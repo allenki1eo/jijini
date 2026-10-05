@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+/*
+ * BodaGo design tokens. Tailwind v4 exposes every token below as a CSS
+ * variable (e.g. var(--color-sun)) and as utilities (bg-sun, text-forest…).
+ */
+@theme {
+  --color-forest: #0b6e4f;
+  --color-forest-400: #2a9b74;
+  --color-forest-600: #095c42;
+  --color-forest-800: #063f2d;
+  --color-sun: #ffc72c;
+  --color-sun-300: #ffdc7a;
+  --color-sun-600: #e5a800;
+  --color-sun-800: #a87a00;
+  --color-sky: #00a3dd;
+  --color-sky-300: #6fd0f2;
+  --color-sky-700: #00739c;
+  --color-night: #10131a;
+  --color-night-800: #161a23;
+  --color-night-700: #1d222d;
+  --color-night-600: #272d3b;
+  --color-night-500: #363e51;
+  --color-night-400: #4a5470;
+  --color-cream: #fff6e5;
+  --color-cream-200: #f3e6cc;
+  --color-cream-400: #d9c9a8;
+  --color-coral: #ff5a4f;
+  --color-coral-700: #c93a31;
+  --color-earth: #b9714a;
+
+  --font-display: "Baloo 2 Variable", "Baloo 2", ui-rounded, system-ui, sans-serif;
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+
+  --radius-chunk: 1.25rem;
+  --radius-card: 1.75rem;
+
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --animate-road: road 0.6s linear infinite;
+  --animate-spin-wheel: spin 0.45s linear infinite;
+  --animate-bob: bob 0.5s ease-in-out infinite;
+  --animate-drift: drift 60s linear infinite;
+  --animate-stripes: stripes 1s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
+
+  @keyframes road {
+    from { transform: translateX(0); }
+    to { transform: translateX(-48px); }
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-1.5px); }
+  }
+  @keyframes drift {
+    from { transform: translateX(-30%); }
+    to { transform: translateX(130%); }
+  }
+  @keyframes stripes {
+    from { background-position: 0 0; }
+    to { background-position: 28px 0; }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgb(255 199 44 / 0.55); }
+    70%, 100% { box-shadow: 0 0 0 18px rgb(255 199 44 / 0); }
+  }
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    background: var(--color-night);
+    color: var(--color-cream);
+    overscroll-behavior: none;
+  }
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-sky-300);
+    outline-offset: 3px;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  /* Chunky pressable surface: a solid "edge" under the face that collapses on press. */
+  .chunky {
+    --edge: var(--color-night);
+    box-shadow:
+      0 6px 0 0 var(--edge),
+      0 14px 28px -12px rgb(0 0 0 / 0.65);
+    transform: translateY(0);
+    transition:
+      transform 90ms ease-out,
+      box-shadow 90ms ease-out,
+      filter 150ms ease-out;
+  }
+  .chunky:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+  .chunky:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow:
+      0 2px 0 0 var(--edge),
+      0 6px 14px -8px rgb(0 0 0 / 0.6);
+  }
+
+  /* Display type with a sticker outline. */
+  .sticker {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-shadow:
+      0 3px 0 var(--color-forest-800),
+      0 6px 0 rgb(0 0 0 / 0.35);
+  }
+
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .safe-x {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .safe-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  .safe-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Settings toggle mirrors the media query for users who opt in manually. */
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+/* Landscape phones are short: compact layouts kick in below 480px of height. */
+@custom-variant short (@media (max-height: 480px));

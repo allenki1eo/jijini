@@ -4,11 +4,13 @@
  * look both ways, waiting for a gap in the traffic and for the boda; while
  * crossing they hurry if something comes, and turn back to the kerb if it's
  * too close; on the pavement they step aside from a boda riding at them.
- * They hurry off the road when someone honks.
+ * They hurry off the road when someone honks. When it rains most put up an
+ * umbrella; the rest hurry along, and fewer people are out.
  */
 import * as THREE from "three";
+import { env } from "@/game/systems/environment";
 import { createInstancedMaterial, setInstanceHex } from "@/game/world/meshKit";
-import { CLOTHES, PERSON_GEOMETRY, PERSON_KINDS, personKindFor, type PersonKind } from "@/game/world/people";
+import { CLOTHES, hasUmbrella, PERSON_GEOMETRY, PERSON_KINDS, personKindFor, UMBRELLA_COLORS, umbrellaGeometry, umbrellaMatrix, umbrellaOpen, type PersonKind } from "@/game/world/people";
 import type { BikePhysics } from "@/game/vehicles/BikePhysics";
 import type { RideStats } from "@/game/vehicles/bikes";
 import type { LanePoint, NavNetwork } from "./NavNetwork";
@@ -39,6 +41,8 @@ interface Ped {
   waited: number;
   shirt: string;
   kind: PersonKind;
+  /** Umbrella colour, or null for someone caught without one. */
+  umbrella: string | null;
   obstacle: Obstacle;
 }
 
@@ -57,6 +61,7 @@ export class Pedestrians {
   private peds: Ped[];
   private meshes: Record<PersonKind, THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>>;
   private material = createInstancedMaterial();
+  private umbrellas: THREE.InstancedMesh;
   private target: number;
   /** Market positions attract crowds. */
   private hotspots: [number, number][] = [];
@@ -87,12 +92,14 @@ export class Pedestrians {
       phase: Math.random() * 6,
       shirt: "#FFFFFF",
       kind: "man" as PersonKind,
+      umbrella: null as string | null,
       obstacle: { x: 0, z: 0, radius: 0.5 },
     }));
     this.peds.forEach((p, i) => {
       p.kind = personKindFor(i);
       const clothes = CLOTHES[p.kind];
       p.shirt = clothes[(i * 7) % clothes.length]!;
+      p.umbrella = hasUmbrella(i) ? UMBRELLA_COLORS[(i * 5) % UMBRELLA_COLORS.length]! : null;
     });
     this.meshes = Object.fromEntries(
       PERSON_KINDS.map((kind) => {
@@ -103,6 +110,10 @@ export class Pedestrians {
         return [kind, mesh];
       }),
     ) as Record<PersonKind, THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>>;
+    this.umbrellas = new THREE.InstancedMesh(umbrellaGeometry(), this.material, capacity);
+    this.umbrellas.count = 0;
+    this.umbrellas.frustumCulled = false;
+    this.group.add(this.umbrellas);
   }
 
   setHotspots(points: [number, number][]) {
@@ -182,13 +193,17 @@ export class Pedestrians {
     const b = bike.state;
     if (traffic) traffic.positions(vehicles);
     else vehicles.length = 0;
+    // Rain keeps some people indoors; those without an umbrella hurry.
+    const rain = env.rain;
+    const open = umbrellaOpen(rain);
+    const target = Math.round(this.target * (1 - 0.35 * rain));
     let active = 0;
     for (const p of this.peds) {
       if (p.active && Math.hypot(p.x - b.x, p.z - b.z) > 180) p.active = false;
       if (p.active) active++;
     }
     for (const p of this.peds) {
-      if (active >= this.target) break;
+      if (active >= target) break;
       if (p.active) continue;
       this.spawn(p, b.x, b.z);
       if (p.active) active++;
@@ -197,9 +212,10 @@ export class Pedestrians {
 
     for (const p of this.peds) {
       if (!p.active) continue;
-      p.phase += dt * p.speed * 6;
+      const pace = p.speed * (p.umbrella ? 1 : 1 + 0.6 * open);
+      p.phase += dt * pace * 6;
       if (p.state === "walk") {
-        p.s += p.speed * dt;
+        p.s += pace * dt;
         const lane = this.nav.lanes[p.lane]!;
         if (p.s > lane.length) {
           p.s -= lane.length;
@@ -247,8 +263,7 @@ export class Pedestrians {
           p.side = p.side === 1 ? -1 : 1;
           p.yaw = Math.atan2(-(p.toX - p.fromX), -(p.toZ - p.fromZ));
         }
-        const pace = threat ? 2.6 : p.speed;
-        p.t += (pace * dt) / len;
+        p.t += ((threat ? 2.6 : pace) * dt) / len;
         p.x = p.fromX + (p.toX - p.fromX) * Math.min(1, p.t);
         p.z = p.fromZ + (p.toZ - p.fromZ) * Math.min(1, p.t);
         if (p.t >= 1) {
@@ -274,6 +289,7 @@ export class Pedestrians {
     }
 
     const counts = Object.fromEntries(PERSON_KINDS.map((k) => [k, 0])) as Record<PersonKind, number>;
+    let umbrellas = 0;
     for (const p of this.peds) {
       if (!p.active) continue;
       const mesh = this.meshes[p.kind];
@@ -284,7 +300,14 @@ export class Pedestrians {
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
       setInstanceHex(mesh, i, p.shirt);
+      if (open > 0 && p.umbrella && p.state !== "fallen") {
+        this.umbrellas.setMatrixAt(umbrellas, umbrellaMatrix(p.kind, p.x, bob, p.z, p.yaw, open));
+        setInstanceHex(this.umbrellas, umbrellas++, p.umbrella);
+      }
     }
+    this.umbrellas.count = umbrellas;
+    this.umbrellas.instanceMatrix.needsUpdate = true;
+    if (this.umbrellas.instanceColor) this.umbrellas.instanceColor.needsUpdate = true;
     for (const kind of PERSON_KINDS) {
       const mesh = this.meshes[kind];
       mesh.count = counts[kind];
@@ -298,6 +321,8 @@ export class Pedestrians {
       mesh.geometry.dispose();
       mesh.dispose();
     }
+    this.umbrellas.geometry.dispose();
+    this.umbrellas.dispose();
     this.material.dispose();
   }
 }

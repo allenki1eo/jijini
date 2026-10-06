@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { MISSION_ACCENT, MissionIcon } from "@/components/missions/MissionIcon";
 import { formatDistance } from "@/components/missions/stopLabel";
 import { StationBrowser } from "@/components/radio/StationBrowser";
+import { BodaPesaApp } from "./BodaPesaApp";
 import { IconButton } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
 import { clockText } from "@/game/systems/environment";
@@ -148,6 +149,7 @@ export function PhonePanel({ game }: { game: Game }) {
   useHudTick(1);
   const { open, tab, messages, calls, set, markRead } = usePhone();
   const wallet = usePlayer((s) => s.wallet);
+  const bodapesa = usePlayer((s) => s.bodapesa);
   const regulars = usePlayer((s) => s.regulars);
   const owed = usePlayer((s) => s.hesabuOwed);
   const licenceDays = Math.ceil(game.licenceHours / 24);
@@ -297,11 +299,7 @@ export function PhonePanel({ game }: { game: Game }) {
 
               {tab === "pesa" && (
                 <div className="flex flex-col gap-3">
-                  <div className="rounded-3xl bg-gradient-to-br from-forest to-forest-800 p-4 text-cream shadow-lg">
-                    <p className="text-xs font-semibold tracking-wide uppercase opacity-75">{t.phone.pesaName}</p>
-                    <p className="mt-2 text-xs opacity-75">{t.phone.balance}</p>
-                    <p className="font-display text-3xl leading-none font-extrabold tabular">TSh {formatTzs(wallet)}</p>
-                  </div>
+                  <BodaPesaApp />
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-2xl bg-night-700 p-3">
                       <p className="flex items-center gap-1.5 text-xs font-bold text-cream/60">
@@ -330,7 +328,7 @@ export function PhonePanel({ game }: { game: Game }) {
                       </span>
                       <button
                         type="button"
-                        disabled={wallet < owed}
+                        disabled={wallet + bodapesa < owed}
                         onClick={() => game.payHesabuDebt()}
                         className="chunky rounded-xl bg-sun px-3 py-2 font-display text-sm font-extrabold text-night [--edge:var(--color-sun-800)] disabled:opacity-50"
                       >

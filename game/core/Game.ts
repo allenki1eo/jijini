@@ -430,10 +430,10 @@ export class Game {
     const onVisibility = () => {
       if (document.hidden) {
         audio.suspend();
-        livePlayer.pause();
+        // Live streams stay connected so the lock screen and the system media
+        // controls can keep the station playing. Engine audio still suspends.
       } else {
         audio.resume();
-        if (useSettings.getState().radio.startsWith("live:")) livePlayer.resume();
       }
     };
     void loadLiveStations();
@@ -497,9 +497,8 @@ export class Game {
     const live = liveStations.find((st) => st.id === s.radio);
     if (live) {
       audio.stopMusic();
-      if (!navigator.onLine) return livePlayer.onError?.(live);
-      livePlayer.play(live, s.masterVolume * s.musicVolume);
-      if (!this.liveNoticeShown) {
+      const started = livePlayer.play(live, s.masterVolume * s.musicVolume, "follow");
+      if (started && !this.liveNoticeShown) {
         this.liveNoticeShown = true;
         events.emit("toast", { text: currentDictionary().radio.liveData, tone: "sky" });
       }

@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { BatteryMedium, Briefcase, HandCoins, IdCard, Megaphone, MessageSquare, PackageCheck, Phone as PhoneIcon, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Signal, Smartphone, Star, Wallet, X } from "lucide-react";
+import { BatteryMedium, Briefcase, HandCoins, IdCard, Megaphone, MessageSquare, PackageCheck, Phone as PhoneIcon, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Radio as RadioIcon, Signal, Smartphone, Star, Wallet, X } from "lucide-react";
 import { useEffect } from "react";
 import { MISSION_ACCENT, MissionIcon } from "@/components/missions/MissionIcon";
 import { formatDistance } from "@/components/missions/stopLabel";
+import { StationBrowser } from "@/components/radio/StationBrowser";
 import { IconButton } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
 import { clockText } from "@/game/systems/environment";
@@ -132,6 +133,7 @@ const TABS: { id: PhoneTab; icon: typeof MessageSquare }[] = [
   { id: "calls", icon: PhoneIcon },
   { id: "pesa", icon: Wallet },
   { id: "hustles", icon: Briefcase },
+  { id: "radio", icon: RadioIcon },
 ];
 
 const HUSTLES = [
@@ -261,6 +263,8 @@ export function PhonePanel({ game }: { game: Game }) {
                 </div>
               )}
 
+              {tab === "radio" && <StationBrowser variant="phone" />}
+
               {tab === "hustles" && (
                 <div className="flex flex-col gap-2">
                   <p className="px-1 text-sm text-cream/60">{t.phone.hustles.intro}</p>
@@ -350,7 +354,7 @@ export function PhonePanel({ game }: { game: Game }) {
               )}
             </div>
 
-            <nav className="grid grid-cols-4 gap-1 border-t border-white/8 p-2" aria-label={t.phone.open}>
+            <nav className="grid grid-cols-5 gap-1 border-t border-white/8 p-2" aria-label={t.phone.open}>
               {TABS.map(({ id, icon: Icon }) => {
                 const unread = messages.some((msg) => !msg.read && (id === "pesa" ? msg.kind === "pesa" : id === "messages" && msg.kind === "sms"));
                 return (
@@ -359,10 +363,10 @@ export function PhonePanel({ game }: { game: Game }) {
                     type="button"
                     aria-pressed={tab === id}
                     onClick={() => set({ tab: id })}
-                    className={cn("relative flex flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[11px] font-bold", tab === id ? "bg-sun text-night" : "text-cream/60 hover:bg-white/6")}
+                    className={cn("relative flex min-w-0 flex-col items-center gap-0.5 rounded-2xl px-0.5 py-1.5 text-[10px] leading-none font-bold", tab === id ? "bg-sun text-night" : "text-cream/60 hover:bg-white/6")}
                   >
-                    <Icon className="size-5" />
-                    {t.phone.tabs[id]}
+                    <Icon className="size-4" />
+                    <span className="max-w-full truncate">{t.phone.tabs[id]}</span>
                     {unread && tab !== id && <span className="absolute top-1 right-[30%] size-2 rounded-full bg-coral" />}
                   </button>
                 );

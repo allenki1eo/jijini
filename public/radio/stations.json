@@ -1,3 +1,235 @@
 {
-  "live": []
+  "live": [
+    {
+      "id": "tbc-taifa",
+      "name": "TBC Taifa",
+      "freq": "94.6",
+      "city": "Dar es Salaam",
+      "genre": "news",
+      "group": "national",
+      "color": "#0B6E4F",
+      "url": "https://a7.asurahosting.com/listen/tbc_taifa/radio.mp3",
+      "source": "TBC Taifa's public stream (Asura), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name TBC Taifa."
+    },
+    {
+      "id": "bongo-fm",
+      "name": "Bongo FM",
+      "freq": "90.0",
+      "city": "Dar es Salaam",
+      "genre": "bongo",
+      "group": "national",
+      "color": "#E0457B",
+      "url": "https://a7.asurahosting.com/listen/bongo_fm/radio.mp3",
+      "source": "TBC Bongo FM's public stream (Asura), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name Bongo FM."
+    },
+    {
+      "id": "east-africa-radio",
+      "name": "East Africa Radio",
+      "freq": "88.1",
+      "city": "Dar es Salaam",
+      "genre": "sports",
+      "group": "dar",
+      "color": "#00A3DD",
+      "url": "https://eatv.radioca.st/stream",
+      "source": "East Africa Radio's public stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 64 kbps MP3, icy-name East Africa Radio."
+    },
+    {
+      "id": "radio-free-africa",
+      "name": "Radio Free Africa",
+      "freq": "89.3",
+      "city": "Dar es Salaam",
+      "genre": "news",
+      "group": "dar",
+      "color": "#FF5A4F",
+      "url": "https://s3.radio.co/s8df0149e0/listen",
+      "source": "Radio Free Africa's public radio.co stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name Radio Free Africa."
+    },
+    {
+      "id": "crown-fm",
+      "name": "Crown FM",
+      "freq": "92.1",
+      "city": "Dar es Salaam",
+      "genre": "music",
+      "group": "dar",
+      "color": "#FFC72C",
+      "url": "https://radio.crownmedia.co.tz:8443/crown",
+      "source": "Crown FM's own host (radio.crownmedia.co.tz), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name CROWN FM."
+    },
+    {
+      "id": "radio-one",
+      "name": "RadioOne",
+      "freq": "89.7",
+      "city": "Dar es Salaam",
+      "genre": "hits",
+      "group": "dar",
+      "color": "#7C3AED",
+      "url": "https://radioonetanzania.radioca.st/stream",
+      "source": "RadioOne's public stream (radioonetanzania.radioca.st), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 192 kbps MP3. The encoder's icy-name is unset (No Name); the hostname is the station's."
+    },
+    {
+      "id": "wasafi-fm",
+      "name": "Wasafi FM",
+      "freq": "88.9",
+      "city": "Dar es Salaam",
+      "genre": "bongo",
+      "group": "dar",
+      "color": "#E60000",
+      "url": "https://radio.wasafimedia.co.tz/wasafi",
+      "source": "Wasafi FM's own host (radio.wasafimedia.co.tz), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name Wasafi FM."
+    },
+    {
+      "id": "e-fm",
+      "name": "E-FM",
+      "freq": "93.7",
+      "city": "Dar es Salaam",
+      "genre": "hits",
+      "group": "dar",
+      "color": "#F5A300",
+      "url": "https://efmradio-atunwadigital.streamguys1.com/efmradio",
+      "source": "E-FM's public StreamGuys mount, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 192 kbps MP3. icy-name is blank; the mount path is efmradio."
+    },
+    {
+      "id": "capital-radio",
+      "name": "Capital Radio",
+      "freq": "101.3",
+      "city": "Dar es Salaam",
+      "genre": "talk",
+      "group": "dar",
+      "color": "#1C4CB4",
+      "url": "https://capitalradio.radioca.st/stream",
+      "source": "Capital Radio's public stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 64 kbps MP3, icy-name Capital Radio Tanzania."
+    },
+    {
+      "id": "kiss-fm",
+      "name": "Kiss FM",
+      "freq": "98.9",
+      "city": "Dar es Salaam",
+      "genre": "hits",
+      "group": "dar",
+      "color": "#FF4FA3",
+      "url": "https://s3.radio.co/sbe50ddddb/listen",
+      "source": "Kiss FM's public radio.co stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name Kiss FM."
+    },
+    {
+      "id": "upendo-fm",
+      "name": "Upendo FM",
+      "freq": "107.7",
+      "city": "Dar es Salaam",
+      "genre": "music",
+      "group": "dar",
+      "color": "#2A9B74",
+      "url": "https://upendofm.dhsolutions.co.tz/listen/upendo_media/upendofm.mp3",
+      "source": "Upendo FM's own host (upendofm.dhsolutions.co.tz), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 192 kbps MP3, icy-name UpendoFM Radio."
+    },
+    {
+      "id": "mjini-fm",
+      "name": "Mjini FM",
+      "freq": "92.5",
+      "city": "Dar es Salaam",
+      "genre": "music",
+      "group": "dar",
+      "color": "#B9714A",
+      "url": "https://mjinifm.dhsolutions.co.tz/listen/mjinifm_92.5/mjinifm.mp3",
+      "source": "Mjini FM's own host (mjinifm.dhsolutions.co.tz), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 192 kbps MP3, icy-name MjiniFM 92.5."
+    },
+    {
+      "id": "tff-radio",
+      "name": "TFF Radio",
+      "freq": "LIVE",
+      "city": "Dar es Salaam",
+      "genre": "sports",
+      "group": "dar",
+      "color": "#00739C",
+      "url": "https://edge.mixlr.com/channel/ofrkn",
+      "source": "TFF's public Mixlr channel, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3. Mixlr is up when TFF is on air; the app shows a message when it is not."
+    },
+    {
+      "id": "radio-maria",
+      "name": "Radio Maria",
+      "freq": "89.1",
+      "city": "Dar es Salaam",
+      "genre": "gospel",
+      "group": "religious",
+      "color": "#163C8F",
+      "url": "https://dreamsiteradiocp2.com/proxy/rmtanzania2?mp=/stream",
+      "source": "Radio Maria Tanzania's public Dreamsite stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 32 kbps AAC, icy-name RADIO MARIA TANZANIA."
+    },
+    {
+      "id": "mungu-kwanza",
+      "name": "Mungu Kwanza",
+      "freq": "LIVE",
+      "city": "Dar es Salaam",
+      "genre": "gospel",
+      "group": "religious",
+      "color": "#E5A800",
+      "url": "https://mungukwanza.radioca.st/;",
+      "source": "Mungu Kwanza's public stream (mungukwanza.radioca.st), the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3. icy-name is the encoder default MB RECASTER; the hostname is the station's."
+    },
+    {
+      "id": "banana-fm",
+      "name": "Banana FM",
+      "freq": "98.7",
+      "city": "Moshi",
+      "genre": "music",
+      "group": "regional",
+      "color": "#F5C518",
+      "url": "https://bananafm.radioca.st/stream",
+      "source": "Banana FM's public stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name Peak Media Limited Stream (Banana FM's company)."
+    },
+    {
+      "id": "kicheko",
+      "name": "Radio Kicheko",
+      "freq": "91.1",
+      "city": "Moshi",
+      "genre": "music",
+      "group": "regional",
+      "color": "#FF8A3D",
+      "url": "https://a7.asurahosting.com:6540/stream",
+      "source": "The stream URL radio-tanzania.com publishes for Radio Kicheko Live. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3. icy-name is the generic RadioBOSS Stream."
+    },
+    {
+      "id": "safina-fm",
+      "name": "Radio Safina",
+      "freq": "92.5",
+      "city": "Arusha",
+      "genre": "music",
+      "group": "regional",
+      "color": "#6FD0F2",
+      "url": "https://s9.myradiostream.com:46284/;",
+      "source": "The stream URL radio-tanzania.com publishes for Radio Safina FM. Verified 2026-10-06: ffmpeg decoded 56 kbps MP3. icy-name is the generic NET."
+    },
+    {
+      "id": "kwizera",
+      "name": "Radio Kwizera",
+      "freq": "97.7",
+      "city": "Ngara",
+      "genre": "community",
+      "group": "regional",
+      "color": "#095C42",
+      "url": "https://uk4-vn.mixstream.net/:8052/;listen.mp3",
+      "source": "Radio Kwizera's public stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 96 kbps MP3, icy-name RADIO KWIZERA NGARA."
+    },
+    {
+      "id": "jambo-fm",
+      "name": "Jambo FM",
+      "freq": "92.7",
+      "city": "Shinyanga",
+      "genre": "music",
+      "group": "regional",
+      "color": "#C93A31",
+      "url": "https://cast3.asurahosting.com/proxy/jambocom/stream",
+      "source": "Jambo FM's public stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded AAC, icy-name JAMBO FM."
+    },
+    {
+      "id": "jembe-fm",
+      "name": "Jembe FM",
+      "freq": "93.7",
+      "city": "Mwanza",
+      "genre": "music",
+      "group": "regional",
+      "color": "#4A5470",
+      "url": "https://cast3.asurahosting.com/proxy/jembemed/stream",
+      "source": "Jembe FM's public stream, the URL on radio-tanzania.com. Verified 2026-10-06: ffmpeg decoded 128 kbps MP3, icy-name JembeFm."
+    }
+  ]
 }

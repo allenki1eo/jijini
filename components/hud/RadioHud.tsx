@@ -3,7 +3,7 @@
 import { AnimatePresence, m } from "motion/react";
 import { Radio as RadioIcon, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
-import { liveStations } from "@/game/audio/LiveRadio";
+import { liveStations, useLiveCatalog } from "@/game/audio/LiveRadio";
 import { Radio, STATIONS } from "@/game/audio/Radio";
 import { events } from "@/game/core/events";
 import { useT } from "@/i18n";
@@ -15,6 +15,7 @@ const SHOW_FOR = 9000;
 export function RadioChip() {
   const t = useT();
   const station = useSettings((s) => s.radio);
+  useLiveCatalog((s) => s.revision);
   const live = liveStations.find((s) => s.id === station);
   const info = STATIONS.find((s) => s.id === station) ?? live;
   const [line, setLine] = useState<{ id: number; text: string; color: string } | null>(null);

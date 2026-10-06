@@ -1,8 +1,8 @@
 "use client";
 
-import { AnimatePresence, m } from "motion/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useT } from "@/i18n";
+import { cn } from "@/lib/cn";
 import { LoadingScreen } from "./LoadingScreen";
 import { MainMenu } from "./MainMenu";
 
@@ -27,6 +27,7 @@ export function BootGate() {
   const [step, setStep] = useState<Step>("fonts");
   const [progress, setProgress] = useState(0.12);
   const [done, setDone] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     if (booted) return;
@@ -50,7 +51,9 @@ export function BootGate() {
       } catch {
         // Ignore: the splash simply shows again.
       }
-      setDone(true);
+      setLeaving(true);
+      await new Promise((r) => setTimeout(r, 450));
+      if (!cancelled) setDone(true);
     })();
     return () => {
       cancelled = true;
@@ -61,13 +64,11 @@ export function BootGate() {
   return (
     <>
       <MainMenu />
-      <AnimatePresence>
-        {showSplash && (
-          <m.div key="splash" className="fixed inset-0 z-50" exit={{ opacity: 0, scale: 1.04 }} transition={{ duration: 0.45 }}>
-            <LoadingScreen progress={progress} status={t.splash.steps[step]} />
-          </m.div>
-        )}
-      </AnimatePresence>
+      {showSplash && (
+        <div className={cn("fixed inset-0 z-50 transition-[opacity,transform] duration-[450ms] ease-out", leaving && "scale-[1.04] opacity-0")}>
+          <LoadingScreen progress={progress} status={t.splash.steps[step]} />
+        </div>
+      )}
     </>
   );
 }

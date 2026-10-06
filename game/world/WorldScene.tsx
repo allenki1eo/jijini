@@ -1,14 +1,17 @@
 "use client";
 
 import { CITIES, type CityId } from "@/data/cities/config";
+import type { Game } from "@/game/core/Game";
 import type { QualityPreset } from "@/game/core/quality";
 import { useWorld } from "@/stores/world";
 import { CameraRig } from "./CameraRig";
 import { CityChunks } from "./CityChunks";
 import { ChunkGridOverlay, NavGraphOverlay } from "./DebugOverlays";
-import { ENV } from "./environment";
+import { EnvironmentRig } from "./EnvironmentRig";
+import { FpsGovernor } from "./FpsGovernor";
 import type { CityManifest } from "./format";
 import { SkyDome } from "./SkyDome";
+import { RideRig } from "./RideRig";
 import { StatsProbe } from "./StatsProbe";
 
 interface WorldSceneProps {
@@ -16,29 +19,28 @@ interface WorldSceneProps {
   manifest: CityManifest;
   baseUrl: string;
   preset: QualityPreset;
+  game: Game;
 }
 
-export function WorldScene({ cityId, manifest, baseUrl, preset }: WorldSceneProps) {
+export function WorldScene({ cityId, manifest, baseUrl, preset, game }: WorldSceneProps) {
   const mode = useWorld((s) => s.cameraMode);
   const showNavGraph = useWorld((s) => s.showNavGraph);
   const showChunkGrid = useWorld((s) => s.showChunkGrid);
   const loadedKeys = useWorld((s) => s.loadedKeys);
-  const sun = ENV.sunDirection;
 
   return (
     <>
-      <color attach="background" args={[ENV.horizon]} />
-      <fog attach="fog" args={[ENV.fog, preset.fogNear, preset.fogFar]} />
-      <hemisphereLight args={[ENV.hemiSky, ENV.hemiGround, 1.9]} />
-      <directionalLight color={ENV.sun} intensity={2.4} position={[sun.x * 100, sun.y * 100, sun.z * 100]} />
+      <EnvironmentRig preset={preset} />
 
       <SkyDome skyline={CITIES[cityId].skyline} />
-      <CityChunks manifest={manifest} baseUrl={baseUrl} radius={preset.loadRadius} />
+      <CityChunks manifest={manifest} baseUrl={baseUrl} radius={preset.loadRadius} index={game.index} skyline={CITIES[cityId].skyline} />
       {showNavGraph && <NavGraphOverlay baseUrl={baseUrl} />}
       {showChunkGrid && <ChunkGridOverlay manifest={manifest} loadedKeys={loadedKeys} />}
 
-      <CameraRig mode={mode} manifest={manifest} />
+      <RideRig game={game} active={mode === "ride"} />
+      {mode !== "ride" && <CameraRig mode={mode} manifest={manifest} />}
       <StatsProbe />
+      <FpsGovernor preset={preset} />
     </>
   );
 }

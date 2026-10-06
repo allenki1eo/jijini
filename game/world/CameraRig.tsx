@@ -19,19 +19,18 @@ const right = new THREE.Vector3();
 const euler = new THREE.Euler(0, 0, 0, "YXZ");
 
 interface CameraRigProps {
-  mode: CameraMode;
+  mode: Exclude<CameraMode, "ride">;
   manifest: CityManifest;
 }
 
 /**
- * Debug camera: a touch-friendly map camera (pan / pinch / rotate) and a
+ * Debug cameras: a touch-friendly map camera (pan / pinch / rotate) and a
  * free-fly camera (WASD + drag-to-look, or the on-screen stick on phones).
  */
 export function CameraRig({ mode, manifest }: CameraRigProps) {
   const camera = useThree((s) => s.camera);
   const dom = useThree((s) => s.gl.domElement);
   const controls = useRef<ComponentRef<typeof MapControls>>(null);
-  const firstMount = useRef(true);
   const look = useRef({ yaw: 0, pitch: 0 });
   const keys = useRef(new Set<string>());
   const { bounds } = manifest;
@@ -41,23 +40,17 @@ export function CameraRig({ mode, manifest }: CameraRigProps) {
     if (mode === "map") {
       const c = controls.current;
       if (!c) return;
-      if (firstMount.current) {
-        firstMount.current = false;
-        const { x, z, heading } = manifest.spawn;
-        // Start behind and above the spawn point, looking along the road.
-        camera.position.set(x + Math.sin(heading) * 120, 110, z + Math.cos(heading) * 120);
-        c.target.set(x, 0, z);
-      } else {
-        const dir = camera.getWorldDirection(forward);
-        const t = dir.y < -0.05 ? Math.min(camera.position.y / -dir.y, 300) : 120;
-        c.target.copy(camera.position).addScaledVector(dir, t).setY(0);
-      }
+      // Aim at whatever the camera was looking at (the rider, coming from ride mode).
+      const dir = camera.getWorldDirection(forward);
+      const t = dir.y < -0.05 ? Math.min(camera.position.y / -dir.y, 300) : 12;
+      c.target.copy(camera.position).addScaledVector(dir, t).setY(0);
+      camera.position.y = Math.max(camera.position.y, 40);
       c.update();
     } else {
       euler.setFromQuaternion(camera.quaternion, "YXZ");
       look.current = { yaw: euler.y, pitch: euler.x };
     }
-  }, [mode, camera, manifest.spawn]);
+  }, [mode, camera]);
 
   // Fly mode input: keyboard + pointer drag (the joystick writes analogInput directly).
   useEffect(() => {

@@ -9,6 +9,9 @@ import { streamFocus } from "./focus";
 import type { CityManifest } from "./format";
 import { createWorldMaterials } from "./materials";
 import { EARTH_COLOR } from "./palette";
+import type { WorldIndex } from "./WorldIndex";
+import { HorizonWater } from "./SkyDome";
+import type { SkylineKind } from "@/data/cities/config";
 
 const FOCUS_INTERVAL = 0.25;
 
@@ -26,9 +29,11 @@ interface CityChunksProps {
   manifest: CityManifest;
   baseUrl: string;
   radius: number;
+  index?: WorldIndex;
+  skyline: SkylineKind;
 }
 
-export function CityChunks({ manifest, baseUrl, radius }: CityChunksProps) {
+export function CityChunks({ manifest, baseUrl, radius, index, skyline }: CityChunksProps) {
   const scene = useThree((s) => s.scene);
   const materials = useMemo(() => createWorldMaterials(), []);
   const ground = useMemo(() => baseGround(), []);
@@ -52,6 +57,7 @@ export function CityChunks({ manifest, baseUrl, radius }: CityChunksProps) {
       radius,
       (p) => setWorld({ progress: { loaded: p.loaded, total: p.total }, loadedKeys: p.keys }),
       (message) => setWorld({ status: "error", error: message }),
+      index,
     );
     scene.add(s.root);
     streamer.current = s;
@@ -63,12 +69,12 @@ export function CityChunks({ manifest, baseUrl, radius }: CityChunksProps) {
     };
     // The radius is applied live below; recreating the streamer for it would reload every chunk.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manifest, baseUrl, materials, scene, setWorld]);
+  }, [manifest, baseUrl, materials, scene, setWorld, index]);
 
   useEffect(() => streamer.current?.setRadius(radius), [radius]);
 
   useFrame((_, dt) => {
-    materials.time.value += dt;
+    streamer.current?.tick();
     sinceFocus.current += dt;
     if (sinceFocus.current >= FOCUS_INTERVAL) {
       sinceFocus.current = 0;
@@ -76,5 +82,10 @@ export function CityChunks({ manifest, baseUrl, radius }: CityChunksProps) {
     }
   });
 
-  return <mesh geometry={ground} material={materials.ground} position-y={-0.02} matrixAutoUpdate={false} />;
+  return (
+    <>
+      <mesh geometry={ground} material={materials.ground} position-y={-0.02} matrixAutoUpdate={false} />
+      <HorizonWater skyline={skyline} material={materials.water} />
+    </>
+  );
 }

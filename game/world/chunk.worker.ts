@@ -2,6 +2,7 @@
  * Chunk worker: downloads a baked chunk and turns it into transferable
  * geometry buffers so the main thread never parses JSON or triangulates.
  */
+import { fetchJson } from "@/lib/fetchJson";
 import { buildChunk, chunkTransferables, type BuiltChunk } from "./build";
 import type { ChunkData } from "./format";
 
@@ -17,9 +18,7 @@ const scope = self as unknown as DedicatedWorkerGlobalScope;
 scope.onmessage = async (event: MessageEvent<ChunkRequest>) => {
   const { id, url } = event.data;
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const chunk = buildChunk((await res.json()) as ChunkData);
+    const chunk = buildChunk(await fetchJson<ChunkData>(url));
     scope.postMessage({ id, ok: true, chunk } satisfies ChunkResponse, chunkTransferables(chunk));
   } catch (error) {
     scope.postMessage({ id, ok: false, error: (error as Error).message } satisfies ChunkResponse);

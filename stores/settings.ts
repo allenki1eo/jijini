@@ -13,6 +13,20 @@ export interface SettingsState {
   haptics: boolean;
   leftHanded: boolean;
   reducedMotion: boolean;
+  /** Throttle held automatically (beginner assist). */
+  autoThrottle: boolean;
+  /** Steer by tilting the phone. */
+  tiltSteer: boolean;
+  cameraView: "chase" | "fpv";
+  /** HUD size multiplier (accessibility). */
+  hudScale: number;
+  /** Set once the graphics preset was picked from the device tier. */
+  tierDetected: boolean;
+  /** Radio station playing while you ride (or "off"). */
+  /** "kijiweni" | "bongo" | "pwani", a live station "live:<n>", or "off". */
+  radio: string;
+  /** Answer to "are you 18 or over?" (null = not asked yet). Gates alcohol adverts. */
+  adult: boolean | null;
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 
@@ -28,11 +42,20 @@ export const useSettings = create<SettingsState>()(
       haptics: true,
       leftHanded: false,
       reducedMotion: false,
+      autoThrottle: false,
+      tiltSteer: false,
+      cameraView: "chase",
+      hudScale: 1,
+      tierDetected: false,
+      radio: "kijiweni",
+      adult: null,
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
     }),
     {
       name: "bodago:settings",
-      version: 1,
+      version: 2,
+      // v2 added ride assists and HUD scale; persisted fields merge over the defaults.
+      migrate: (persisted) => persisted as SettingsState,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: ({ set, ...rest }) => rest,

@@ -4,6 +4,7 @@
  * procedural facades, water shimmer and tree sway.
  */
 import * as THREE from "three";
+import { envUniforms } from "@/game/systems/environment";
 import { WATER_COLOR } from "./palette";
 
 export interface WorldMaterials {
@@ -11,8 +12,6 @@ export interface WorldMaterials {
   buildings: THREE.MeshLambertMaterial;
   water: THREE.MeshLambertMaterial;
   trees: THREE.MeshLambertMaterial;
-  /** Shared clock uniform; advance it once per frame. */
-  time: { value: number };
   dispose: () => void;
 }
 
@@ -50,12 +49,17 @@ const withWorldXZ = (shader: THREE.WebGLProgramParametersWithUniforms) => {
 const createGround = () => {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true });
   m.onBeforeCompile = (shader) => {
+    shader.uniforms.uWet = envUniforms.uWet;
     withWorldXZ(shader);
-    shader.fragmentShader = shader.fragmentShader.replace(
+    shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uWet;").replace(
       "#include <color_fragment>",
       `${SRGB_VERTEX_COLOR}
       float grain = bgNoise(vWorldXZ * 0.08) * 0.45 + bgNoise(vWorldXZ * 0.6) * 0.35 + bgNoise(vWorldXZ * 3.1) * 0.2;
-      diffuseColor.rgb *= 0.86 + 0.26 * grain;`,
+      diffuseColor.rgb *= 0.86 + 0.26 * grain;
+      // Rain darkens everything and leaves puddles in the low spots.
+      float puddle = smoothstep(0.55, 0.7, bgNoise(vWorldXZ * 0.21)) * uWet;
+      diffuseColor.rgb *= 1.0 - uWet * 0.32;
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.19, 0.24), puddle * 0.7);`,
     );
   };
   m.customProgramCacheKey = () => "bodago-ground";
@@ -65,12 +69,18 @@ const createGround = () => {
 const createBuildings = () => {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true });
   m.onBeforeCompile = (shader) => {
+    shader.uniforms.uNight = envUniforms.uNight;
+    withWorldXZ(shader);
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nattribute vec3 facade;\nvarying vec3 vFacade;\nvarying float vDist;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\nvFacade = facade;")
       .replace("#include <project_vertex>", "#include <project_vertex>\nvDist = -mvPosition.z;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vFacade;\nvarying float vDist;")
+      .replace("#include <common>", "#include <common>\nvarying vec3 vFacade;\nvarying float vDist;\nuniform float uNight;\nvec3 bgGlow = vec3(0.0);")
+      .replace(
+        "#include <emissivemap_fragment>",
+        "#include <emissivemap_fragment>\ntotalEmissiveRadiance += bgGlow;",
+      )
       .replace(
         "#include <color_fragment>",
         `${SRGB_VERTEX_COLOR}
@@ -95,12 +105,17 @@ const createBuildings = () => {
             vec3 signColor = pick < 1.0 ? vec3(0.85, 0.12, 0.1) : pick < 2.0 ? vec3(0.0, 0.32, 0.62)
               : pick < 3.0 ? vec3(1.0, 0.6, 0.0) : pick < 4.0 ? vec3(0.0, 0.3, 0.16) : vec3(0.55, 0.05, 0.3);
             diffuseColor.rgb = mix(diffuseColor.rgb, signColor, signBand);
+            bgGlow += signColor * signBand * uNight * 0.55;
+            // Some shops stay open late with warm light spilling from the doorway.
+            bgGlow += vec3(1.0, 0.72, 0.38) * door * uNight * step(0.55, bgHash(floor(vWorldXZ / 3.6))) * 0.7;
           } else if (h > 0.42) {
             float cell = mod(u, 3.0);
             float frame = step(0.82, floorY) * step(floorY, 2.24) * step(0.82, cell) * step(cell, 2.18);
             float glass = step(0.92, floorY) * step(floorY, 2.14) * step(0.92, cell) * step(cell, 2.08);
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.12, frame * detail);
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.07, 0.09), glass * detail);
+            float lit = step(0.58, bgHash(floor(vWorldXZ / 3.0) + level * 7.13));
+            bgGlow += vec3(1.0, 0.78, 0.45) * glass * lit * uNight * 0.9;
           }
         }`,
       );
@@ -109,10 +124,10 @@ const createBuildings = () => {
   return m;
 };
 
-const createWater = (time: { value: number }) => {
+const createWater = () => {
   const m = new THREE.MeshLambertMaterial({ color: WATER_COLOR });
   m.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = time;
+    shader.uniforms.uTime = envUniforms.uTime;
     withWorldXZ(shader);
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", "#include <common>\nuniform float uTime;")
@@ -128,10 +143,11 @@ const createWater = (time: { value: number }) => {
   return m;
 };
 
-const createTrees = (time: { value: number }) => {
-  const m = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+const createTrees = () => {
+  // A touch of emissive keeps the canopy's underside from going black.
+  const m = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, emissive: "#14240E" });
   m.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = time;
+    shader.uniforms.uTime = envUniforms.uTime;
     shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nuniform float uTime;").replace(
       "#include <begin_vertex>",
       `#include <begin_vertex>
@@ -149,16 +165,14 @@ const createTrees = (time: { value: number }) => {
 };
 
 export const createWorldMaterials = (): WorldMaterials => {
-  const time = { value: 0 };
   const materials = {
     ground: createGround(),
     buildings: createBuildings(),
-    water: createWater(time),
-    trees: createTrees(time),
+    water: createWater(),
+    trees: createTrees(),
   };
   return {
     ...materials,
-    time,
     dispose: () => Object.values(materials).forEach((m) => m.dispose()),
   };
 };

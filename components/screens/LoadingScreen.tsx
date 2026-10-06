@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, m } from "motion/react";
 import { useEffect, useState } from "react";
 import { BodaRider } from "@/components/brand/BodaRider";
 import { KitengeStrip } from "@/components/brand/Kitenge";
@@ -77,18 +76,9 @@ export function LoadingScreen({ progress, status, detail }: LoadingScreenProps) 
         </div>
 
         <div className="relative h-14 w-full text-center short:h-10">
-          <AnimatePresence mode="wait">
-            <m.p
-              key={index}
-              className="absolute inset-0 font-display text-lg leading-snug font-semibold text-sun-300 italic short:text-base"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.35 }}
-            >
-              “{proverbs[index]}”
-            </m.p>
-          </AnimatePresence>
+          <p key={index} className="animate-fade-up absolute inset-0 font-display text-lg leading-snug font-semibold text-sun-300 italic short:text-base">
+            “{proverbs[index]}”
+          </p>
         </div>
       </div>
 

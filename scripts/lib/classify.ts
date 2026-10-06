@@ -154,14 +154,35 @@ const POI_MAP: Record<string, PoiKind> = {
   courthouse: "office",
 };
 
+const GARAGE_SHOPS = new Set(["motorcycle", "motorcycle_repair", "car_repair", "tyres", "car_parts", "bicycle"]);
+const HEALTHCARE: Record<string, PoiKind> = {
+  hospital: "hospital",
+  clinic: "clinic",
+  centre: "clinic",
+  doctor: "clinic",
+  dentist: "clinic",
+  laboratory: "clinic",
+  pharmacy: "pharmacy",
+};
+
 export const poiKind = (tags: Tags): PoiKind | null => {
+  if (tags.amenity === "car_repair" || tags.amenity === "motorcycle_repair" || tags.craft === "motorcycle_repair" || GARAGE_SHOPS.has(tags.shop ?? "")) return "garage";
   if (tags.amenity && POI_MAP[tags.amenity]) return POI_MAP[tags.amenity]!;
+  if (tags.healthcare && HEALTHCARE[tags.healthcare]) return HEALTHCARE[tags.healthcare]!;
+  if (tags.public_transport === "station") return "bus_station";
+  if (tags.highway === "bus_stop" || tags.public_transport === "platform" || tags.public_transport === "stop_position") return "bus_stop";
   if (tags.shop === "supermarket" || tags.shop === "mall") return "market";
-  if (tags.shop) return "shop";
+  if (tags.shop || tags.craft) return "shop";
   if (tags.tourism && ["hotel", "guest_house", "hostel", "motel"].includes(tags.tourism)) return "hotel";
   if (tags.office) return "office";
   if (tags.amenity) return "other";
   return null;
+};
+
+/** The OSM value that says what kind of place this is, for signs and shop menus. */
+export const poiSubtype = (tags: Tags): string | undefined => {
+  const v = tags.shop ?? tags.office ?? tags.healthcare ?? tags.craft ?? tags.amenity ?? tags.tourism;
+  return v && v !== "yes" ? v.slice(0, 24) : undefined;
 };
 
 export const poiKindIndex = (k: PoiKind) => POI_KINDS.indexOf(k);

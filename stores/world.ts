@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { CityManifest } from "@/game/world/format";
 
-export type CameraMode = "map" | "fly";
+export type CameraMode = "ride" | "map" | "fly";
 export type WorldStatus = "loading" | "ready" | "error";
 
 interface WorldState {
@@ -14,6 +14,8 @@ interface WorldState {
   showStats: boolean;
   showNavGraph: boolean;
   showChunkGrid: boolean;
+  /** This city has 18+ sponsors (the age question appears). */
+  adultAdsHere: boolean;
   set: (patch: Partial<Omit<WorldState, "set" | "reset">>) => void;
   reset: () => void;
 }
@@ -24,10 +26,11 @@ const initial = {
   error: null,
   progress: { loaded: 0, total: 0 },
   loadedKeys: [],
-  cameraMode: "map" as CameraMode,
+  cameraMode: "ride" as CameraMode,
   showStats: false,
   showNavGraph: false,
   showChunkGrid: false,
+  adultAdsHere: false,
 };
 
 /** Session state for the world explorer (not persisted). */

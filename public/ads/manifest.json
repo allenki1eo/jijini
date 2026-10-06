@@ -1,0 +1,26 @@
+{
+  "sponsors": [
+    {
+      "id": "eas-spirits",
+      "name": "Hanson's Choice · Furaha Gin",
+      "tagline": "Ladha Halisi ya Tanzania.",
+      "taglineEn": "Crafted for the real taste of Tanzania.",
+      "colors": ["#1A120D", "#F4EAD5", "#C99A4B"],
+      "icon": "droplet",
+      "cities": ["shinyanga"],
+      "ageRestricted": true,
+      "image": "eas-spirits.jpg"
+    },
+    {
+      "id": "eas-beers",
+      "name": "Basembi · Hanson's · Goldberg",
+      "tagline": "Baridi. Halisi. Yetu.",
+      "taglineEn": "Ice-cold, brewed and bottled in Tanzania.",
+      "colors": ["#0C1F17", "#F4EAD5", "#F2B533"],
+      "icon": "droplet",
+      "cities": ["shinyanga"],
+      "ageRestricted": true,
+      "image": "eas-beers.jpg"
+    }
+  ]
+}

@@ -38,6 +38,7 @@ import {
   oneWay,
   poiKind,
   poiKindIndex,
+  poiSubtype,
   roadClass,
   roadClassIndex,
   roadWidth,
@@ -308,6 +309,37 @@ const main = async () => {
   }
 
   // ── 5. POIs ──────────────────────────────────────────────────────────────
+  // Each place gets a curb point on its nearest drivable road for a signpost and a stopping spot.
+  const SIGN_REACH = 60;
+  const curbHash = new SpatialHash<{ a: Vec2; b: Vec2; half: number }>(30);
+  for (const r of roads) {
+    if (!isDrivable(r.cls)) continue;
+    for (let i = 1; i < r.points.length; i++) {
+      const a = r.points[i - 1]!;
+      const b = r.points[i]!;
+      curbHash.insert(
+        { minX: Math.min(a[0], b[0]) - SIGN_REACH, minZ: Math.min(a[1], b[1]) - SIGN_REACH, maxX: Math.max(a[0], b[0]) + SIGN_REACH, maxZ: Math.max(a[1], b[1]) + SIGN_REACH },
+        { a, b, half: r.width / 2 },
+      );
+    }
+  }
+  const curbPoint = (p: Vec2): [number, number] | undefined => {
+    let best: Vec2 | undefined;
+    let bestD = SIGN_REACH;
+    for (const { a, b, half } of curbHash.query(p)) {
+      const dx = b[0] - a[0], dz = b[1] - a[1];
+      const len2 = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / len2));
+      const qx = a[0] + dx * t, qz = a[1] + dz * t;
+      const d = Math.hypot(p[0] - qx, p[1] - qz);
+      if (d >= bestD) continue;
+      bestD = d;
+      // Step off the carriageway toward the place, onto the verge.
+      const off = Math.min(d, half + 1.3);
+      best = d > 0.01 ? [qx + ((p[0] - qx) / d) * off, qz + ((p[1] - qz) / d) * off] : [qx, qz];
+    }
+    return best && vecToDm(best);
+  };
   const inBounds = ([x, z]: Vec2) => x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ;
   const pois: Poi[] = [];
   const addPoi = (tags: Tags | undefined, p: Vec2) => {
@@ -315,13 +347,28 @@ const main = async () => {
     const kind = poiKind(tags);
     if (!kind) return;
     const [x, z] = vecToDm(p);
-    pois.push({ k: poiKindIndex(kind), ...(tags.name ? { n: tags.name.trim() } : {}), x, z });
+    // Bus stops come as several OSM objects (stop, platform, pole); keep one per 25 m.
+    if (kind === "bus_stop" && pois.some((o) => o.k === poiKindIndex("bus_stop") && Math.hypot(o.x - x, o.z - z) < 250)) return;
+    const name = (tags.name ?? tags["name:sw"] ?? "").trim();
+    const brand = (tags.brand ?? (kind === "fuel" || kind === "bank" ? tags.operator : undefined))?.trim();
+    const subtype = poiSubtype(tags);
+    const curb = curbPoint(p);
+    pois.push({
+      k: poiKindIndex(kind),
+      ...(name ? { n: name } : {}),
+      ...(subtype ? { t: subtype } : {}),
+      ...(brand && brand !== name ? { b: brand } : {}),
+      x,
+      z,
+      ...(curb ? { r: curb } : {}),
+    });
   };
   for (const n of nodes.values()) addPoi(n.tags, pos.get(n.id)!);
   for (const way of ways.values()) {
     if (!way.tags || way.tags.highway) continue;
+    const t = way.tags;
     const ring = closedRing(way);
-    if (ring && (way.tags.amenity || way.tags.shop || way.tags.tourism)) addPoi(way.tags, centroid(ring));
+    if (ring && (t.amenity || t.shop || t.tourism || t.office || t.healthcare || t.craft || t.public_transport)) addPoi(t, centroid(ring));
   }
 
   // ── 6. Navigation graph ──────────────────────────────────────────────────
@@ -626,6 +673,16 @@ const main = async () => {
     chunkRefs.push({ key: chunk.key, cx: chunk.cx, cz: chunk.cz, bytes });
     totalBytes += bytes;
   }
+  // Stylized map for the city-select card: major roads normalized to 0..1000.
+  const size = bounds.maxX - bounds.minX;
+  const preview = roads
+    .filter((r) => roadClassIndex(r.cls) <= 3)
+    .map((r) => ({
+      c: roadClassIndex(r.cls),
+      p: simplify(r.points, 6).flatMap(([x, z]) => [Math.round(((x - bounds.minX) / size) * 1000), Math.round(((z - bounds.minZ) / size) * 1000)]),
+    }));
+  await fs.writeFile(path.join(outDir, "preview.json"), JSON.stringify(preview));
+
   const navJson = JSON.stringify(navGraph);
   const poiJson = JSON.stringify(pois);
   await fs.writeFile(path.join(outDir, "navgraph.json"), navJson);

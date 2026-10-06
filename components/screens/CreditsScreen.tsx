@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Map as MapIcon, Palette, Type } from "lucide-react";
+import { ExternalLink, Map as MapIcon, Music, Palette, Type } from "lucide-react";
 import manifest from "@/public/assets/MANIFEST.json";
 import { Card } from "@/components/ui";
 import { useT } from "@/i18n";
@@ -68,6 +68,15 @@ export function CreditsScreen() {
                 </ul>
               )}
             </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex gap-4">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-sun text-night">
+              <Music className="size-6" />
+            </span>
+            <p className="self-center text-cream/80">{t.credits.audio}</p>
           </div>
         </Card>
 

@@ -82,6 +82,9 @@ const LANDMARK_CLEARANCE: Record<string, number> = {
 };
 
 /** How many junctions get traffic lights in each city. */
+/** Chevrons to a place the rider picked on the map, and to a sheli. */
+const TRIP_COLOR = "#38BDF8";
+const FUEL_COLOR = "#FF5A4F";
 const LIGHTS: Record<CityId, number> = { kariakoo: 14, dodoma: 8, arusha: 8, mwanza: 8, mbeya: 6, tanga: 5, moshi: 5, shinyanga: 3 };
 
 export class Game {
@@ -149,7 +152,7 @@ export class Game {
     const p = usePlayer.getState();
     this.quality = useSettings.getState().quality;
     this.rain = new RainField(DENSITY.high.rain);
-    this.root.add(this.model.root, this.rain.mesh, this.headlight, this.headlight.target, this.guide.group, this.particles.points, this.ghost.model.root);
+    this.root.add(this.model.root, this.rain.mesh, this.headlight, this.headlight.target, this.guide.group, this.tripGuide.group, this.particles.points, this.ghost.model.root);
     this.stats = currentRideStats(p);
     this.bike.place(manifest.spawn.x, manifest.spawn.z, manifest.spawn.heading);
     this.bike.state.fuel = Math.min(p.fuel, this.stats.tank);
@@ -483,9 +486,12 @@ export class Game {
   private fuelNav = false;
   private fuelTarget: { x: number; z: number; name: string } | null = null;
   private fuelRouteAge = 0;
+  private pinRouteAge = 0;
+  /** Chevrons on the road for the rider's own trips (a place picked on the map, or a sheli); jobs have their own. */
+  private tripGuide = new RouteGuide(TRIP_COLOR, 1.25, 0.62);
 
   /** Shortest drive over the lane network from the rider to (x, z), as a flat [x, z, ...] polyline. */
-  private routeTo(x: number, z: number): Float32Array | null {
+  planRoute(x: number, z: number): Float32Array | null {
     const nav = this.nav;
     if (!nav) return null;
     const bike = this.bike.state;
@@ -507,6 +513,12 @@ export class Game {
     return new Float32Array(pts);
   }
 
+  /** The nearest point on a road to (x, z): where a tap on the map becomes a destination. */
+  snapToRoad(x: number, z: number) {
+    const n = this.nav?.nearestOnNetwork(x, z);
+    return n ? { x: n.x, z: n.z, distance: n.distance } : null;
+  }
+
   /** Petrol stations by distance from the rider. */
   private nearestFuel() {
     const s = this.bike.state;
@@ -516,6 +528,7 @@ export class Game {
   /** Turn directions to the nearest sheli on or off. Returns whether they're on. */
   toggleFuelNav(): boolean {
     this.fuelNav = !this.fuelNav && Boolean(this.nearestFuel());
+    if (this.fuelNav) this.setDestination(null);
     this.fuelTarget = null;
     navHud.fuelRoute = null;
     this.navTimer = 0;
@@ -526,16 +539,53 @@ export class Game {
     return this.fuelNav;
   }
 
-  /** Refresh the top-of-screen arrow: along the job route, or to a sheli when asked or when the tank runs low. */
+  /** Ride to a place picked on the map (or stop, with null): the arrow, the minimap and chevrons on the road lead there. */
+  setDestination(dest: { x: number; z: number; label: string } | null) {
+    navHud.pin = dest;
+    navHud.pinRoute = dest ? this.planRoute(dest.x, dest.z) : null;
+    this.pinRouteAge = 0;
+    if (dest) {
+      this.fuelNav = false;
+      navHud.fuelRoute = null;
+      this.tripGuide.setStop({ x: dest.x, z: dest.z, color: TRIP_COLOR });
+    } else this.tripGuide.setStop(null);
+    this.navTimer = 0;
+  }
+
+  /** Refresh the top-of-screen arrow: to the rider's own destination, along the job route, or to a sheli when asked or when the tank runs low. */
   private updateNav(dt: number) {
     this.navTimer -= dt;
     this.fuelRouteAge += dt;
+    this.pinRouteAge += dt;
+    const s = this.bike.state;
+    // Chevrons follow the rider every frame; the route itself is re-planned below.
+    const trip = navHud.pin ? navHud.pinRoute : this.fuelNav ? navHud.fuelRoute : null;
+    this.tripGuide.setColor(navHud.pin ? TRIP_COLOR : FUEL_COLOR);
+    this.tripGuide.update(dt, trip, s.x, s.z, 0);
     if (this.navTimer > 0) return;
     this.navTimer = 0.12;
-    const s = this.bike.state;
     const lowFuel = s.fuel / this.stats.tank < 0.2;
 
-    // A job's route takes priority, unless the rider asked for a sheli.
+    // A sheli the rider asked for comes first, then their own destination, then the job.
+    const pin = navHud.pin;
+    if (pin && !this.fuelNav) {
+      const dist = Math.hypot(pin.x - s.x, pin.z - s.z);
+      if (dist < 18) {
+        events.emit("toast", { text: fmt(currentDictionary().nav.arrived, { place: pin.label }), tone: "sky" });
+        this.setDestination(null);
+        navHud.mode = null;
+        return;
+      }
+      // Re-plan every few seconds so a missed turn gets a new way round.
+      if (this.pinRouteAge > 3 || !navHud.pinRoute) {
+        navHud.pinRoute = this.planRoute(pin.x, pin.z);
+        this.pinRouteAge = 0;
+      }
+      if (navHud.pinRoute) {
+        this.guideAlong("pin", navHud.pinRoute, pin.label, dist);
+        return;
+      }
+    }
     if (missionHud.active && missionHud.route && missionHud.route.length >= 4 && !this.fuelNav) {
       this.guideAlong("job", missionHud.route, missionHud.stopName, missionHud.distance);
       return;
@@ -550,7 +600,7 @@ export class Game {
       // Re-plan every few seconds (or when a nearer sheli comes up) so turns follow the rider.
       if (!this.fuelTarget || this.fuelTarget !== near || this.fuelRouteAge > 3 || !navHud.fuelRoute) {
         this.fuelTarget = near;
-        navHud.fuelRoute = this.routeTo(near.x, near.z);
+        navHud.fuelRoute = this.planRoute(near.x, near.z);
         this.fuelRouteAge = 0;
       }
       const dist = Math.hypot(near.x - s.x, near.z - s.z);
@@ -573,7 +623,7 @@ export class Game {
   }
 
   /** Point the arrow down the route and find the next turn. */
-  private guideAlong(mode: "job" | "fuel", route: Float32Array, label: string, distance: number) {
+  private guideAlong(mode: "job" | "fuel" | "pin", route: Float32Array, label: string, distance: number) {
     const s = this.bike.state;
     const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
     // Unwrapped against the last value so the arrow turns the short way.
@@ -1038,6 +1088,11 @@ export class Game {
       });
     }
     this.guide.dispose();
+    this.tripGuide.dispose();
+    navHud.pin = null;
+    navHud.pinRoute = null;
+    navHud.fuelRoute = null;
+    navHud.mode = null;
     this.rain.dispose();
     this.particles.dispose();
     this.ghost.dispose();

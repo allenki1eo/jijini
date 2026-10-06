@@ -18,7 +18,7 @@ export function ClockChip() {
   const label = env.night > 0.5 && env.weather === "sunny" ? t.life.night : t.life.weather[env.weather];
   return (
     <Chip icon={icon} className="tabular">
-      {clockText()} <span className="hidden text-cream/60 sm:inline">· {label}</span>
+      <span aria-label={`${clockText()} · ${label}`}>{clockText()}</span>
     </Chip>
   );
 }

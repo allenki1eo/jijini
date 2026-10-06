@@ -111,17 +111,17 @@ export function RideHud({ game, manifest, children, topCenter, topRight, rail, t
         the bar, then (on phones) the job card, then a row with the rider's stack on the left and the minimap rail on the right.
       */}
       <div className="safe-top safe-x absolute inset-x-0 top-0 flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2 sm:gap-3">
-          <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+        <div className="flex items-start justify-between gap-1.5 sm:gap-3">
+          <div className="pointer-events-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
             <IconButton label={t.ride.pause} icon={<Pause />} onClick={() => setPaused(true)} />
             <span className="hidden lg:inline-flex">
               <Chip icon={<MapPin className="text-coral" />}>{manifest.name}</Chip>
             </span>
             <ClockChip />
-            <RadioChip compact={narrow} />
+            <RadioChip compact={narrow || touch} />
           </div>
           {!narrow && <div className="flex min-w-0 flex-1 justify-center">{topCenter}</div>}
-          <div className="pointer-events-auto flex shrink-0 items-start gap-2">
+          <div className="pointer-events-auto flex shrink-0 items-start gap-1.5 sm:gap-2">
             {!touch && (
               <IconButton
                 label={t.ride.camera}

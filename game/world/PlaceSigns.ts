@@ -17,9 +17,10 @@ const BUS_STATION = POI_KINDS.indexOf("bus_station");
 /** Signs closer together than this collapse to the most important one. */
 const DECLUTTER = 9;
 const SIGN_HEIGHT = 3.3;
-const FADE_FAR = 190;
-const LABELS = 6;
-const LABEL_RANGE = 60;
+const FADE_FAR = 120;
+/** Only the couple of places right beside the rider get a name card; the rest are just badges. */
+const LABELS = 2;
+const LABEL_RANGE = 38;
 /** Main roads get a daladala stop at least this often when OSM has none mapped. */
 const SYNTH_STOP_SPACING = 320;
 

@@ -22,7 +22,7 @@ function Bar({ value, icon, tone, warn, label }: { value: number; icon: React.Re
 /**
  * The phone dash: one slim strip instead of the big dial, so it fits in the
  * top stack on a portrait screen. Speed and gear, the road's limit, the
- * signal ahead, and fuel/boost/damage bars.
+ * signal ahead, and fuel; boost and damage only when they matter.
  */
 export function CompactDash() {
   useHudTick(12);
@@ -47,8 +47,8 @@ export function CompactDash() {
       {hud.light && <span className="size-3.5 shrink-0 rounded-full" style={{ background: LIGHTS[hud.light], boxShadow: `0 0 8px ${LIGHTS[hud.light]}` }} aria-label={hud.light} />}
       <span className="flex flex-col gap-0.5">
         <Bar value={hud.fuel} icon={<Fuel />} tone="bg-forest-400" warn={hud.fuel < 0.15} label={t.ride.fuel} />
-        <Bar value={hud.boost} icon={<Zap />} tone="bg-sky" label={t.ride.boost} />
-        <Bar value={1 - hud.damage / 100} icon={<Wrench />} tone="bg-sun" warn={hud.damage > 70} label={t.ride.damage} />
+        {(hud.boosting || hud.boost < 0.98) && <Bar value={hud.boost} icon={<Zap />} tone="bg-sky" label={t.ride.boost} />}
+        {hud.damage > 25 && <Bar value={1 - hud.damage / 100} icon={<Wrench />} tone="bg-sun" warn={hud.damage > 70} label={t.ride.damage} />}
       </span>
     </div>
   );

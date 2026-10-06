@@ -1,9 +1,11 @@
 /**
  * In-world wayfinding: glowing chevrons painted along the route ahead of the
- * rider and a light beam over the current stop.
+ * rider and a light beam over the current stop. Jobs use the sun-yellow
+ * guide; the rider's own destination (picked on the map) and the drive to a
+ * sheli use a second guide in their own colour.
  */
 import * as THREE from "three";
-import { block, createInstancedMaterial, merge, part } from "@/game/world/meshKit";
+import { block, createInstancedMaterial, merge, part, setInstanceHex } from "@/game/world/meshKit";
 import type { StopKind } from "./types";
 
 const CHEVRONS = 18;
@@ -21,8 +23,8 @@ const STOP_COLORS: Record<StopKind, string> = {
 
 const chevronGeometry = () =>
   merge([
-    part(block(0.35, 0.04, 1.6, -0.45, 0, 0).rotateY(-0.7), "#FFC72C", { glow: true }),
-    part(block(0.35, 0.04, 1.6, 0.45, 0, 0).rotateY(0.7), "#FFC72C", { glow: true }),
+    part(block(0.35, 0.04, 1.6, -0.45, 0, 0).rotateY(-0.7), "#FFFFFF", { glow: true, tint: true }),
+    part(block(0.35, 0.04, 1.6, 0.45, 0, 0).rotateY(0.7), "#FFFFFF", { glow: true, tint: true }),
   ]);
 
 export class RouteGuide {
@@ -35,9 +37,16 @@ export class RouteGuide {
   private ringMaterial: THREE.MeshBasicMaterial;
   private dummy = new THREE.Object3D();
   private time = 0;
+  private color = "";
 
-  constructor() {
+  /** `size` scales the chevrons and `lift` raises them (the rider's own trips use bigger ones that float a touch higher, easy to follow at speed and on dirt tracks). */
+  constructor(
+    color = STOP_COLORS.pickup,
+    private readonly size = 0.75,
+    private readonly lift = 0.37,
+  ) {
     this.chevrons = new THREE.InstancedMesh(chevronGeometry(), this.material, CHEVRONS);
+    this.setColor(color);
     this.chevrons.count = 0;
     this.chevrons.frustumCulled = false;
     this.beamMaterial = new THREE.ShaderMaterial({
@@ -63,13 +72,22 @@ export class RouteGuide {
     this.setStop(null);
   }
 
-  setStop(stop: { x: number; z: number; kind: StopKind } | null) {
+  /** Chevron colour (the beam takes the stop's colour). */
+  setColor(hex: string) {
+    if (hex === this.color) return;
+    this.color = hex;
+    for (let i = 0; i < CHEVRONS; i++) setInstanceHex(this.chevrons, i, hex);
+    if (this.chevrons.instanceColor) this.chevrons.instanceColor.needsUpdate = true;
+  }
+
+  /** The beam and ring over a stop: a job stop's kind picks the colour, or pass one. */
+  setStop(stop: { x: number; z: number; kind?: StopKind; color?: string } | null) {
     this.beam.visible = this.ring.visible = Boolean(stop);
     if (!stop) {
       this.chevrons.count = 0;
       return;
     }
-    const color = new THREE.Color(STOP_COLORS[stop.kind]);
+    const color = new THREE.Color(stop.color ?? STOP_COLORS[stop.kind ?? "pickup"]);
     (this.beamMaterial.uniforms.uColor!.value as THREE.Color).copy(color);
     this.ringMaterial.color.copy(color);
     this.beam.position.set(stop.x, 0, stop.z);
@@ -110,10 +128,10 @@ export class RouteGuide {
       const dx = (bx - ax) / len, dz = (bz - az) / len;
       let t = carry;
       for (; t < len && count < CHEVRONS; t += SPACING) {
-        this.dummy.position.set(ax + dx * t, 0.37, az + dz * t);
+        this.dummy.position.set(ax + dx * t, this.lift + Math.sin(this.time * 3 - count * 0.5) * 0.04, az + dz * t);
         this.dummy.rotation.set(0, Math.atan2(-dx, -dz), 0);
         const pulse = 0.85 + 0.15 * Math.sin(this.time * 6 - count * 0.7);
-        this.dummy.scale.setScalar(pulse * 0.75);
+        this.dummy.scale.setScalar(pulse * this.size);
         this.dummy.updateMatrix();
         this.chevrons.setMatrixAt(count++, this.dummy.matrix);
       }

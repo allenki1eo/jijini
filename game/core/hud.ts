@@ -28,8 +28,8 @@ export type NavTurn = "straight" | "left" | "right" | "uturn" | "arrive";
 
 /** Turn-by-turn guidance for the arrow at the top of the screen, refreshed a few times a second. */
 export const navHud = {
-  /** "job": following the route to the current stop; "fuel": tank nearly empty, heading for the nearest sheli. */
-  mode: null as "job" | "fuel" | null,
+  /** "job": following the route to the current stop; "fuel": heading for the nearest sheli; "pin": a place the rider picked on the map. */
+  mode: null as "job" | "fuel" | "pin" | null,
   /** Where to steer, relative to the rider's heading (rad, + = right; unwrapped, so it can exceed ±π). */
   angle: 0,
   turn: "straight" as NavTurn,
@@ -42,4 +42,8 @@ export const navHud = {
   asked: false,
   /** The drive to the sheli, for the minimap. */
   fuelRoute: null as Float32Array | null,
+  /** The drive to the rider's own destination, for the minimap and the city map. */
+  pinRoute: null as Float32Array | null,
+  /** That destination, while one is set. */
+  pin: null as { x: number; z: number; label: string } | null,
 };

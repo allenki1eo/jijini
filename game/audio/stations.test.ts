@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { parseLiveStations, shouldStartStream, STATION_GROUPS } from "./stations";
+import { parseLiveStations, shouldStartStream, stationDial, STATION_GROUPS } from "./stations";
 
 test("parseLiveStations keeps named https streams and drops the rest", () => {
   const stations = parseLiveStations({
@@ -39,6 +39,12 @@ test("parseLiveStations accepts an empty or broken catalog", () => {
   assert.deepEqual(parseLiveStations(null), []);
   assert.deepEqual(parseLiveStations({}), []);
   assert.deepEqual(parseLiveStations({ live: {} }), []);
+});
+
+test("the ride dial is the live catalog and nothing else", () => {
+  const dial = stationDial(["live:tbc-taifa", "live:wasafi-fm"]);
+  assert.deepEqual(dial, ["live:tbc-taifa", "live:wasafi-fm", "off"]);
+  assert.equal(dial.includes("kijiweni") || dial.includes("bongo") || dial.includes("pwani"), false);
 });
 
 test("shouldStartStream holds a paused station but lets the listener choose another", () => {

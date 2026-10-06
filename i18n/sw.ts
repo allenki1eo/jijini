@@ -51,8 +51,6 @@ export const sw = {
     updateCta: "Onyesha upya",
     offline: "Huna mtandao — unacheza nje ya mtandao",
     city: "Jiji",
-    radio: "Redio",
-    radioHint: "Vituo vya Tanzania, moja kwa moja",
   },
   settings: {
     title: "Mipangilio",
@@ -535,7 +533,6 @@ export const sw = {
     off: "Redio imezimwa",
     change: "Badilisha stesheni (R)",
     liveData: "Redio ya moja kwa moja inatumia data (karibu MB 1 kwa dakika).",
-    liveDown: "{name} haipatikani sasa. Tunarudi Kijiweni FM.",
     title: "Redio",
     intro: "Sikiliza vituo vya Tanzania moja kwa moja. Gusa kituo kuanza.",
     groups: { all: "Vyote", national: "Kitaifa", dar: "Dar es Salaam", regional: "Mikoa", religious: "Dini" },

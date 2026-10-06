@@ -1,6 +1,6 @@
 # Live radio
 
-Besides its three built-in stations (Kijiweni FM, Bongo Vibes, Pwani Taarab), BodaGo plays **real Tanzanian stations**. They are on the Redio screen (from the main menu) and on the boda phone while you ride. On the ride HUD they also come up on the radio button (or the R key) after the built-in ones, marked **LIVE**.
+While you ride, the radio chip (or the R key) and the Redio tab on the boda phone play **real Tanzanian stations**. Both controls share one stream: the station you hear is the one stored in settings, and only one audio element is open. The catalog is `stations.json` in this folder. There is no separate radio page.
 
 The listener's browser fetches the audio directly from the station. BodaGo does not proxy or rebroadcast it.
 
@@ -31,22 +31,22 @@ The listener's browser fetches the audio directly from the station. BodaGo does 
 | Field | Notes |
 |---|---|
 | `id` | Stable slug. The app stores `live:<id>` in settings. |
-| `name` | Shown on the list, the radio chip and the lock screen. |
+| `name` | Shown on the radio chip, the phone list and the lock screen. |
 | `freq` | Shown next to the name. Use `LIVE` when there is no frequency. |
 | `city` | City or town, when we know it. |
 | `genre` | One of `news`, `talk`, `bongo`, `hits`, `gospel`, `sports`, `music`, `community`. |
 | `group` | One of `national`, `dar`, `regional`, `religious`. |
 | `url` | Must start with `https://`. MP3 and AAC play everywhere; HLS (`.m3u8`) plays on Safari and recent Chrome on Android. |
-| `color` | Accent for the station's monogram. There is no logo file; the monogram is the fallback. |
+| `color` | Accent for the station's radio icon. There is no logo file. |
 | `source` | Where the stream URL came from, and how it was verified. |
 
 ## How it behaves
 
-- One station plays at a time. Play, pause and stop are on the station list. Connecting shows a spinner. If you are offline, or the stream will not start, the radio says so instead of spinning forever.
-- Live audio follows the music volume (a quiet floor is used on the Redio screen if music is muted). Stop leaves the station selected but does not keep the connection open. Switching station, turning the radio off, or leaving a ride drops the stream.
+- One station plays at a time. Tap the ride's radio chip, or press R, to move to the next station, then to Off. Open the boda phone, Redio tab, and tap a station to tune that one. The chip always shows the name of whatever is selected.
+- Pause and stop are on the chip. They control the same stream the phone started. Connecting shows a spinner and "Inaunganisha…". If you are offline, or the stream will not start, the chip says so and stays on that station.
+- Live audio follows master volume times music volume. Stop leaves the station selected but closes the connection. Turning the radio off, or leaving a ride, drops the stream.
 - The stream keeps playing when the screen locks. The system media controls show the station name, frequency and city (Media Session), with play, pause and stop. The ride's engine sounds still pause in the background.
 - The first time a rider tunes in during a ride, they're told live radio uses mobile data (about 1 MB a minute at 128 kbps).
-- During a ride, if a stream dies, the radio says so and goes back to Kijiweni FM. On the Redio screen it stays on that station and asks you to try again. The built-in stations always work offline.
 - The service worker never caches streams.
 
 ## Left out on purpose

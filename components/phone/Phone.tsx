@@ -263,7 +263,7 @@ export function PhonePanel({ game }: { game: Game }) {
                 </div>
               )}
 
-              {tab === "radio" && <StationBrowser variant="phone" />}
+              {tab === "radio" && <StationBrowser />}
 
               {tab === "hustles" && (
                 <div className="flex flex-col gap-2">

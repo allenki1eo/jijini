@@ -16,6 +16,7 @@ import { currentDictionary, fmt, formatTzs } from "@/i18n";
 import { useSettings } from "@/stores/settings";
 import { audio, type MusicStyle } from "./AudioEngine";
 import { liveStations } from "./LiveRadio";
+import { stationDial } from "./stations";
 import { playVoice } from "./voices";
 
 export type StationId = "kijiweni" | "bongo" | "pwani";
@@ -42,11 +43,14 @@ export class Radio {
     private readonly hotspots: string[],
   ) {}
 
-  /** Next station (or off), as the HUD button and the R key do. */
+  /** Next live station (or off), as the HUD button and the R key do. */
   static cycle() {
+    const ids = liveStations.map((st) => st.id);
+    if (!ids.length) return;
     const s = useSettings.getState();
-    const order = [...STATIONS.map((st) => st.id as string), ...liveStations.map((st) => st.id), "off"];
-    s.set("radio", order[(order.indexOf(s.radio) + 1) % order.length]!);
+    const order = stationDial(ids);
+    const at = order.indexOf(s.radio);
+    s.set("radio", order[(at + 1) % order.length]!);
   }
 
   update(dt: number) {

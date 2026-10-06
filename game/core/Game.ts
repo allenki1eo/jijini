@@ -27,7 +27,7 @@ import { buildHeroBillboard, loadAds } from "@/game/world/adAtlas";
 import { RoadBanners } from "@/game/world/RoadBanners";
 import { Markets } from "@/game/world/Markets";
 import { Radio } from "@/game/audio/Radio";
-import { liveStations, livePlayer, loadLiveStations } from "@/game/audio/LiveRadio";
+import { liveStations, livePlayer, loadLiveStations, useLivePlayback } from "@/game/audio/LiveRadio";
 import { fetchJson } from "@/lib/fetchJson";
 import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
 import { Particles } from "@/game/world/Particles";
@@ -437,10 +437,11 @@ export class Game {
       }
     };
     void loadLiveStations();
-    // A live stream that won't play (offline, down, blocked): back to the house station.
+    // A live stream that won't play: say so, and leave the rider on that station.
     livePlayer.onError = (station) => {
-      events.emit("toast", { text: fmt(currentDictionary().radio.liveDown, { name: station.name }), tone: "coral" });
-      useSettings.getState().set("radio", "kijiweni");
+      const t = currentDictionary().radio;
+      const text = useLivePlayback.getState().problem === "offline" ? t.offline : fmt(t.unavailable, { name: station.name });
+      events.emit("toast", { text, tone: "coral" });
     };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
@@ -491,7 +492,7 @@ export class Game {
 
   private liveNoticeShown = false;
 
-  /** Start whichever station is selected: the procedural ones through Web Audio, live ones as a stream. */
+  /** Play the tuned live station, or silence the radio when it is off. */
   private applyRadio() {
     const s = useSettings.getState();
     const live = liveStations.find((st) => st.id === s.radio);
@@ -504,7 +505,7 @@ export class Game {
       }
     } else {
       livePlayer.stop();
-      audio.startMusic();
+      audio.stopMusic();
     }
   }
 

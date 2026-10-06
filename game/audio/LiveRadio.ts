@@ -5,6 +5,7 @@
  * the Media Session API shows the station on the system controls.
  */
 import { create } from "zustand";
+import { useSettings } from "@/stores/settings";
 import { parseLiveStations, shouldStartStream, type LiveStation } from "./stations";
 
 export type { LiveStation };
@@ -31,6 +32,9 @@ export const loadLiveStations = () =>
     .then((r) => (r.ok ? (r.json() as Promise<unknown>) : { live: [] }))
     .then((raw) => {
       liveStations = parseLiveStations(raw);
+      const tuned = useSettings.getState().radio;
+      const known = tuned === "off" || liveStations.some((s) => s.id === tuned);
+      if (!known && liveStations[0]) useSettings.getState().set("radio", liveStations[0].id);
       useLiveCatalog.setState((s) => ({ ready: true, revision: s.revision + 1 }));
       return liveStations;
     })

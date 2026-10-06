@@ -52,8 +52,6 @@ export const en: Dictionary = {
     updateCta: "Refresh",
     offline: "You're offline — playing from cache",
     city: "City",
-    radio: "Radio",
-    radioHint: "Tanzanian stations, live",
   },
   settings: {
     title: "Settings",
@@ -536,7 +534,6 @@ export const en: Dictionary = {
     off: "Radio off",
     change: "Change station (R)",
     liveData: "Live radio uses mobile data (about 1 MB a minute).",
-    liveDown: "{name} isn't available right now. Back to Kijiweni FM.",
     title: "Radio",
     intro: "Listen to Tanzanian stations live. Tap a station to start.",
     groups: { all: "All", national: "National", dar: "Dar es Salaam", regional: "Regional", religious: "Religious" },

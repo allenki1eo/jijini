@@ -34,6 +34,9 @@ const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
 const oneOf = <T extends string>(value: string, allowed: readonly T[]): T | undefined =>
   (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
 
+/** The ride's radio dial: every live station, then off. Placeholder stations are not on it. */
+export const stationDial = (liveIds: readonly string[]): string[] => [...liveIds, "off"];
+
 /**
  * A ride that is merely following the tuned station must not restart audio
  * the listener has paused or stopped. Choosing a station (or pressing play)

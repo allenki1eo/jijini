@@ -2,7 +2,7 @@
   "format": 1,
   "id": "dodoma",
   "name": "Dodoma",
-  "generatedAt": "2026-10-06T16:07:59.535Z",
+  "generatedAt": "2026-10-06T16:37:13.506Z",
   "source": "osm-api",
   "origin": {
     "lat": -6.1731,
@@ -409,11 +409,35 @@
   "stats": {
     "buildings": 3201,
     "roads": 366,
-    "pois": 327,
+    "pois": 330,
     "navNodes": 559,
     "navEdges": 790,
-    "trees": 3151
+    "trees": 3151,
+    "roadKm": 83.8,
+    "shopfronts": 750,
+    "places": {
+      "hospital": 3,
+      "clinic": 8,
+      "pharmacy": 12,
+      "school": 10,
+      "market": 11,
+      "fuel": 6,
+      "bus_station": 4,
+      "place_of_worship": 10,
+      "bank": 17,
+      "restaurant": 21,
+      "bar": 21,
+      "shop": 88,
+      "hotel": 50,
+      "police": 2,
+      "office": 36,
+      "other": 10,
+      "bus_stop": 13,
+      "garage": 4,
+      "playground": 1,
+      "pitch": 3
+    }
   },
-  "totalBytes": 642451,
+  "totalBytes": 642538,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

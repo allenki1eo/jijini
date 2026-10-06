@@ -10,9 +10,11 @@ import { __iconData as bed } from "lucide-react/dist/esm/icons/bed-double.mjs";
 import { __iconData as briefcase } from "lucide-react/dist/esm/icons/briefcase.mjs";
 import { __iconData as bus } from "lucide-react/dist/esm/icons/bus.mjs";
 import { __iconData as busFront } from "lucide-react/dist/esm/icons/bus-front.mjs";
+import { __iconData as church } from "lucide-react/dist/esm/icons/church.mjs";
+import { __iconData as ferris } from "lucide-react/dist/esm/icons/ferris-wheel.mjs";
 import { __iconData as fuel } from "lucide-react/dist/esm/icons/fuel.mjs";
+import { __iconData as goal } from "lucide-react/dist/esm/icons/goal.mjs";
 import { __iconData as hospital } from "lucide-react/dist/esm/icons/hospital.mjs";
-import { __iconData as landmark } from "lucide-react/dist/esm/icons/landmark.mjs";
 import { __iconData as mapPin } from "lucide-react/dist/esm/icons/map-pin.mjs";
 import { __iconData as pill } from "lucide-react/dist/esm/icons/pill.mjs";
 import { __iconData as school } from "lucide-react/dist/esm/icons/school.mjs";
@@ -41,7 +43,7 @@ export const PLACE_STYLE: Record<PoiKind, PlaceStyle> = {
   market: { color: "#F59E0B", icon: basket.node, rank: 3 },
   fuel: { color: "#00A3DD", icon: fuel.node, rank: 3 },
   bus_station: { color: "#E0A800", icon: bus.node, rank: 3 },
-  place_of_worship: { color: "#7C3AED", icon: landmark.node, rank: 1 },
+  place_of_worship: { color: "#7C3AED", icon: church.node, rank: 2 },
   bank: { color: "#059669", icon: banknote.node, rank: 2 },
   restaurant: { color: "#EA580C", icon: utensils.node, rank: 1 },
   bar: { color: "#B45309", icon: beer.node, rank: 1 },
@@ -52,6 +54,8 @@ export const PLACE_STYLE: Record<PoiKind, PlaceStyle> = {
   other: { color: "#64748B", icon: mapPin.node, rank: -1 },
   bus_stop: { color: "#E0A800", icon: busFront.node, rank: 2 },
   garage: { color: "#57534E", icon: wrench.node, rank: 0 },
+  playground: { color: "#F97316", icon: ferris.node, rank: 1 },
+  pitch: { color: "#15803D", icon: goal.node, rank: 1 },
 };
 
 /** Atlas layout: one square cell per POI kind, in POI_KINDS order. */

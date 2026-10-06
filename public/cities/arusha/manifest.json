@@ -2,7 +2,7 @@
   "format": 1,
   "id": "arusha",
   "name": "Arusha",
-  "generatedAt": "2026-10-06T16:08:01.199Z",
+  "generatedAt": "2026-10-06T16:37:15.207Z",
   "source": "osm-api",
   "origin": {
     "lat": -3.37,
@@ -409,11 +409,34 @@
   "stats": {
     "buildings": 1134,
     "roads": 297,
-    "pois": 242,
+    "pois": 245,
     "navNodes": 475,
     "navEdges": 584,
-    "trees": 4682
+    "trees": 4682,
+    "roadKm": 47.2,
+    "shopfronts": 750,
+    "places": {
+      "hospital": 10,
+      "clinic": 1,
+      "pharmacy": 4,
+      "school": 12,
+      "market": 2,
+      "fuel": 4,
+      "bus_station": 1,
+      "place_of_worship": 7,
+      "bank": 20,
+      "restaurant": 32,
+      "bar": 7,
+      "shop": 28,
+      "hotel": 26,
+      "police": 2,
+      "office": 34,
+      "other": 44,
+      "bus_stop": 2,
+      "garage": 6,
+      "pitch": 3
+    }
   },
-  "totalBytes": 362775,
+  "totalBytes": 363016,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

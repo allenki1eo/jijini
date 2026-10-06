@@ -2,7 +2,7 @@
   "format": 1,
   "id": "shinyanga",
   "name": "Shinyanga",
-  "generatedAt": "2026-10-06T16:07:58.612Z",
+  "generatedAt": "2026-10-06T16:37:12.521Z",
   "source": "overpass",
   "origin": {
     "lat": -3.6639,
@@ -409,11 +409,33 @@
   "stats": {
     "buildings": 2580,
     "roads": 275,
-    "pois": 185,
+    "pois": 189,
     "navNodes": 519,
     "navEdges": 738,
-    "trees": 1882
+    "trees": 1882,
+    "roadKm": 75.2,
+    "shopfronts": 750,
+    "places": {
+      "hospital": 4,
+      "clinic": 3,
+      "pharmacy": 10,
+      "school": 24,
+      "market": 8,
+      "fuel": 5,
+      "bus_station": 6,
+      "place_of_worship": 15,
+      "bank": 11,
+      "restaurant": 6,
+      "bar": 13,
+      "shop": 31,
+      "hotel": 23,
+      "office": 15,
+      "other": 9,
+      "bus_stop": 1,
+      "garage": 1,
+      "pitch": 4
+    }
   },
-  "totalBytes": 478032,
+  "totalBytes": 478123,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

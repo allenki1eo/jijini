@@ -427,7 +427,16 @@ const main = async () => {
   };
   const inBounds = ([x, z]: Vec2) => x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ;
   const pois: Poi[] = [];
-  const addPoi = (tags: Tags | undefined, p: Vec2) => {
+  /** A pitch's long axis (degrees, for local +z) and size, from its mapped outline. */
+  const pitchShape = (ring: Vec2[]): Pick<Poi, "a" | "s"> => {
+    const [c0, c1, c2] = orientedBox(ring).corners;
+    if (!c0 || !c1 || !c2) return {};
+    const e1: Vec2 = [c1[0] - c0[0], c1[1] - c0[1]], e2: Vec2 = [c2[0] - c1[0], c2[1] - c1[1]];
+    const l1 = Math.hypot(...e1), l2 = Math.hypot(...e2);
+    const long = l1 >= l2 ? e1 : e2;
+    return { a: Math.round((Math.atan2(long[0], long[1]) * 180) / Math.PI), s: [Math.round(Math.min(l1, l2)), Math.round(Math.max(l1, l2))] };
+  };
+  const addPoi = (tags: Tags | undefined, p: Vec2, ring?: Vec2[]) => {
     if (!tags || !inBounds(p)) return;
     const kind = poiKind(tags);
     if (!kind) return;
@@ -443,6 +452,7 @@ const main = async () => {
       ...(name ? { n: name } : {}),
       ...(subtype ? { t: subtype } : {}),
       ...(brand && brand !== name ? { b: brand } : {}),
+      ...(kind === "pitch" && ring ? pitchShape(ring) : {}),
       x,
       z,
       ...(curb ? { r: curb } : {}),
@@ -453,7 +463,7 @@ const main = async () => {
     if (!way.tags || way.tags.highway) continue;
     const t = way.tags;
     const ring = closedRing(way);
-    if (ring && (t.amenity || t.shop || t.tourism || t.office || t.healthcare || t.craft || t.public_transport)) addPoi(t, centroid(ring));
+    if (ring && (t.amenity || t.shop || t.tourism || t.office || t.healthcare || t.craft || t.public_transport || t.leisure === "playground" || t.leisure === "pitch")) addPoi(t, centroid(ring), ring);
   }
 
   // ── 5b. Street frontage ─────────────────────────────────────────────────
@@ -515,11 +525,17 @@ const main = async () => {
     const clearOfRoads = (p: Vec2) => segHash.query(p).every(({ a, b, half }) => distToSegment(p, a, b) > half + 1.2);
     const inBuilding = (p: Vec2) => bHash.query(p).some((i) => pointInRing(p, buildings[i]!.outer));
     const inWater = (p: Vec2) => waterAreas.some((w) => pointInRing(p, w.outer));
+    // No shop rows across school grounds, pitches, parks or cemeteries, or in front of churches, mosques, schools and the like.
+    const OPEN = new Set(["institution", "pitch", "cemetery", "grass"].map((k) => AREA_KINDS.indexOf(k as (typeof AREA_KINDS)[number])));
+    const openAreas = areas.filter((a) => OPEN.has(a.kind));
+    const CIVIC = new Set(["school", "place_of_worship", "hospital", "police", "playground", "pitch", "clinic"].map((k) => POI_KINDS.indexOf(k as (typeof POI_KINDS)[number])));
+    const civic = pois.filter((p) => CIVIC.has(p.k)).map((p) => ({ x: p.x / 10, z: p.z / 10, r: p.s ? p.s[1] / 2 + 6 : 22 }));
+    const inOpenGround = (p: Vec2) => openAreas.some((a) => pointInRing(p, a.outer)) || civic.some((c) => Math.hypot(c.x - p[0], c.z - p[1]) < c.r);
     const fits = (rect: Vec2[]) => {
       const c: Vec2 = [(rect[0]![0] + rect[2]![0]) / 2, (rect[0]![1] + rect[2]![1]) / 2];
       const probes: Vec2[] = [...rect, c, ...rect.map((p, i): Vec2 => [(p[0] + rect[(i + 1) % 4]![0]) / 2, (p[1] + rect[(i + 1) % 4]![1]) / 2])];
       if (!probes.every(inBounds)) return false;
-      if (probes.some(inBuilding) || !probes.every(clearOfRoads) || inWater(c)) return false;
+      if (probes.some(inBuilding) || !probes.every(clearOfRoads) || inWater(c) || inOpenGround(c)) return false;
       // A building corner poking into the shop, or another shop overlapping it.
       for (const i of bHash.query(c)) if (buildings[i]!.outer.some((v) => pointInRing(v, rect))) return false;
       for (const other of placed.query(c)) if (other.some((v) => pointInRing(v, rect)) || rect.some((v) => pointInRing(v, other))) return false;
@@ -935,6 +951,9 @@ const main = async () => {
       navNodes: navGraph.nodes.length / 2,
       navEdges: navGraph.edges.length,
       trees: treeCount,
+      roadKm: Math.round(navGraph.edges.reduce((sum, e) => sum + e.l, 0) / 10 / 100) / 10,
+      shopfronts: frontage.shops.length / FRONTAGE_STRIDE,
+      places: Object.fromEntries(POI_KINDS.map((k, i) => [k, pois.filter((p) => p.k === i).length]).filter(([, n]) => (n as number) > 0)),
     },
     totalBytes,
     attribution: ATTRIBUTION,

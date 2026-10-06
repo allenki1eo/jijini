@@ -15,7 +15,7 @@ import { GhostRider } from "@/game/vehicles/GhostRider";
 import { streamFocus } from "@/game/world/focus";
 import type { CityManifest } from "@/game/world/format";
 import { WorldIndex } from "@/game/world/WorldIndex";
-import { clockText, env, updateEnvironment } from "@/game/systems/environment";
+import { clockText, env, setRealTime, updateEnvironment } from "@/game/systems/environment";
 import { Checkpoints } from "@/game/traffic/Checkpoints";
 import { loadNavNetwork, type NavNetwork } from "@/game/traffic/NavNetwork";
 import { Pedestrians } from "@/game/traffic/Pedestrians";
@@ -34,6 +34,8 @@ import { Particles } from "@/game/world/Particles";
 import { buildLandmark } from "@/game/world/landmarks";
 import { FuelStations } from "@/game/world/FuelStations";
 import { Frontage } from "@/game/world/Frontage";
+import { Civic } from "@/game/world/Civic";
+import { attachTelemetry } from "@/lib/telemetry";
 import { makeProjector } from "@/game/world/projection";
 import { MissionGenerator } from "@/game/missions/generator";
 import { MissionRunner, missionHud, type TalkOption } from "@/game/missions/MissionRunner";
@@ -106,6 +108,7 @@ export class Game {
   private markets: Markets | null = null;
   private fuelStations: FuelStations | null = null;
   private frontage: Frontage | null = null;
+  private civic: Civic | null = null;
   private radio: Radio | null = null;
   private disposeAds: (() => void) | null = null;
   private landmarkObjects: THREE.Object3D[] = [];
@@ -184,11 +187,20 @@ export class Game {
   async start() {
     const detachInputs = attachInputs();
     const detachProgression = attachProgression();
+    // Anonymous counts for /stats: kilometres come off the bike's odometer since the last report.
+    let reportedKm = 0;
+    const detachTelemetry = attachTelemetry(this.cityId, () => {
+      const total = this.bike.state.odometer / 1000 + this.telemetryKm;
+      const km = Math.max(0, total - reportedKm);
+      reportedKm = total;
+      return km;
+    });
     const detachAudio = this.attachAudio();
     this.detach = () => {
       detachInputs();
       detachProgression();
       detachAudio();
+      detachTelemetry();
     };
     const [nav, mapped, frontage] = await Promise.all([
       loadNavNetwork(this.baseUrl),
@@ -296,6 +308,11 @@ export class Game {
       this.landmarkObjects.push(hero.object);
       keepOut.push({ x: spot.x, z: spot.z, r: 9 });
     }
+    // Schools, churches and mosques, pitches and playgrounds.
+    this.civic = new Civic(pois);
+    this.root.add(this.civic.group);
+    if (this.civic.walls.length) this.index.addChunk("civic", new Float32Array(this.civic.walls), new Float32Array());
+    keepOut.push(...this.civic.keepOut);
     // Rows of dukas along streets the map left bare, so riding feels like a real town.
     if (frontage) {
       this.frontage = new Frontage(frontage, keepOut);
@@ -421,6 +438,8 @@ export class Game {
   }
 
   private navTimer = 0;
+  /** Kilometres already moved off the odometer into the save (telemetry adds the live odometer on top). */
+  private telemetryKm = 0;
   /** The rider asked for directions to the nearest sheli ("Tafuta sheli"). */
   private fuelNav = false;
   private fuelTarget: { x: number; z: number; name: string } | null = null;
@@ -641,7 +660,9 @@ export class Game {
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
     document.addEventListener("visibilitychange", onVisibility);
+    setRealTime(useSettings.getState().realClock);
     const unsubSettings = useSettings.subscribe((s) => {
+      setRealTime(s.realClock);
       audio.setVolumes(s.masterVolume, s.musicVolume, s.sfxVolume);
       if (s.musicVolume <= 0 || s.radio === "off") {
         audio.stopMusic();
@@ -744,7 +765,8 @@ export class Game {
     this.obstacles.length = 0;
     this.peds?.obstacles(this.obstacles);
     this.traffic?.update(dt, this.bike, this.stats, this.obstacles);
-    this.peds?.update(dt, this.bike, this.stats);
+    this.peds?.update(dt, this.bike, this.stats, this.traffic ?? undefined);
+    this.civic?.update(dt);
     const player = usePlayer.getState();
     const licence = { valid: this.licenceHours > 0, hesabu: HESABU[this.cityId] };
     const fine = (amount: number) => player.spend(Math.min(usePlayer.getState().wallet, amount));
@@ -931,6 +953,7 @@ export class Game {
     }
     if (s.odometer > 0) {
       player.bumpStat("distanceKm", s.odometer / 1000);
+      this.telemetryKm += s.odometer / 1000;
       s.odometer = 0;
     }
   }
@@ -952,6 +975,7 @@ export class Game {
     this.markets?.dispose();
     this.fuelStations?.dispose();
     this.frontage?.dispose();
+    this.civic?.dispose();
     this.disposeAds?.();
     for (const o of this.landmarkObjects) {
       o.traverse((child) => {

@@ -2,7 +2,7 @@
   "format": 1,
   "id": "tanga",
   "name": "Tanga",
-  "generatedAt": "2026-10-06T16:08:02.067Z",
+  "generatedAt": "2026-10-06T16:37:16.105Z",
   "source": "overpass",
   "origin": {
     "lat": -5.0705,
@@ -409,11 +409,34 @@
   "stats": {
     "buildings": 4266,
     "roads": 215,
-    "pois": 805,
+    "pois": 807,
     "navNodes": 388,
     "navEdges": 561,
-    "trees": 2355
+    "trees": 2355,
+    "roadKm": 55.6,
+    "shopfronts": 750,
+    "places": {
+      "hospital": 7,
+      "clinic": 5,
+      "pharmacy": 15,
+      "school": 30,
+      "market": 7,
+      "fuel": 10,
+      "bus_station": 3,
+      "place_of_worship": 15,
+      "bank": 17,
+      "restaurant": 67,
+      "bar": 7,
+      "shop": 439,
+      "hotel": 41,
+      "police": 1,
+      "office": 84,
+      "other": 50,
+      "bus_stop": 1,
+      "garage": 6,
+      "pitch": 2
+    }
   },
-  "totalBytes": 756734,
+  "totalBytes": 756964,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

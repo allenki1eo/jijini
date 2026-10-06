@@ -195,6 +195,26 @@ export function Minimap({ game }: { game: Game }) {
       }
       ctx.restore();
 
+      // Compass: true north (map −z) on the rim, so the map's turn with the rider stays readable.
+      {
+        const [nx, ny] = tx(b.x, b.z - 1000);
+        const dx = nx - SIZE / 2, dy = ny - SIZE / 2;
+        const d = Math.hypot(dx, dy) || 1;
+        const cx = SIZE / 2 + (dx / d) * (SIZE / 2 - 10), cy = SIZE / 2 + (dy / d) * (SIZE / 2 - 10);
+        ctx.fillStyle = "#10131A";
+        ctx.strokeStyle = "#FF5A4F";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#FFF6E5";
+        ctx.font = "800 10px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("N", cx, cy + 0.5);
+      }
+
       // Rider arrow.
       ctx.fillStyle = "#FFC72C";
       ctx.strokeStyle = "#10131A";

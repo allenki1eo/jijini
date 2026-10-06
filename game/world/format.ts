@@ -141,7 +141,19 @@ export interface CityManifest {
   chunkSize: number;
   chunks: ChunkRef[];
   spawn: { x: number; z: number; heading: number };
-  stats: { buildings: number; roads: number; pois: number; navNodes: number; navEdges: number; trees: number };
+  stats: {
+    buildings: number;
+    roads: number;
+    pois: number;
+    navNodes: number;
+    navEdges: number;
+    trees: number;
+    /** Kilometres of drivable road (newer bakes). */
+    roadKm?: number;
+    /** Generated shopfronts and mapped places by kind (newer bakes). */
+    shopfronts?: number;
+    places?: Partial<Record<PoiKind, number>>;
+  };
   totalBytes: number;
   attribution: string;
 }
@@ -189,6 +201,8 @@ export const POI_KINDS = [
   // Appended later; keep existing indices stable.
   "bus_stop",
   "garage",
+  "playground",
+  "pitch",
 ] as const;
 export type PoiKind = (typeof POI_KINDS)[number];
 
@@ -200,6 +214,10 @@ export interface Poi {
   t?: string;
   /** Brand or operator (fuel stations, banks, supermarkets). */
   b?: string;
+  /** Long-axis direction in degrees (sports pitches mapped as areas): local +z runs along it. */
+  a?: number;
+  /** Width and length in metres (sports pitches mapped as areas). */
+  s?: [number, number];
   x: number;
   z: number;
   /** Curb point (dm) on the nearest drivable road, where the place's signpost stands. */

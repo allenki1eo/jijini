@@ -27,6 +27,10 @@ export interface SettingsState {
   radio: string;
   /** Answer to "are you 18 or over?" (null = not asked yet). Gates alcohol adverts. */
   adult: boolean | null;
+  /** Follow the device's real local time (morning is morning), or run the fast game clock. */
+  realClock: boolean;
+  /** Send anonymous play counts (city, jobs, km) for the public /stats page. */
+  shareStats: boolean;
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 
@@ -49,6 +53,8 @@ export const useSettings = create<SettingsState>()(
       tierDetected: false,
       radio: "kijiweni",
       adult: null,
+      realClock: true,
+      shareStats: true,
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
     }),
     {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Download, Gamepad2, Gauge, Hand, Info, Languages, Maximize, Smartphone, Sparkles, Trash2, Upload, Vibrate, Volume2, ZoomIn, Wine } from "lucide-react";
+import { BarChart3, Camera, Clock, Download, Gamepad2, Gauge, Hand, Info, Languages, Maximize, Smartphone, Sparkles, Trash2, Upload, Vibrate, Volume2, ZoomIn, Wine } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 import { Button, Card, Segmented, Slider, Toggle } from "@/components/ui";
@@ -121,6 +121,12 @@ export function SettingsScreen() {
             </Row>
             <Row icon={<Sparkles />} title={t.settings.reducedMotion} hint={t.settings.reducedMotionHint}>
               <Toggle label={t.settings.reducedMotion} checked={s.reducedMotion} onChange={(v) => s.set("reducedMotion", v)} />
+            </Row>
+            <Row icon={<BarChart3 />} title={t.settings.shareStats} hint={t.settings.shareStatsHint}>
+              <Toggle label={t.settings.shareStats} checked={s.shareStats} onChange={(v) => s.set("shareStats", v)} />
+            </Row>
+            <Row icon={<Clock />} title={t.settings.realClock} hint={t.settings.realClockHint}>
+              <Toggle label={t.settings.realClock} checked={s.realClock} onChange={(v) => s.set("realClock", v)} />
             </Row>
             <Row icon={<Wine />} title={t.settings.adultAds} hint={t.settings.adultAdsHint}>
               <Toggle label={t.settings.adultAds} checked={s.adult === true} onChange={(v) => s.set("adult", v)} />

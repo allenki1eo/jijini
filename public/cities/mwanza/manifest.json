@@ -2,7 +2,7 @@
   "format": 1,
   "id": "mwanza",
   "name": "Mwanza",
-  "generatedAt": "2026-10-06T16:08:24.553Z",
+  "generatedAt": "2026-10-06T16:37:39.735Z",
   "source": "overpass",
   "origin": {
     "lat": -2.5164,
@@ -409,11 +409,35 @@
   "stats": {
     "buildings": 2516,
     "roads": 368,
-    "pois": 2755,
+    "pois": 2762,
     "navNodes": 487,
     "navEdges": 609,
-    "trees": 2461
+    "trees": 2461,
+    "roadKm": 47.8,
+    "shopfronts": 1100,
+    "places": {
+      "hospital": 19,
+      "clinic": 17,
+      "pharmacy": 43,
+      "school": 44,
+      "market": 48,
+      "fuel": 10,
+      "bus_station": 5,
+      "place_of_worship": 17,
+      "bank": 52,
+      "restaurant": 107,
+      "bar": 22,
+      "shop": 2015,
+      "hotel": 45,
+      "police": 5,
+      "office": 87,
+      "other": 112,
+      "bus_stop": 10,
+      "garage": 97,
+      "playground": 1,
+      "pitch": 6
+    }
   },
-  "totalBytes": 646570,
+  "totalBytes": 646989,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

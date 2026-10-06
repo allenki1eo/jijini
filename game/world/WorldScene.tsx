@@ -8,6 +8,7 @@ import { CameraRig } from "./CameraRig";
 import { CityChunks } from "./CityChunks";
 import { ChunkGridOverlay, NavGraphOverlay } from "./DebugOverlays";
 import { EnvironmentRig } from "./EnvironmentRig";
+import { FpsGovernor } from "./FpsGovernor";
 import type { CityManifest } from "./format";
 import { SkyDome } from "./SkyDome";
 import { RideRig } from "./RideRig";
@@ -39,6 +40,7 @@ export function WorldScene({ cityId, manifest, baseUrl, preset, game }: WorldSce
       <RideRig game={game} active={mode === "ride"} />
       {mode !== "ride" && <CameraRig mode={mode} manifest={manifest} />}
       <StatsProbe />
+      <FpsGovernor preset={preset} />
     </>
   );
 }

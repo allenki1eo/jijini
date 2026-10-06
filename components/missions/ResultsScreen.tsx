@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRight, Bike, Star } from "lucide-react";
+import { ArrowRight, Bike, Star, Trophy } from "lucide-react";
 import { KitengeStrip } from "@/components/brand/Kitenge";
 import { Button } from "@/components/ui";
 import type { MissionResult } from "@/game/missions/types";
@@ -11,6 +11,7 @@ import { usePlayer, xpForLevel } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
 import { Confetti } from "./Confetti";
 import { MISSION_ACCENT, MissionIcon } from "./MissionIcon";
+import { formatClock } from "./stopLabel";
 import { useCountUp } from "./useCountUp";
 
 function Row({ label, value, delay, tone }: { label: string; value: number; delay: number; tone?: string }) {
@@ -48,6 +49,17 @@ function Body({ result, onNext, onClose }: { result: MissionResult; onNext: () =
             </p>
           </div>
         </div>
+
+        {result.best !== undefined && (
+          <div className="flex items-center justify-center gap-2">
+            {result.record && (
+              <m.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.6 }} className="inline-flex items-center gap-1.5 rounded-full bg-sun px-3 py-1 font-display font-extrabold text-night">
+                <Trophy className="size-4" /> {t.results.record}
+              </m.span>
+            )}
+            <span className="font-display font-bold text-cream/70 tabular">{fmt(t.results.best, { t: formatClock(result.best) })}</span>
+          </div>
+        )}
 
         {result.success ? (
           <div className="flex justify-center gap-1.5" aria-label={`${result.stars}/5`}>

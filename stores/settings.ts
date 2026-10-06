@@ -20,6 +20,8 @@ export interface SettingsState {
   cameraView: "chase" | "fpv";
   /** HUD size multiplier (accessibility). */
   hudScale: number;
+  /** Set once the graphics preset was picked from the device tier. */
+  tierDetected: boolean;
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 
@@ -39,6 +41,7 @@ export const useSettings = create<SettingsState>()(
       tiltSteer: false,
       cameraView: "chase",
       hudScale: 1,
+      tierDetected: false,
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
     }),
     {

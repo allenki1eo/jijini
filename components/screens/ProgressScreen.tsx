@@ -30,6 +30,8 @@ import {
 import { useEffect, useState } from "react";
 import { Button, Card, Chip, Segmented } from "@/components/ui";
 import { ACHIEVEMENTS, CHALLENGE_BY_ID, claimChallenge, ensureChallenges } from "@/game/systems/progression";
+import { formatClock } from "@/components/missions/stopLabel";
+import { CITIES, CITY_ORDER, isCityId } from "@/data/cities/config";
 import { fmt, formatTzs, useT } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { usePlayer, type ChallengeState } from "@/stores/player";
@@ -103,7 +105,9 @@ function ChallengeList({ which, state }: { which: "daily" | "weekly"; state: Cha
 
 export function ProgressScreen() {
   const t = useT();
-  const [tab, setTab] = useState<"challenges" | "achievements">("challenges");
+  const [tab, setTab] = useState<"challenges" | "achievements" | "records">("challenges");
+  const bests = usePlayer((s) => s.bests);
+  const cityEarnings = usePlayer((s) => s.cityEarnings);
   const daily = usePlayer((s) => s.daily);
   const weekly = usePlayer((s) => s.weekly);
   const unlocked = usePlayer((s) => s.achievements);
@@ -129,12 +133,49 @@ export function ProgressScreen() {
               options={[
                 { value: "challenges", label: t.progress.daily, icon: <CalendarCheck /> },
                 { value: "achievements", label: t.progress.achievements, icon: <Trophy /> },
+                { value: "records", label: t.progress.records, icon: <Medal /> },
               ]}
             />
           }
         />
 
-        {tab === "challenges" ? (
+        {tab === "records" ? (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Card pattern className="p-5">
+              <h2 className="mb-3 font-display text-2xl font-extrabold">{t.progress.records}</h2>
+              {Object.keys(bests).length === 0 ? (
+                <p className="text-cream/60">{t.progress.noRecords}</p>
+              ) : (
+                <ul className="grid gap-2">
+                  {Object.entries(bests)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([course, best]) => {
+                      const [city, , n] = course.split("-");
+                      return (
+                        <li key={course} className="flex items-center justify-between rounded-2xl bg-night-700 px-4 py-3">
+                          <span className="font-display font-bold">{fmt(t.progress.course, { city: city && isCityId(city) ? CITIES[city].name : city ?? "", n: Number(n ?? 0) + 1 })}</span>
+                          <span className="font-display text-xl font-extrabold text-sun tabular">{formatClock(best.time)}</span>
+                        </li>
+                      );
+                    })}
+                </ul>
+              )}
+            </Card>
+            <Card pattern className="p-5">
+              <h2 className="mb-3 font-display text-2xl font-extrabold">{t.progress.earnings}</h2>
+              <ul className="grid gap-2">
+                {CITY_ORDER.map((id) => (
+                  <li key={id} className="flex items-center justify-between rounded-2xl bg-night-700 px-4 py-3">
+                    <span className="font-display font-bold">{CITIES[id].name}</span>
+                    <span className="font-display text-xl font-extrabold tabular">
+                      {formatTzs(cityEarnings[id] ?? 0)} <span className="text-sm text-cream/50">{t.common.tzs}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+        ) : tab === "challenges" ? (
           <div className="grid gap-5">
             <Card pattern className="p-5">
               <div className="mb-3 flex items-center justify-between">

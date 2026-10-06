@@ -1,6 +1,5 @@
 "use client";
 
-import { domAnimation, LazyMotion, MotionConfig } from "motion/react";
 import { useEffect, type ReactNode } from "react";
 import { PwaProvider } from "@/components/pwa/PwaProvider";
 import { usePlayer } from "@/stores/player";
@@ -11,7 +10,17 @@ function SettingsSync() {
   const reducedMotion = useSettings((s) => s.reducedMotion);
   useEffect(() => {
     // Settings are persisted with skipHydration so SSR and first paint agree.
-    void useSettings.persist.rehydrate();
+    void Promise.resolve(useSettings.persist.rehydrate()).then(() => {
+      const s = useSettings.getState();
+      if (s.tierDetected) return;
+      // First run: pick a graphics preset from the device tier.
+      const nav = navigator as Navigator & { deviceMemory?: number };
+      const memory = nav.deviceMemory ?? 4;
+      const cores = nav.hardwareConcurrency ?? 4;
+      const phone = window.matchMedia("(pointer: coarse)").matches;
+      s.set("quality", phone && (memory <= 3 || cores <= 4) ? "low" : !phone && memory >= 8 && cores >= 8 ? "high" : "medium");
+      s.set("tierDetected", true);
+    });
     void usePlayer.persist.rehydrate();
   }, []);
   useEffect(() => {
@@ -22,15 +31,10 @@ function SettingsSync() {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const reducedMotion = useSettings((s) => s.reducedMotion);
   return (
     <PwaProvider>
-      <MotionConfig reducedMotion={reducedMotion ? "always" : "user"}>
-        <LazyMotion features={domAnimation} strict>
-          <SettingsSync />
-          {children}
-        </LazyMotion>
-      </MotionConfig>
+      <SettingsSync />
+      {children}
     </PwaProvider>
   );
 }

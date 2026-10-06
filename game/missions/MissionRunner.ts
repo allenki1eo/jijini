@@ -6,6 +6,7 @@ import { events } from "@/game/core/events";
 import { env } from "@/game/systems/environment";
 import type { NavNetwork } from "@/game/traffic/NavNetwork";
 import type { BikeModel } from "@/game/vehicles/BikeModel";
+import { GHOST_SAMPLE_EVERY, type GhostRider } from "@/game/vehicles/GhostRider";
 import type { BikeState } from "@/game/vehicles/BikePhysics";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
@@ -55,12 +56,17 @@ export class MissionRunner {
   private legsOnTime = 0;
   private sinceRoute = 0;
   private offs: (() => void)[];
+  /** Races only start the clock at the start line. */
+  private raceStarted = false;
+  private recording: number[] = [];
+  private sinceSample = 0;
 
   constructor(
     private readonly nav: NavNetwork,
     private readonly model: BikeModel,
     private readonly guide: RouteGuide,
     private readonly cityId: string,
+    private readonly ghost: GhostRider,
   ) {
     this.offs = [
       events.on("collision", ({ kind }) => {
@@ -98,6 +104,9 @@ export class MissionRunner {
     this.photos = 0;
     this.hornUses = 0;
     this.legsOnTime = 0;
+    this.raceStarted = false;
+    this.recording = [];
+    this.ghost.stop();
     missionHud.active = true;
     missionHud.type = def.type;
     missionHud.stopIndex = 0;
@@ -157,7 +166,16 @@ export class MissionRunner {
     const def = this.def;
     this.guide.update(dt, def ? missionHud.route : null, bike.x, bike.z, this.loading);
     if (!def) return;
-    this.elapsed += dt;
+    const racing = def.type === "mbio";
+    if (!racing || this.raceStarted) this.elapsed += dt;
+    if (racing && this.raceStarted) {
+      this.ghost.update(this.elapsed, dt);
+      this.sinceSample += dt;
+      if (this.sinceSample >= GHOST_SAMPLE_EVERY) {
+        this.sinceSample = 0;
+        this.recording.push(+this.elapsed.toFixed(2), +bike.x.toFixed(1), +bike.z.toFixed(1), +bike.heading.toFixed(3));
+      }
+    }
     const stop = def.stops[missionHud.stopIndex]!;
     const d = Math.hypot(stop.x - bike.x, stop.z - bike.z);
     missionHud.distance = d;
@@ -207,7 +225,15 @@ export class MissionRunner {
     const def = this.def!;
     const stop = def.stops[missionHud.stopIndex]!;
     this.loading = 0;
-    if (stop.kind === "pickup") {
+    if (stop.kind === "pickup" && def.type === "mbio") {
+      // Green light: the race clock and the ghost of your best run start now.
+      this.raceStarted = true;
+      this.elapsed = 0;
+      this.sinceSample = 0;
+      this.recording = [0, +bike.x.toFixed(1), +bike.z.toFixed(1), +bike.heading.toFixed(3)];
+      const best = def.courseId ? usePlayer.getState().bests[def.courseId] : undefined;
+      if (best) this.ghost.play(best.ghost);
+    } else if (stop.kind === "pickup") {
       missionHud.carrying = true;
       if (def.passenger !== "none") this.model.setPassenger(def.passenger);
       else this.model.setCargo(def.cargo);
@@ -272,8 +298,20 @@ export class MissionRunner {
       nearMisses: this.nearMisses,
     };
 
-    // Payout and bookkeeping.
+    // Races: personal bests and ghosts.
     const player = usePlayer.getState();
+    this.ghost.stop();
+    if (def.courseId) {
+      const prev = player.bests[def.courseId];
+      result.best = prev?.time;
+      if (success && (!prev || this.elapsed < prev.time)) {
+        result.record = true;
+        result.best = +this.elapsed.toFixed(2);
+        player.patch({ bests: { ...player.bests, [def.courseId]: { time: result.best, ghost: this.recording } } });
+      }
+    }
+
+    // Payout and bookkeeping.
     player.earn(result.total, result.xp);
     player.adjustReputation(success ? (stars - 3) * 0.06 : reason === "abandoned" ? -0.1 : -0.15);
     if (success) {

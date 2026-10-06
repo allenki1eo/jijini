@@ -23,6 +23,8 @@ game on the explorer HUD, the main menu footer, and the credits screen.
 
 ## Art and audio
 
-All current art (bike illustration, skyline, trees, buildings, PWA icons) is
-original and generated in code. External models, textures and sounds will be
+All current art (bikes, riders, vehicles, people, props, landmarks, trees,
+buildings, skyline illustration, PWA icons) is original and generated in code.
+All sound (engine, horns, ambience, UI) and the music loop are synthesized at
+runtime with the Web Audio API — original, with no sample files. External models, textures and sounds will be
 listed in `public/assets/MANIFEST.json`, which also drives the in-game credits.

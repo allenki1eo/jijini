@@ -105,6 +105,13 @@ export class Pedestrians {
     }
   }
 
+  /** People within `radius` meters (drives the crowd ambience). */
+  countNear(x: number, z: number, radius: number) {
+    let n = 0;
+    for (const p of this.peds) if (p.active && (p.x - x) ** 2 + (p.z - z) ** 2 < radius * radius) n++;
+    return n;
+  }
+
   hornAt(x: number, z: number, range: number) {
     for (const p of this.peds) {
       if (p.active && p.state === "cross" && (p.x - x) ** 2 + (p.z - z) ** 2 < range * range) p.speed = 2.6;

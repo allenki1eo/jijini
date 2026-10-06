@@ -11,6 +11,7 @@ import { BikeModel } from "@/game/vehicles/BikeModel";
 import { BikePhysics } from "@/game/vehicles/BikePhysics";
 import type { RideStats } from "@/game/vehicles/bikes";
 import { ChaseCamera } from "@/game/vehicles/ChaseCamera";
+import { GhostRider } from "@/game/vehicles/GhostRider";
 import { streamFocus } from "@/game/world/focus";
 import type { CityManifest } from "@/game/world/format";
 import { WorldIndex } from "@/game/world/WorldIndex";
@@ -22,6 +23,7 @@ import { TrafficSystem, type Obstacle } from "@/game/traffic/TrafficSystem";
 import { POI_KINDS, type Poi } from "@/game/world/format";
 import { RainField } from "@/game/world/RainField";
 import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
+import { Particles } from "@/game/world/Particles";
 import { buildLandmark } from "@/game/world/landmarks";
 import { makeProjector } from "@/game/world/projection";
 import { MissionGenerator } from "@/game/missions/generator";
@@ -32,6 +34,7 @@ import { CITIES } from "@/data/cities/config";
 import { FUEL_PRICE_PER_L, REPAIR_PRICE_PER_POINT } from "@/game/vehicles/bikes";
 import { useMissions } from "@/stores/missions";
 import { attachProgression } from "@/game/systems/progression";
+import { audio } from "@/game/audio/AudioEngine";
 import type { Quality } from "@/stores/settings";
 import { attachInputs, clearPressed, controls, pollControls } from "./controls";
 import { events } from "./events";
@@ -67,6 +70,9 @@ export class Game {
   private rain: RainField;
   private headlight = new THREE.SpotLight("#FFF1D0", 0, 48, 0.55, 0.65, 1.1);
   private obstacles: Obstacle[] = [];
+  private particles = new Particles();
+  private ghost = new GhostRider();
+  private emitCarry = 0;
   private quality: Quality;
   stats: RideStats;
   paused = false;
@@ -92,7 +98,7 @@ export class Game {
     const p = usePlayer.getState();
     this.quality = useSettings.getState().quality;
     this.rain = new RainField(DENSITY.high.rain);
-    this.root.add(this.model.root, this.rain.mesh, this.headlight, this.headlight.target, this.guide.group);
+    this.root.add(this.model.root, this.rain.mesh, this.headlight, this.headlight.target, this.guide.group, this.particles.points, this.ghost.model.root);
     this.stats = currentRideStats(p);
     this.bike.place(manifest.spawn.x, manifest.spawn.z, manifest.spawn.heading);
     this.bike.state.fuel = Math.min(p.fuel, this.stats.tank);
@@ -134,9 +140,11 @@ export class Game {
   async start() {
     const detachInputs = attachInputs();
     const detachProgression = attachProgression();
+    const detachAudio = this.attachAudio();
     this.detach = () => {
       detachInputs();
       detachProgression();
+      detachAudio();
     };
     const [nav, pois] = await Promise.all([
       loadNavNetwork(this.baseUrl),
@@ -176,8 +184,8 @@ export class Game {
       p.earn(HELMET_REWARD, 25);
     });
     this.root.add(this.collectibles.group);
-    this.generator = new MissionGenerator(nav, pois, sights);
-    this.missions = new MissionRunner(nav, this.model, this.guide, this.cityId);
+    this.generator = new MissionGenerator(nav, pois, sights, this.cityId);
+    this.missions = new MissionRunner(nav, this.model, this.guide, this.cityId, this.ghost);
     this.refreshOffers();
   }
 
@@ -274,6 +282,46 @@ export class Game {
     return true;
   }
 
+  /** Wire game events to sound, and keep volumes and focus in sync. */
+  private attachAudio() {
+    const unlock = () => {
+      audio.unlock();
+      const s = useSettings.getState();
+      audio.setVolumes(s.masterVolume, s.musicVolume, s.sfxVolume);
+      if (s.musicVolume > 0) audio.startMusic();
+    };
+    const onVisibility = () => (document.hidden ? audio.suspend() : audio.resume());
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    document.addEventListener("visibilitychange", onVisibility);
+    const unsubSettings = useSettings.subscribe((s) => {
+      audio.setVolumes(s.masterVolume, s.musicVolume, s.sfxVolume);
+      if (s.musicVolume <= 0) audio.stopMusic();
+      else if (audio.ready) audio.startMusic();
+    });
+    const offs = [
+      events.on("horn", () => audio.horn(this.missions?.active?.type === "dharura")),
+      events.on("honked", ({ x, z }) => audio.honk(Math.hypot(x - this.bike.state.x, z - this.bike.state.z))),
+      events.on("collision", ({ speed }) => audio.crash(speed / 10)),
+      events.on("nearMiss", () => audio.whoosh()),
+      events.on("delivery", () => audio.coin()),
+      events.on("collectible", () => audio.coin()),
+      events.on("refuel", () => audio.click()),
+      events.on("levelUp", () => audio.levelUp()),
+      events.on("checkpoint", () => audio.whistle()),
+      events.on("missionFailed", () => audio.fail()),
+    ];
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      document.removeEventListener("visibilitychange", onVisibility);
+      unsubSettings();
+      offs.forEach((off) => off());
+      audio.stopContinuous();
+      audio.stopMusic();
+    };
+  }
+
   private applyDensity() {
     const d = DENSITY[this.quality];
     this.traffic?.setDensity(d.traffic);
@@ -290,6 +338,7 @@ export class Game {
       this.applyDensity();
     }
     if (this.paused) {
+      audio.stopContinuous();
       clearPressed();
       return;
     }
@@ -324,10 +373,25 @@ export class Game {
     );
 
     this.missions?.update(dt, s);
+    const skid = s.drifting ? 1 : controls.brake > 0.5 && s.speed > 6 ? 0.6 : 0;
+    const crowd = Math.min(1, (this.peds?.countNear(s.x, s.z, 45) ?? 0) / 10);
+    audio.update(s.speed, controls.throttle, skid, env.rain, crowd, this.riding && s.fuel > 0);
     this.collectibles?.update(dt, s.x, s.z);
 
-    // Headlight comes on at dusk and in the rain.
+    // Juice: red-earth dust on dirt, spray on wet tarmac, exhaust when idling.
     const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
+    const v = Math.abs(s.speed);
+    const rate = s.surface === "earth" || s.surface === "dirt" || s.surface === "path" ? v * 2.2 : s.surface === "mud" ? v * 1.5 : env.wetness > 0.3 ? v * 1.2 : v < 2 ? 3 : 0;
+    this.emitCarry += rate * dt;
+    while (this.emitCarry >= 1) {
+      this.emitCarry -= 1;
+      const kind = s.surface === "mud" ? "mud" : s.surface === "earth" || s.surface === "dirt" || s.surface === "path" ? "dust" : env.wetness > 0.3 && v > 2 ? "spray" : "exhaust";
+      const back = kind === "exhaust" ? 1.0 : 0.75;
+      this.particles.emit(kind, s.x - fx * back + (kind === "exhaust" ? -fz * 0.17 : 0), kind === "exhaust" ? 0.35 : 0.15, s.z - fz * back + (kind === "exhaust" ? fx * 0.17 : 0), -fx * v * 0.15, 0.4, -fz * v * 0.15);
+    }
+    this.particles.update(dt);
+
+    // Headlight comes on at dusk and in the rain.
     this.headlight.intensity = Math.max(env.night, env.rain * 0.4) * 60;
     this.headlight.position.set(s.x + fx * 0.6, 1.05, s.z + fz * 0.6);
     this.headlight.target.position.set(s.x + fx * 16, 0, s.z + fz * 16);
@@ -386,6 +450,8 @@ export class Game {
     }
     this.guide.dispose();
     this.rain.dispose();
+    this.particles.dispose();
+    this.ghost.dispose();
     this.detach?.();
     this.unsubPlayer();
     this.offEvents.forEach((off) => off());

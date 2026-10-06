@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, m } from "motion/react";
 import { Download, RefreshCw, Share, WifiOff } from "lucide-react";
 import { useSyncExternalStore, useState } from "react";
 import { Button, Chip } from "@/components/ui";
@@ -51,15 +50,9 @@ export function InstallBanner() {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {show && (
-        <m.aside
-          className="pointer-events-auto w-[min(26rem,calc(100vw-2rem))] rounded-3xl bg-night-800/95 p-4 shadow-2xl ring-1 ring-white/10 backdrop-blur"
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 30, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 380, damping: 28, delay: 1.2 }}
-        >
+        <aside className="animate-pop-in pointer-events-auto w-[min(26rem,calc(100vw-2rem))] rounded-3xl bg-night-800/95 p-4 shadow-2xl ring-1 ring-white/10 backdrop-blur [animation-delay:1.2s]">
           <div className="flex items-start gap-3">
             <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-forest text-sun">
               {ios ? <Share className="size-6" /> : <Download className="size-6" />}
@@ -79,9 +72,9 @@ export function InstallBanner() {
               </Button>
             )}
           </div>
-        </m.aside>
+        </aside>
       )}
-    </AnimatePresence>
+    </>
   );
 }
 
@@ -90,23 +83,17 @@ export function UpdateToast() {
   const t = useT();
   const updateReady = usePwa((s) => s.updateReady);
   return (
-    <AnimatePresence>
+    <>
       {updateReady && (
-        <m.div
-          role="status"
-          className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-sky py-2 pr-2 pl-4 text-night shadow-2xl"
-          initial={{ y: -30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -30, opacity: 0 }}
-        >
+        <div role="status" className="animate-pop-in pointer-events-auto flex items-center gap-3 rounded-2xl bg-sky py-2 pr-2 pl-4 text-night shadow-2xl">
           <RefreshCw className="size-5" />
           <span className="font-display font-bold">{t.menu.update}</span>
           <Button variant="night" onClick={applyUpdate}>
             {t.menu.updateCta}
           </Button>
-        </m.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }
 

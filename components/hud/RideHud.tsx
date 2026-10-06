@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { useSettings } from "@/stores/settings";
 import { useWorld, type CameraMode } from "@/stores/world";
 import { CheckpointPrompt, ClockChip, useSkillToasts } from "./LifeHud";
+import { SpeedLines, useHaptics } from "./Juice";
 import { PauseMenu } from "./PauseMenu";
 import { Speedometer } from "./Speedometer";
 import { StatsPanel } from "./StatsPanel";
@@ -64,6 +65,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
   const [paused, setPaused] = useState(false);
   const [showKeys, setShowKeys] = useState(true);
   useSkillToasts();
+  useHaptics();
 
   useEffect(() => {
     game.setPaused(paused);
@@ -85,6 +87,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
 
   return (
     <div className="pointer-events-none fixed inset-0 z-20 select-none" style={{ fontSize: `${scale * 100}%` }}>
+      <SpeedLines />
       <div className="safe-top safe-x flex items-start justify-between gap-3">
         <div className="pointer-events-auto flex items-center gap-2">
           <IconButton label={t.ride.pause} icon={<Pause />} onClick={() => setPaused(true)} />

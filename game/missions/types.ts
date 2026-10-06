@@ -14,7 +14,7 @@ export interface Stop {
   /** POI or place name, shown on cards and the tracker. */
   name: string;
   /** Category, used for a fallback label when the place has no name. */
-  poi?: PoiKind;
+  poi?: PoiKind | "start";
 }
 
 export type RiskTag = "fast" | "fragile" | "crowded" | "night" | "rain" | "long" | "vip";
@@ -36,6 +36,8 @@ export interface MissionDef {
   risks: RiskTag[];
   /** Route preview, normalized polyline [x, y, ...] in 0..1. */
   preview: number[];
+  /** Races: fixed course id for personal bests and ghosts. */
+  courseId?: string;
 }
 
 export interface MissionResult {
@@ -55,6 +57,10 @@ export interface MissionResult {
   seconds: number;
   collisions: number;
   nearMisses: number;
+  /** Races: new personal best? */
+  record?: boolean;
+  /** Races: best time on this course (s). */
+  best?: number;
 }
 
 /** Display config: lucide icon name, accent token, unlock rule. */

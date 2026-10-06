@@ -95,6 +95,7 @@ export const sw = {
     osmLink: "Soma kuhusu hakimiliki",
     assets: "Michoro na sauti",
     assetsEmpty: "Mchezo kwa sasa unatumia michoro iliyotengenezwa kwa msimbo. Michoro ya nje itaorodheshwa hapa.",
+    audio: "Sauti na muziki: zimetengenezwa kwa msimbo (Web Audio) — za asili, hakuna faili za nje.",
     fonts: "Herufi: Baloo 2 na Inter (SIL Open Font License).",
     made: "Imetengenezwa kwa upendo kwa ajili ya madereva wa bodaboda wa Tanzania.",
   },
@@ -189,9 +190,12 @@ export const sw = {
       office: "Ofisi",
       other: "Mahali",
       street: "Mtaani",
+      start: "Mstari wa kuanzia",
     },
   },
   results: {
+    record: "Rekodi mpya!",
+    best: "Bora yako: {t}",
     success: "Kazi imekamilika!",
     failed: "Kazi imeshindikana",
     reasons: {
@@ -220,6 +224,10 @@ export const sw = {
     broke: "Pesa haitoshi",
   },
   progress: {
+    records: "Rekodi",
+    noRecords: "Bado huna rekodi. Mshinde Baraka kwenye Mbio!",
+    course: "{city} · njia {n}",
+    earnings: "Mapato kwa jiji",
     title: "Changamoto",
     daily: "Za leo",
     weekly: "Ya wiki",
@@ -390,6 +398,11 @@ export const sw = {
     buildings: "{n} majengo halisi",
     current: "Uko hapa",
     soon: "Inakuja",
+    download: "Pakua jiji · {size}",
+    downloading: "Inapakua…",
+    downloaded: "Limepakuliwa — linachezeka bila mtandao",
+    remove: "Futa",
+    downloadFailed: "Imeshindwa kupakua. Jaribu tena.",
     regions: { shinyanga: "Mji tulivu wa kuanzia", arusha: "Mnara wa Saa, chini ya Mlima Meru", mwanza: "Mji wa Mawe, Ziwa Victoria", kariakoo: "Soko kubwa la Dar es Salaam" },
   },
   life: {

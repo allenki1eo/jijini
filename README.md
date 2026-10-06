@@ -1,132 +1,130 @@
 # BodaGo 🏍️
 
-A PWA-first 3D bodaboda delivery game set in **real Tanzanian cities generated from OpenStreetMap data**.
-Swahili-first, landscape-first, built to hold 60 FPS on a budget Android phone.
+A PWA-first 3D bodaboda delivery game set in **real Tanzanian cities generated from OpenStreetMap**.
+Swahili-first (English toggle), landscape-first, built for budget Android phones.
 
-> **Status: Phases 1–2 done.** The design system, PWA shell, i18n, splash and main menu are in place, and the
-> OSM bake pipeline turns Shinyanga into a streamed 3D world you can explore with map and free-fly debug cameras.
+Ride a boda through Shinyanga, Arusha, Mwanza and Kariakoo. Pick up passengers and parcels, dodge daladalas,
+show your leseni at police checkpoints, earn TZS and work your way from a rented Mkopo Ride to the gold-trimmed Legend Boda.
 
-| Main menu | Shinyanga, from OpenStreetMap |
-|---|---|
-| ![Menu](public/screenshots/menu-wide.png) | ![World](public/screenshots/world-wide.png) |
+| Main menu | Riding in Shinyanga | Mission board |
+|---|---|---|
+| ![Menu](public/screenshots/menu-wide.png) | ![Ride](public/screenshots/world-wide.png) | ![Board](public/screenshots/board-wide.png) |
 
 ## Run it
 
 ```bash
 npm install
-npm run dev            # http://localhost:3000 (service worker disabled in dev)
-
-npm run build && npm start   # production build with the service worker
+npm run dev                  # http://localhost:3000 (service worker off in dev)
+npm run build && npm start   # production build with the PWA service worker
 ```
-
-Other scripts:
 
 | Command | What it does |
 |---|---|
-| `npm run bake -- shinyanga` | Rebuild `public/cities/shinyanga/` from cached OSM data (`scripts/.cache/`) |
-| `npm run bake -- shinyanga --refresh` | Re-download from Overpass first (falls back to the OSM API for small boxes) |
-| `npm run icons` | Regenerate the favicon and PWA icons from the SVG design in `scripts/gen-icons.ts` |
+| `npm run bake -- <city>` | Rebuild `public/cities/<city>/` from cached OSM data (`shinyanga`, `arusha`, `mwanza`, `kariakoo`) |
+| `npm run bake -- <city> --refresh` | Re-download from Overpass first (falls back to the OSM API for small boxes) |
+| `npm run icons` | Regenerate favicon and PWA icons |
 | `npm run typecheck` / `npm run lint` | Strict TypeScript / ESLint |
 
-The baked Shinyanga data is committed, so you don't need to run the bake to play.
-If your network sits behind an HTTP proxy, run the bake with `NODE_USE_ENV_PROXY=1` (Node ≥ 22.21) so Node's `fetch` uses it.
+All four cities are baked and committed (2.8 MB of JSON), so no bake is needed to play.
+Behind an HTTP proxy, bake with `NODE_USE_ENV_PROXY=1` (Node ≥ 22.21).
+
+**Controls:** `W/↑` throttle · `S/↓/Space` brake · `A/D` steer · `Shift` boost · `Q` wheelie · `H` horn · `C` camera · `E` show licence · `Esc` pause.
+On phones: steering pad on the left (or tilt), throttle and brake pedals plus horn, boost and wheelie on the right.
+A left-handed layout and auto-throttle are in Settings. Gamepads work (standard mapping).
+
+## What's in the game
+
+- **Bike:** arcade physics with lean, drift on dirt, wheelies, boost, fuel and damage. Surfaces include tarmac, dirt, footpath, off-road and mud in the rain. You slide along walls, and only hard hits cause a short stumble. There's a chase camera (speed FOV, look-ahead, pulls in near walls) and a rider-eye view.
+- **City life:**
+  - Traffic (cars, daladalas, bajaji, trucks, bodas) drives on the left with car-following and junction right-of-way. Vehicles honk, and daladalas pull over for passengers.
+  - Pedestrians cross the road, with crowds thicker around markets.
+  - At police checkpoints you meet Afande Salum.
+  - Lamps, kiosks, umbrella vendors and billboards line the streets.
+- **Time and weather:** a full day cycle with stars, lit windows and lamp light pools at night, and a headlight. Rain brings wet roads, puddles and grip loss; dusty haze comes and goes.
+- **Ten mission types**, built from real OSM places:
+  - Abiria, Mzigo, Dharura
+  - Chai ya Asubuhi (spill meter), Soko Run, Shule Run
+  - Wageni (photo stops at landmarks)
+  - Mbio (fixed race courses with ghosts of your best run)
+  - Chipsi Mayai Rush (chained combo), Night shift
+- **On the road:** passenger mood, tips, near-miss combos, clean-ride bonuses and 1–5 stars. A* routing gives glowing road arrows, a light beam over the stop and a rotating minimap.
+- **Economy and progression:**
+  - Fares in believable TZS; fuel and repairs at petrol stations.
+  - Five bike tiers with six upgrade tracks; paint, helmet, jacket, stickers, LED, mud flaps and a number plate.
+  - Reputation (Sifa) shapes the job board. XP and levels.
+  - Daily and weekly challenges, 19 achievements.
+- **Story:** seven Kijiweni chapters with Mzee Juma, Baraka, Mama Neema and Afande Salum. A guided tutorial leads to the first paid job in about two minutes, and each city hides three golden helmets.
+- **Four cities**, unlocked by level and boda-stand membership: Shinyanga, Arusha (Clock Tower), Mwanza (Lake Victoria, Bismarck Rock) and Kariakoo (the market).
+- **Audio:** engine, horns, siren, skid, rain, market chatter, distant honks, UI sounds and an original Singeli/Bongo-flava-inspired loop. All of it is synthesized with Web Audio, with no sample files.
+- **PWA:**
+  - Installable, with an install banner (Android) and iOS instructions.
+  - An update toast that never interrupts a ride, plus an offline page.
+  - **Pakua jiji** downloads a city for full offline play.
+  - Fullscreen with landscape lock, and the screen stays awake while you ride.
+  - Saves live in IndexedDB with a versioned schema and JSON export/import.
 
 ## Stack
 
-| Concern | Package |
+| Concern | Choice |
 |---|---|
-| Framework | `next` 16 (App Router, Turbopack), `react` 19, TypeScript 5.9 strict (`noUncheckedIndexedAccess`) |
-| 3D | `three`, `@react-three/fiber`, `@react-three/drei` (only `MapControls`), loaded only on `/play` |
-| State | `zustand` (settings persisted to localStorage, world and PWA session stores) |
-| UI | `tailwindcss` v4 (tokens in `@theme`), `motion` (`LazyMotion` + `m`), `lucide-react` |
-| Fonts | `@fontsource-variable/baloo-2`, `@fontsource-variable/inter` (self-hosted) |
+| Framework | Next.js 16 (App Router, Turbopack), React 19, TypeScript 5.9 strict (`noUncheckedIndexedAccess`) |
+| 3D | three.js via `@react-three/fiber` (+ `drei` for debug map controls); loaded only on game routes |
+| State | `zustand`. The player profile is in IndexedDB (`idb`) with migrations; settings are in localStorage. |
+| UI | Tailwind CSS v4 design tokens; `motion` only on game and meta screens (the menu uses CSS animations); `lucide-react` |
 | PWA | `serwist` + `@serwist/turbopack` |
-| Geometry | `earcut` (polygon triangulation, in a Web Worker) |
-| Tooling | `tsx` (bake script), `sharp` (icons), `eslint-config-next` |
-| Reserved for later phases | `idb` (saves and offline city downloads) |
+| Geometry | `earcut` in a Web Worker |
+| Audio | Web Audio API (procedural, no Howler.js needed without sample files) |
 
-## Project layout
+## Architecture
 
 ```
-app/                      routes: / (splash + menu), /play, /settings, /credits, /~offline
-  manifest.ts             web app manifest
-  sw.ts                   service worker (Serwist)
-  serwist/[path]/route.ts builds and serves /serwist/sw.js
+app/                    routes: / (splash + menu), /play, /garage, /daily, /cities, /settings, /credits, /~offline
 components/
-  ui/                     design system: Button, Card, Chip, Meter, Modal, Segmented, Slider, Toggle, IconButton
-  brand/                  Logo, Kitenge pattern, animated BodaRider, Skyline illustration
-  screens/                BootGate (splash), LoadingScreen, MainMenu, Settings, Credits
-  hud/                    ExploreHud, StatsPanel, VirtualJoystick
-  pwa/                    SW registration, install banner, update toast, offline chip
+  ui/                   design system (Button, Card, Chip, Meter, Modal, Segmented, Slider, Toggle, IconButton)
+  brand/                logo, kitenge pattern, animated boda rider, sunset skyline
+  screens/              menu, loading, garage, challenges, cities, settings, credits
+  hud/                  ride HUD, speedometer, touch controls, pause, toasts, tutorial, juice
+  missions/             mission board, tracker, minimap, results, station panel
+  story/                character portraits, dialogue cards, story director
 game/
-  core/                   quality presets, shared input + render stats
-  world/
-    format.ts             baked data format, shared by the bake script and the runtime
-    palette.ts            Tanzanian wall, roof and ground palette
-    build/                chunk → geometry builders (ground, roads, buildings), run in the worker
-    chunk.worker.ts       fetch chunk JSON → transferable buffers
-    ChunkStreamer.ts      streams chunks around the camera, disposes far ones
-    materials.ts          Lambert materials with facade, ground grain, water and tree-sway shader patches
-    trees.ts              instanced low-poly mango, acacia and palm trees
-    SkyDome.tsx, CameraRig.tsx, CityChunks.tsx, DebugOverlays.tsx, WorldScene.tsx, WorldView.tsx
-data/cities/config.ts     city definitions (bbox, chunk size, skyline, tree mix, landmarks)
-i18n/                     sw.ts (source of truth), en.ts (type-checked against it)
-stores/                   settings, player, world, pwa
-scripts/                  bake-city.ts + lib/ (osm download, classify, geometry), gen-icons.ts
-public/cities/<id>/       baked output: manifest.json, navgraph.json, pois.json, chunks/<cx>_<cz>.json
+  core/                 Game orchestrator (one frame loop), controls, events bus, HUD state, quality presets
+  world/                OSM chunk worker + builders, streamer, spatial index, materials, sky, props, landmarks,
+                        rain, particles, collectibles, FPS governor
+  vehicles/             bike tiers/upgrades, arcade physics, procedural boda model, chase camera, ghost rider
+  traffic/              lane network + A*, traffic AI, pedestrians, police checkpoints
+  missions/             generator (OSM places → jobs), runner (stops, clock, mood, spill, scoring), route guide
+  systems/              time of day + weather, challenges + achievements
+  audio/                procedural audio engine and music sequencer
+  save/                 IndexedDB storage adapter
+data/                   city config (bbox, unlocks, landmarks), story chapters
+i18n/                   sw.ts (source of truth), en.ts (type-checked, lazy-loaded)
+scripts/                bake-city.ts (+ lib), gen-icons.ts
+public/cities/<id>/     baked: manifest, navgraph, pois, preview, chunks/<cx>_<cz>.json
 ```
+
+One `Game` object owns every system and is ticked from a single `useFrame`. React renders meshes and a HUD that samples mutable state at about 10 Hz, so nothing re-renders every frame. A typed event bus connects the systems to audio, haptics, toasts, challenges and achievements.
 
 ## The OSM pipeline
 
-**Bake (offline, `scripts/bake-city.ts`).** Overpass is never called at runtime.
+1. **Bake** (`scripts/bake-city.ts`, offline). It downloads the city box from Overpass, falling back to the OSM API, then projects to local meters. Roads are simplified between junctions, buildings are classified (seeded 1–3 floors where untagged; hipped iron roofs for near-rectangular houses), and land use and water are clipped per 200 m chunk. It also builds a navigation graph, scatters trees and writes chunk files plus `navgraph.json`, `pois.json` and a `preview.json` for the city cards.
+2. **Runtime.** A Web Worker turns each chunk into transferable buffers: ground, buildings, water, collision walls, road segments and props. The streamer keeps the chunks within the quality preset's radius and feeds a spatial index used for collisions, surface lookups and the minimap. Windows, shop shutters, sign bands, night lights, wet roads and puddles are all shader work rather than geometry.
 
-1. Downloads the city box plus a 60 m margin. It tries the Overpass mirrors in order, then falls back to the OSM API v0.6 `map` call.
-2. Projects lat/lon to local meters (equirectangular around the city centre, +x east, +z south).
-3. Roads are simplified with Douglas–Peucker *between junctions*, so junction vertices stay exact. Width comes from the `width` or `lanes` tags, or a class default (primary 9 m, residential 5 m, track 3 m). Surface comes from `surface`, or a believable default (most side streets are red earth).
-4. Buildings are simplified, tiny footprints are dropped, and heights come from `height` or `building:levels`. Untagged buildings get a seeded 1–3 floors. Near-rectangular houses get a hipped iron roof over their oriented bounding box.
-5. Land use, water and parks are clipped exactly to each chunk. Roads are clipped too, and each piece carries its neighbour points so ribbons miter seamlessly across chunk seams.
-6. Builds a **navigation graph** from drivable ways: nodes at junctions, edges with length, class, width, speed limit and one-way flag. Only the largest connected component is kept.
-7. Scatters trees into open ground, avoiding roads, buildings and water, weighted per land-use type.
-8. Writes 200 m × 200 m chunks. Each chunk is one file containing all of its layers, to keep requests low on 3G. Shinyanga is 64 chunks and about 440 KB of JSON before gzip.
+The Overpass query for each city is generated from its bounding box (see `scripts/lib/osm.ts` and the Phase 1–2 notes in the history).
 
-The Overpass query for Shinyanga (the bbox is derived from `data/cities/config.ts`):
+## Performance
 
-```
-[out:json][timeout:120];
-(
-  way["highway"](-3.67163,33.41406,-3.65617,33.42954);
-  way["building"](-3.67163,33.41406,-3.65617,33.42954);
-  relation["building"](-3.67163,33.41406,-3.65617,33.42954);
-  way["natural"~"^(water|wood|scrub|grassland|sand|bare_rock|beach)$"](-3.67163,33.41406,-3.65617,33.42954);
-  relation["natural"="water"](-3.67163,33.41406,-3.65617,33.42954);
-  way["waterway"](-3.67163,33.41406,-3.65617,33.42954);
-  way["landuse"](-3.67163,33.41406,-3.65617,33.42954);
-  relation["landuse"](-3.67163,33.41406,-3.65617,33.42954);
-  way["leisure"~"^(park|pitch|garden|playground|stadium)$"](-3.67163,33.41406,-3.65617,33.42954);
-  way["amenity"](-3.67163,33.41406,-3.65617,33.42954);
-  node["amenity"](-3.67163,33.41406,-3.65617,33.42954);
-  node["shop"](-3.67163,33.41406,-3.65617,33.42954);
-  node["tourism"](-3.67163,33.41406,-3.65617,33.42954);
-  way["barrier"](-3.67163,33.41406,-3.65617,33.42954);
-  node["natural"="tree"](-3.67163,33.41406,-3.65617,33.42954);
-);
-out body;
->;
-out skel qt;
-```
+- **Menu first load:** 160.6 KB of JS gzipped (budget 200 KB). Three.js and the game load only on game routes.
+- **Rendering:** about 35–60 draw calls and under 120k triangles on screen in Kariakoo at the Medium preset (budgets 150 and 300k). Each chunk is at most three meshes; trees, props, traffic, pedestrians, particles and guide arrows are instanced or pooled.
+- **Adapting to the device:** the preset is picked on first run (Low, Medium or High), and an FPS governor lowers the render scale when frames drop, then raises it again.
+- **Not yet measured:** frame rate on a real budget phone. The development container renders WebGL in software.
 
-**Runtime.** `ChunkStreamer` keeps the chunks within the quality preset's radius loaded: 300 m on Low, 400 m on Medium, 520 m on High. It drops chunks 140 m past that radius. A Web Worker fetches each chunk and triangulates it into transferable typed arrays, so the main thread only wraps buffers in meshes. Each chunk is at most three draw calls: ground (areas, sidewalks, roads, junctions and markings merged into one mesh), buildings and water. Trees are three instanced meshes for the whole city. Window strips, shop shutters, painted sign bands and dust plinths are drawn by a shader from a per-vertex facade attribute, so they cost no geometry.
+## Attribution
 
-Measured with Shinyanga in the explorer (Medium): **about 35 draw calls and 75k triangles** with 20 chunks loaded. The budget is 150 draw calls and 300k triangles.
+Map data © OpenStreetMap contributors, ODbL 1.0. Credit is shown in the ride HUD, the menu footer and the credits screen; see [ATTRIBUTION.md](ATTRIBUTION.md).
+All art and audio is original and generated in code. `public/assets/MANIFEST.json` lists any external assets (none yet), and the GLB loader picks them up automatically, falling back to the procedural models.
 
-## Notes and decisions
+## Not included
 
-- **Baked data location.** The bake writes to `public/cities/` rather than `data/cities/` so the files can be fetched, streamed and cached by the service worker. City *config* lives in `data/cities/config.ts`.
-- **Chunk files.** There is one file per chunk with all layers, instead of separate `roads.json` and `buildings.json` per chunk. `navgraph.json` and `pois.json` are city-wide because the traffic AI and the mission generator need the whole graph.
-- **Turbopack + service worker.** Turbopack passes a worker's bootstrap config in the URL fragment. `app/sw.ts` serves worker scripts as synthesized responses so the fragment survives when the SW answers from cache. Without this, the chunk worker fails once the SW takes control.
-- **Updates never interrupt a ride.** The SW waits, and the menu shows a "Toleo jipya lipo!" toast that activates it on tap.
-- **Attribution.** "© OpenStreetMap contributors" is always visible in the explorer, in the menu footer, and on the credits screen. See [ATTRIBUTION.md](ATTRIBUTION.md).
-
-## Next: Phase 3
-
-Bike physics, mobile and desktop controls (the `VirtualJoystick` and the `analogInput` channel are already in place), a chase camera, and the GLB asset loader with procedural fallbacks.
+- **Online leaderboards** need a backend (Supabase or Turso) and credentials. Personal bests, race ghosts and per-city earnings are stored locally.
+- **M-Pesa / Tigo Pesa** cosmetic purchases need a merchant integration. Cosmetics are bought with in-game TZS.
+- **Lighthouse audit and device testing** on a physical Tecno/Infinix-class phone are still to do.

@@ -1,6 +1,5 @@
 "use client";
 
-import { m } from "motion/react";
 import { CalendarCheck, Coins, Map as MapIcon, Maximize, PackageOpen, Play, Settings, Star, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Skyline } from "@/components/brand/Skyline";
@@ -35,14 +34,6 @@ function MenuTile({ icon: Icon, label, accent, href }: TileProps) {
   );
 }
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
-};
-const rise = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
-};
 
 export function MainMenu() {
   const t = useT();
@@ -101,18 +92,13 @@ export function MainMenu() {
         <IconButton label={t.settings.fullscreen} icon={<Maximize />} onClick={() => void enterFullscreen()} />
       </header>
 
-      <m.section
-        className="safe-x relative z-10 flex h-full max-w-[34rem] flex-col justify-center gap-5 pt-14 pb-12 short:gap-2.5 short:pt-12 short:pb-11"
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-      >
-        <m.div variants={rise}>
+      <section className="safe-x relative z-10 flex h-full max-w-[34rem] flex-col justify-center gap-5 pt-14 pb-12 short:gap-2.5 short:pt-12 short:pb-11">
+        <div className="animate-rise [animation-delay:100ms]">
           <Logo size="xl" className="short:text-5xl" />
           <p className="mt-3 font-display text-xl font-semibold text-cream/85 short:mt-0.5 short:text-sm">{t.app.tagline}</p>
-        </m.div>
+        </div>
 
-        <m.div variants={rise}>
+        <div className="animate-rise [animation-delay:170ms]">
           <Link
             href={`/play?city=${lastCity}`}
             className="chunky animate-pulse-ring group flex w-full items-center gap-4 rounded-[1.5rem] bg-sun px-5 py-4 text-night [--edge:var(--color-sun-800)] short:py-2.5"
@@ -125,15 +111,15 @@ export function MainMenu() {
               <span className="font-display text-base font-semibold opacity-75">{CITIES[lastCity].name}</span>
             </span>
           </Link>
-        </m.div>
+        </div>
 
-        <m.nav variants={rise} className="grid grid-cols-2 gap-3 sm:grid-cols-4 short:gap-2" aria-label="Menu">
+        <nav className="animate-rise grid grid-cols-2 gap-3 [animation-delay:240ms] sm:grid-cols-4 short:gap-2" aria-label="Menu">
           <MenuTile icon={Wrench} label={t.menu.garage} accent="bg-coral text-cream" href="/garage" />
           <MenuTile icon={PackageOpen} label={t.menu.missions} accent="bg-sky text-night" href="/play?board=1" />
           <MenuTile icon={CalendarCheck} label={t.menu.daily} accent="bg-forest text-sun" href="/daily" />
           <MenuTile icon={MapIcon} label={t.cities.title} accent="bg-cream text-night" href="/cities" />
-        </m.nav>
-      </m.section>
+        </nav>
+      </section>
 
       <footer className="safe-x safe-bottom absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-4 text-xs text-cream/60">
         <Link href="/credits" className="inline-flex min-h-12 items-center underline-offset-4 hover:text-cream hover:underline">

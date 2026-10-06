@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { MotionProvider } from "@/components/MotionProvider";
 import { isCityId } from "@/data/cities/config";
 import { usePlayer } from "@/stores/player";
 
@@ -23,5 +24,9 @@ export function PlayClient() {
   }, [hydrated, unlocked, router]);
 
   if (hydrated && !unlocked) return null;
-  return <WorldView cityId={city} openBoard={params.get("board") === "1"} />;
+  return (
+    <MotionProvider>
+      <WorldView cityId={city} openBoard={params.get("board") === "1"} />
+    </MotionProvider>
+  );
 }

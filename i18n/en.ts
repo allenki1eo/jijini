@@ -96,6 +96,7 @@ export const en: Dictionary = {
     osmLink: "Read about the copyright",
     assets: "Art and audio",
     assetsEmpty: "The game currently uses procedurally generated art. External assets will be listed here.",
+    audio: "Sound and music: synthesized in code (Web Audio) — original, no external files.",
     fonts: "Fonts: Baloo 2 and Inter (SIL Open Font License).",
     made: "Made with love for Tanzania's boda riders.",
   },
@@ -190,9 +191,12 @@ export const en: Dictionary = {
       office: "Office",
       other: "Place",
       street: "Street corner",
+      start: "Start line",
     },
   },
   results: {
+    record: "New record!",
+    best: "Your best: {t}",
     success: "Job done!",
     failed: "Job failed",
     reasons: {
@@ -221,6 +225,10 @@ export const en: Dictionary = {
     broke: "Not enough money",
   },
   progress: {
+    records: "Records",
+    noRecords: "No records yet. Beat Baraka in a Race!",
+    course: "{city} · course {n}",
+    earnings: "Earnings per city",
     title: "Challenges",
     daily: "Today",
     weekly: "This week",
@@ -391,6 +399,11 @@ export const en: Dictionary = {
     buildings: "{n} real buildings",
     current: "You are here",
     soon: "Coming soon",
+    download: "Download city · {size}",
+    downloading: "Downloading…",
+    downloaded: "Downloaded — plays offline",
+    remove: "Remove",
+    downloadFailed: "Download failed. Try again.",
     regions: { shinyanga: "Calm starter town", arusha: "Clock Tower, under Mount Meru", mwanza: "Rock City on Lake Victoria", kariakoo: "Dar es Salaam's great market" },
   },
   life: {

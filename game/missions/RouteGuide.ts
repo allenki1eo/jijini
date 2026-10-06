@@ -8,6 +8,8 @@ import type { StopKind } from "./types";
 
 const CHEVRONS = 18;
 const SPACING = 7;
+/** Meters ahead of the rider where the first chevron sits. */
+const LEAD = 6;
 
 const STOP_COLORS: Record<StopKind, string> = {
   pickup: "#FFC72C",
@@ -83,32 +85,38 @@ export class RouteGuide {
       this.chevrons.count = 0;
       return;
     }
-    // Find the route vertex closest to the rider, then walk forward.
-    let start = 0;
+    // Project the rider onto the route, then lay chevrons from a few meters ahead.
+    let seg = 0;
+    let along = 0;
     let best = Infinity;
-    for (let i = 0; i < route.length; i += 2) {
-      const d = (route[i]! - fromX) ** 2 + (route[i + 1]! - fromZ) ** 2;
+    for (let i = 0; i + 3 < route.length; i += 2) {
+      const ax = route[i]!, az = route[i + 1]!, dx = route[i + 2]! - ax, dz = route[i + 3]! - az;
+      const l2 = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((fromX - ax) * dx + (fromZ - az) * dz) / l2));
+      const d = (ax + dx * t - fromX) ** 2 + (az + dz * t - fromZ) ** 2;
       if (d < best) {
         best = d;
-        start = i;
+        seg = i;
+        along = t * Math.sqrt(l2);
       }
     }
     let count = 0;
-    let carry = SPACING * 0.6;
-    for (let i = start; i + 3 < route.length && count < CHEVRONS; i += 2) {
+    let carry = along + LEAD;
+    for (let i = seg; i + 3 < route.length && count < CHEVRONS; i += 2) {
       const ax = route[i]!, az = route[i + 1]!, bx = route[i + 2]!, bz = route[i + 3]!;
       const len = Math.hypot(bx - ax, bz - az);
       if (len < 0.01) continue;
       const dx = (bx - ax) / len, dz = (bz - az) / len;
-      for (let t = carry; t < len && count < CHEVRONS; t += SPACING) {
+      let t = carry;
+      for (; t < len && count < CHEVRONS; t += SPACING) {
         this.dummy.position.set(ax + dx * t, 0.37, az + dz * t);
         this.dummy.rotation.set(0, Math.atan2(-dx, -dz), 0);
         const pulse = 0.85 + 0.15 * Math.sin(this.time * 6 - count * 0.7);
-        this.dummy.scale.setScalar(pulse);
+        this.dummy.scale.setScalar(pulse * 0.75);
         this.dummy.updateMatrix();
         this.chevrons.setMatrixAt(count++, this.dummy.matrix);
       }
-      carry = (((carry - len) % SPACING) + SPACING) % SPACING;
+      carry = t - len;
     }
     this.chevrons.count = count;
     this.chevrons.instanceMatrix.needsUpdate = true;

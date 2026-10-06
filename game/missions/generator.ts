@@ -29,6 +29,8 @@ interface Place {
   poi?: PoiKind;
 }
 
+const RACE_COURSES = 3;
+
 const PASSENGERS: PassengerKind[] = ["mama", "student", "business", "elder", "kid"];
 
 const roundFare = (v: number) => Math.round(v / 100) * 100;
@@ -44,6 +46,7 @@ export class MissionGenerator {
     private readonly ctxNav: NavNetwork,
     pois: Poi[],
     landmarks: { x: number; z: number; name: string }[] = [],
+    private readonly cityId = "city",
   ) {
     this.places = pois.map((p) => ({ x: p.x / 10, z: p.z / 10, name: p.n ?? "", poi: POI_KINDS[p.k] }));
     this.landmarks = landmarks.map((l) => ({ ...l, poi: "other" as PoiKind }));
@@ -237,9 +240,12 @@ export class MissionGenerator {
         });
       }
       case "mbio": {
-        const course = this.raceCourse(x, z);
+        const k = Math.floor(this.rand() * RACE_COURSES);
+        const course = this.raceCourse(k);
         if (!course) return null;
-        return this.build(type, ctx, course, { client: "Baraka", speed: 12.5, slack: 10, base: 6000, perKm: 3000, risks: ["fast"] });
+        const def = this.build(type, ctx, course.stops, { client: "Baraka", speed: 0, slack: 0, base: 6000, perKm: 3000, risks: ["fast"] });
+        // Beat Baraka's pace (12.5 m/s) over the course itself; the ride to the start line is free.
+        return { ...def, timeLimit: Math.round(course.length / 12.5 + 10), courseId: `${this.cityId}-race-${k}` };
       }
       case "chipsi": {
         const stops: Stop[] = [];
@@ -256,18 +262,26 @@ export class MissionGenerator {
     }
   }
 
-  /** A loop of checkpoints along bigger roads, starting near the player. */
-  private raceCourse(x: number, z: number): Stop[] | null {
+  /**
+   * Fixed race courses per city (seeded by city and course number), so
+   * personal bests and ghosts are comparable run to run.
+   */
+  private raceCourse(k: number): { stops: Stop[]; length: number } | null {
     const nav = this.ctxNav;
-    let node = nav.nearestNode(x, z);
+    let seed = [...`${this.cityId}:${k}`].reduce((a, c) => Math.imul(a ^ c.charCodeAt(0), 16777619), 2166136261) >>> 0;
+    const rand = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+    const starts = nav.out.map((lanes, node) => ({ node, ok: lanes.some((id) => nav.lanes[id]!.cls <= 2) })).filter((n) => n.ok);
+    if (!starts.length) return null;
+    const startNode = starts[Math.floor(rand() * starts.length)]!.node;
+    let node = startNode;
     const points: [number, number][] = [];
     let lane = -1;
     let length = 0;
     for (let i = 0; i < 40 && length < 1700; i++) {
       const out = nav.out[node]!.filter((id) => id !== nav.reverse[lane]);
       if (!out.length) break;
-      out.sort((a, b) => nav.lanes[a]!.cls - nav.lanes[b]!.cls);
-      lane = this.rand() < 0.7 ? out[0]! : this.pick(out)!;
+      out.sort((a, b) => nav.lanes[a]!.cls - nav.lanes[b]!.cls || a - b);
+      lane = rand() < 0.7 ? out[0]! : out[Math.floor(rand() * out.length)]!;
       const l = nav.lanes[lane]!;
       length += l.length;
       node = l.to;
@@ -276,7 +290,13 @@ export class MissionGenerator {
     if (length < 700 || points.length < 4) return null;
     const step = Math.max(1, Math.floor(points.length / 6));
     const picks = points.filter((_, i) => i % step === step - 1 || i === points.length - 1).slice(-6);
-    return picks.map(([px, pz], i) => ({ x: px, z: pz, kind: "checkpoint" as const, name: `${i + 1}/${picks.length}` }));
+    return {
+      length,
+      stops: [
+        { x: nav.nodeX(startNode), z: nav.nodeZ(startNode), kind: "pickup", name: "", poi: "start" },
+        ...picks.map(([px, pz], i) => ({ x: px, z: pz, kind: "checkpoint" as const, name: `${i + 1}/${picks.length}` })),
+      ],
+    };
   }
 
   /** The tutorial's first job: a short, untimed passenger ride close by. */

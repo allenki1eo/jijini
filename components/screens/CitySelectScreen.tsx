@@ -1,10 +1,11 @@
 "use client";
 
 import { m } from "motion/react";
-import { Building2, Check, Coins, Lock, MapPin, Play } from "lucide-react";
+import { Building2, Check, CloudDownload, CloudOff, Coins, Lock, MapPin, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Chip } from "@/components/ui";
+import { Button, Chip, Meter } from "@/components/ui";
+import { downloadCity, downloadedShare, formatMegabytes, removeCity } from "@/lib/cityDownloads";
 import { CITIES, CITY_ORDER, type CityId } from "@/data/cities/config";
 import type { CityManifest } from "@/game/world/format";
 import { fmt, formatTzs, useT } from "@/i18n";
@@ -13,6 +14,60 @@ import { usePlayer } from "@/stores/player";
 import { ScreenHeader } from "./ScreenHeader";
 
 type Preview = { c: number; p: number[] }[];
+
+/** "Pakua jiji": download a city for offline play, with size and progress. */
+function DownloadControl({ id, manifest }: { id: CityId; manifest: CityManifest }) {
+  const t = useT();
+  const [share, setShare] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    downloadedShare(id, manifest).then((v) => !cancelled && setShare(v));
+    return () => {
+      cancelled = true;
+    };
+  }, [id, manifest]);
+
+  if (share === null) return null;
+  if (busy) return <Meter value={share} label={t.cities.downloading} busy showLabel tone="sky" />;
+  if (share >= 1)
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-xl bg-forest/20 px-3 py-2 text-sm text-forest-400">
+        <span className="flex items-center gap-2 font-semibold">
+          <CloudOff className="size-4" /> {t.cities.downloaded}
+        </span>
+        <button
+          type="button"
+          aria-label={t.cities.remove}
+          className="grid size-10 place-items-center rounded-lg text-cream/60 hover:bg-white/8 hover:text-coral"
+          onClick={() => void removeCity(id, manifest).then(() => setShare(0))}
+        >
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+    );
+  return (
+    <div className="grid gap-1">
+      <Button
+        variant="night"
+        block
+        icon={<CloudDownload />}
+        onClick={() => {
+          setBusy(true);
+          setFailed(false);
+          downloadCity(id, manifest, setShare)
+            .catch(() => setFailed(true))
+            .finally(() => setBusy(false));
+        }}
+      >
+        {fmt(t.cities.download, { size: formatMegabytes(manifest.totalBytes) })}
+      </Button>
+      {failed && <p className="text-center text-xs text-coral">{t.cities.downloadFailed}</p>}
+    </div>
+  );
+}
 
 interface CityData {
   manifest: CityManifest | null;
@@ -129,7 +184,8 @@ export function CitySelectScreen() {
                       </p>
                     )}
                   </div>
-                  <div className="mt-auto">
+                  <div className="mt-auto grid gap-2">
+                    {unlocked && d?.manifest && <DownloadControl id={id} manifest={d.manifest} />}
                     {!d?.manifest ? (
                       <Button variant="night" disabled block>
                         {t.cities.soon}

@@ -435,6 +435,7 @@ export const en: Dictionary = {
     draws: "Draws",
     tris: "Tris",
     error: "Couldn't load the city.",
+    errorOffline: "You're offline. Connect to data or Wi‑Fi, or download the city to play offline.",
     attribution: "© OpenStreetMap contributors",
   },
 };

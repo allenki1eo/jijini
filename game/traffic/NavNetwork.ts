@@ -3,6 +3,7 @@
  * Two-way edges become two lanes; one-way edges a single lane.
  */
 import { DM, type NavGraph } from "@/game/world/format";
+import { fetchJson } from "@/lib/fetchJson";
 
 export interface Lane {
   id: number;
@@ -205,8 +206,4 @@ export class NavNetwork {
   }
 }
 
-export const loadNavNetwork = async (baseUrl: string): Promise<NavNetwork> => {
-  const res = await fetch(`${baseUrl}/navgraph.json`);
-  if (!res.ok) throw new Error(`navgraph HTTP ${res.status}`);
-  return new NavNetwork((await res.json()) as NavGraph);
-};
+export const loadNavNetwork = async (baseUrl: string): Promise<NavNetwork> => new NavNetwork(await fetchJson<NavGraph>(`${baseUrl}/navgraph.json`));

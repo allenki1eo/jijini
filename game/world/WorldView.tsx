@@ -13,6 +13,7 @@ import { Game } from "@/game/core/Game";
 import { QUALITY_PRESETS } from "@/game/core/quality";
 import { fmt, useT } from "@/i18n";
 import { requestWakeLock } from "@/lib/device";
+import { fetchJson } from "@/lib/fetchJson";
 import { useSettings } from "@/stores/settings";
 import { useWorld } from "@/stores/world";
 import { streamFocus } from "./focus";
@@ -30,18 +31,14 @@ export default function WorldView({ cityId, openBoard }: { cityId: CityId; openB
   useEffect(() => {
     let cancelled = false;
     reset();
-    fetch(`${baseUrl}/manifest.json`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<CityManifest>;
-      })
+    fetchJson<CityManifest>(`${baseUrl}/manifest.json`)
       .then((m) => {
         if (cancelled) return;
         streamFocus.x = m.spawn.x;
         streamFocus.z = m.spawn.z;
         set({ manifest: m });
         const g = new Game(cityId, m, baseUrl);
-        void g.start();
+        g.start().catch((e: Error) => !cancelled && set({ status: "error", error: e.message }));
         setGame((old) => {
           old?.dispose();
           return g;
@@ -70,6 +67,7 @@ export default function WorldView({ cityId, openBoard }: { cityId: CityId; openB
   }, []);
 
   const city = CITIES[cityId];
+  const offline = status === "error" && !navigator.onLine;
   const loadingProgress = manifest && progress.total ? 0.15 + 0.85 * (progress.loaded / progress.total) : 0.08;
 
   return (
@@ -104,6 +102,7 @@ export default function WorldView({ cityId, openBoard }: { cityId: CityId; openB
         <div className="fixed inset-0 z-50 grid place-items-center bg-night/80 p-6 backdrop-blur">
           <Card pattern className="w-full max-w-md p-6 text-center">
             <p className="font-display text-2xl font-bold">{t.world.error}</p>
+            {offline && <p className="mt-2 text-cream/85">{t.world.errorOffline}</p>}
             <p className="mt-2 font-mono text-sm break-words text-cream/60">{error}</p>
             <div className="mt-5 flex justify-center gap-3">
               <Link href="/" className="chunky inline-flex min-h-12 items-center rounded-2xl bg-night-600 px-5 font-display font-bold [--edge:var(--color-night)]">

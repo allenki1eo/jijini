@@ -434,6 +434,7 @@ export const sw = {
     draws: "Michoro",
     tris: "Pembetatu",
     error: "Imeshindwa kupakia jiji.",
+    errorOffline: "Hakuna mtandao. Unganisha data au Wi‑Fi, au pakua jiji ili kucheza bila mtandao.",
     attribution: "© Wachangiaji wa OpenStreetMap",
   },
 };

@@ -141,7 +141,19 @@ export interface CityManifest {
   chunkSize: number;
   chunks: ChunkRef[];
   spawn: { x: number; z: number; heading: number };
-  stats: { buildings: number; roads: number; pois: number; navNodes: number; navEdges: number; trees: number };
+  stats: {
+    buildings: number;
+    roads: number;
+    pois: number;
+    navNodes: number;
+    navEdges: number;
+    trees: number;
+    /** Kilometres of drivable road (newer bakes). */
+    roadKm?: number;
+    /** Generated shopfronts and mapped places by kind (newer bakes). */
+    shopfronts?: number;
+    places?: Partial<Record<PoiKind, number>>;
+  };
   totalBytes: number;
   attribution: string;
 }
@@ -189,6 +201,8 @@ export const POI_KINDS = [
   // Appended later; keep existing indices stable.
   "bus_stop",
   "garage",
+  "playground",
+  "pitch",
 ] as const;
 export type PoiKind = (typeof POI_KINDS)[number];
 
@@ -200,6 +214,10 @@ export interface Poi {
   t?: string;
   /** Brand or operator (fuel stations, banks, supermarkets). */
   b?: string;
+  /** Long-axis direction in degrees (sports pitches mapped as areas): local +z runs along it. */
+  a?: number;
+  /** Width and length in metres (sports pitches mapped as areas). */
+  s?: [number, number];
   x: number;
   z: number;
   /** Curb point (dm) on the nearest drivable road, where the place's signpost stands. */
@@ -207,3 +225,28 @@ export interface Poi {
 }
 
 export const chunkKey = (cx: number, cz: number): string => `${cx}_${cz}`;
+
+// ── Street frontage (frontage.json) ─────────────────────────────────────────
+
+/**
+ * Shop kinds for the generated street frontage. Where OpenStreetMap has no
+ * buildings along a street, the bake fills the verge with rows of dukas so
+ * streets read as real Tanzanian shopping streets.
+ */
+export const SHOP_KINDS = ["duka", "phone", "salon", "pharmacy", "hardware", "clothes", "food"] as const;
+export type ShopKind = (typeof SHOP_KINDS)[number];
+
+/** Values per shop in `FrontageFile.shops`. */
+export const FRONTAGE_STRIDE = 9;
+
+export interface FrontageFile {
+  format: 1;
+  /**
+   * Flat records of FRONTAGE_STRIDE numbers: x, z (dm, front-centre at the kerb side),
+   * yaw (milliradians; the shop faces local −z), width, depth (dm), floors,
+   * kind (index into SHOP_KINDS), wall colour (palette index), sign (index into `signs`).
+   */
+  shops: number[];
+  /** Signboard texts: a real OSM shop name where one is nearby, otherwise a typical local one. */
+  signs: string[];
+}

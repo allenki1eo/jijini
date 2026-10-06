@@ -150,3 +150,14 @@ All art and audio is original and generated in code. `public/assets/MANIFEST.jso
 - **Online leaderboards** need a backend (Supabase or Turso) and credentials. Personal bests, race ghosts and per-city earnings are stored locally.
 - **M-Pesa / Tigo Pesa** cosmetic purchases need a merchant integration. Cosmetics are bought with in-game TZS.
 - **Lighthouse audit and device testing** on a physical Tecno/Infinix-class phone are still to do.
+
+## Public stats (`/stats`)
+
+`/stats` is a public dashboard of BodaGo in numbers. It always shows what has been mapped in every city: roads, buildings, shopfronts, schools, petrol stations and so on. Once a database is connected, it also shows live anonymous player numbers: players today, this week and all time, rides, jobs, kilometres, hours, rides per day and per city, and the device mix.
+
+Live numbers need a small Redis database:
+
+1. Vercel → the project → **Storage** → **Upstash for Redis** → Create → Connect to the project. This adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`. You can also set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` yourself.
+2. Redeploy.
+
+The game sends anonymous events to `/api/track`: a random install id, the city, device class, jobs, km and minutes. No names or locations are sent. Riders can switch it off in Settings → "Shiriki takwimu". Without a database the routes still answer but store nothing, and `/stats` explains how to switch the numbers on.

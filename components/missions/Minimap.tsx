@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Game } from "@/game/core/Game";
+import { navHud } from "@/game/core/hud";
 import { missionHud } from "@/game/missions/MissionRunner";
 import { PLACE_STYLE, atlasCell, placeAtlas } from "@/game/world/places";
 import { POI_KINDS } from "@/game/world/format";
@@ -72,6 +73,23 @@ export function Minimap({ game }: { game: Game }) {
           ctx.lineTo(x2, y2);
           ctx.stroke();
         }
+      }
+
+      // The drive to a sheli, under the job route.
+      const fuelRoute = navHud.fuelRoute;
+      if (fuelRoute && fuelRoute.length >= 4) {
+        ctx.strokeStyle = "#FF5A4F";
+        ctx.lineWidth = 3.5;
+        ctx.lineJoin = "round";
+        ctx.setLineDash([7, 5]);
+        ctx.beginPath();
+        for (let i = 0; i < fuelRoute.length; i += 2) {
+          const [x, y] = tx(fuelRoute[i]!, fuelRoute[i + 1]!);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       // Route.
@@ -158,7 +176,44 @@ export function Minimap({ game }: { game: Game }) {
         ctx.fill();
         ctx.stroke();
       }
+      // The sheli being driven to, pinned to the rim when off the map.
+      if (fuelRoute && fuelRoute.length >= 2) {
+        let [x, y] = tx(fuelRoute[fuelRoute.length - 2]!, fuelRoute[fuelRoute.length - 1]!);
+        const dx = x - SIZE / 2, dy = y - SIZE / 2;
+        const d = Math.hypot(dx, dy);
+        const max = SIZE / 2 - 11;
+        if (d > max) {
+          x = SIZE / 2 + (dx / d) * max;
+          y = SIZE / 2 + (dy / d) * max;
+        }
+        const [fx, fy, fc] = atlasCell(POI_KINDS.indexOf("fuel"));
+        ctx.fillStyle = "#10131A";
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.drawImage(atlas, fx, fy, fc, fc, x - 9, y - 9, 18, 18);
+      }
       ctx.restore();
+
+      // Compass: true north (map −z) on the rim, so the map's turn with the rider stays readable.
+      {
+        const [nx, ny] = tx(b.x, b.z - 1000);
+        const dx = nx - SIZE / 2, dy = ny - SIZE / 2;
+        const d = Math.hypot(dx, dy) || 1;
+        const cx = SIZE / 2 + (dx / d) * (SIZE / 2 - 10), cy = SIZE / 2 + (dy / d) * (SIZE / 2 - 10);
+        ctx.fillStyle = "#10131A";
+        ctx.strokeStyle = "#FF5A4F";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#FFF6E5";
+        ctx.font = "800 10px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("N", cx, cy + 0.5);
+      }
 
       // Rider arrow.
       ctx.fillStyle = "#FFC72C";
@@ -187,8 +242,9 @@ export function Minimap({ game }: { game: Game }) {
     <canvas
       ref={canvas}
       aria-hidden="true"
-      className="pointer-events-none rounded-full shadow-xl short:scale-75 short:origin-top-right"
-      style={{ width: SIZE * Math.min(scale, 1.1), height: SIZE * Math.min(scale, 1.1) }}
+      // Smaller on portrait phones, where it shares the width with the rider's stack.
+      className="pointer-events-none size-(--mm) rounded-full shadow-xl max-sm:size-28 short:size-28"
+      style={{ "--mm": `${SIZE * Math.min(scale, 1.1)}px` } as React.CSSProperties}
     />
   );
 }

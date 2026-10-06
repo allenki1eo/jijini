@@ -15,12 +15,12 @@ import { GhostRider } from "@/game/vehicles/GhostRider";
 import { streamFocus } from "@/game/world/focus";
 import type { CityManifest } from "@/game/world/format";
 import { WorldIndex } from "@/game/world/WorldIndex";
-import { clockText, env, updateEnvironment } from "@/game/systems/environment";
+import { clockText, env, setRealTime, updateEnvironment } from "@/game/systems/environment";
 import { Checkpoints } from "@/game/traffic/Checkpoints";
 import { loadNavNetwork, type NavNetwork } from "@/game/traffic/NavNetwork";
 import { Pedestrians } from "@/game/traffic/Pedestrians";
 import { TrafficSystem, type Obstacle } from "@/game/traffic/TrafficSystem";
-import { POI_KINDS, ROAD_CLASSES, ROAD_SPEED, type Poi } from "@/game/world/format";
+import { POI_KINDS, ROAD_CLASSES, ROAD_SPEED, type FrontageFile, type Poi } from "@/game/world/format";
 import { RainField } from "@/game/world/RainField";
 import { PlaceSigns, synthesizeBusStops } from "@/game/world/PlaceSigns";
 import { buildHeroBillboard, loadAds } from "@/game/world/adAtlas";
@@ -33,6 +33,9 @@ import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
 import { Particles } from "@/game/world/Particles";
 import { buildLandmark } from "@/game/world/landmarks";
 import { FuelStations } from "@/game/world/FuelStations";
+import { Frontage } from "@/game/world/Frontage";
+import { Civic } from "@/game/world/Civic";
+import { attachTelemetry } from "@/lib/telemetry";
 import { makeProjector } from "@/game/world/projection";
 import { MissionGenerator } from "@/game/missions/generator";
 import { MissionRunner, missionHud, type TalkOption } from "@/game/missions/MissionRunner";
@@ -63,6 +66,18 @@ const DENSITY: Record<Quality, { traffic: number; peds: number; rain: number }> 
 };
 const MAX_DT = 1 / 20;
 
+/** Room the shop rows leave around big landmarks (m); anything unlisted gets 12. */
+const LANDMARK_CLEARANCE: Record<string, number> = {
+  "kambarage-stadium": 64,
+  "jamhuri-stadium": 64,
+  "mkwakwani-stadium": 64,
+  "sokoine-stadium": 64,
+  "kariakoo-market": 26,
+  "nyerere-statue": 14,
+  "uhuru-torch": 12,
+  "bismarck-rock": 10,
+};
+
 /** How many junctions get traffic lights in each city. */
 const LIGHTS: Record<CityId, number> = { kariakoo: 14, dodoma: 8, arusha: 8, mwanza: 8, mbeya: 6, tanga: 5, moshi: 5, shinyanga: 3 };
 
@@ -92,6 +107,8 @@ export class Game {
   private banners: RoadBanners | null = null;
   private markets: Markets | null = null;
   private fuelStations: FuelStations | null = null;
+  private frontage: Frontage | null = null;
+  private civic: Civic | null = null;
   private radio: Radio | null = null;
   private disposeAds: (() => void) | null = null;
   private landmarkObjects: THREE.Object3D[] = [];
@@ -170,15 +187,26 @@ export class Game {
   async start() {
     const detachInputs = attachInputs();
     const detachProgression = attachProgression();
+    // Anonymous counts for /stats: kilometres come off the bike's odometer since the last report.
+    let reportedKm = 0;
+    const detachTelemetry = attachTelemetry(this.cityId, () => {
+      const total = this.bike.state.odometer / 1000 + this.telemetryKm;
+      const km = Math.max(0, total - reportedKm);
+      reportedKm = total;
+      return km;
+    });
     const detachAudio = this.attachAudio();
     this.detach = () => {
       detachInputs();
       detachProgression();
       detachAudio();
+      detachTelemetry();
     };
-    const [nav, mapped] = await Promise.all([
+    const [nav, mapped, frontage] = await Promise.all([
       loadNavNetwork(this.baseUrl),
       fetchJson<Poi[]>(`${this.baseUrl}/pois.json`).catch(() => [] as Poi[]),
+      // Older bakes have no frontage file: the streets just stay as mapped.
+      fetchJson<FrontageFile>(`${this.baseUrl}/frontage.json`).catch(() => null),
     ]);
     if (this.disposed) return;
     this.nav = nav;
@@ -254,11 +282,14 @@ export class Game {
       const off = nav.lanes[n.lane]!.width / 2 + extra;
       return { x: n.x + dx * off, z: n.z + dz * off, yaw: Math.atan2(dx, dz) };
     };
+    // Where the generated shop rows must leave room: landmarks, forecourts, the kijiwe and the hero billboard.
+    const keepOut = this.fuelStations.stations.map((st) => ({ x: st.bayX, z: st.bayZ, r: 14 }));
     for (const lm of CITIES[this.cityId].landmarks) {
       const [px, pz] = project(lm.lat, lm.lon);
       const at = lm.placement === "curb" ? curb(px, pz) : { x: px, z: pz, yaw: ((lm.yaw ?? 0) * Math.PI) / 180 };
       place(lm.id, at.x, at.z, at.yaw);
       sights.push({ x: at.x, z: at.z, name: lm.name });
+      keepOut.push({ x: at.x, z: at.z, r: LANDMARK_CLEARANCE[lm.id] ?? 12 });
     }
     // Every ride starts at Mzee Juma's kijiwe, on the left-hand verge just ahead of the spawn point.
     {
@@ -267,6 +298,7 @@ export class Game {
       // Left of (fx, fz) is (fz, −fx).
       const at = curb(x + fx * 10 + fz * 6, z + fz * 10 - fx * 6, 3.2);
       place("kijiwe", at.x, at.z, at.yaw);
+      keepOut.push({ x: at.x, z: at.z, r: 8 });
       // The sponsor's hero billboard, across the road and further on, facing the rider at the start.
       const hero = buildHeroBillboard();
       const spot = curb(x + fx * 38 - fz * 6, z + fz * 38 + fx * 6, 4.5);
@@ -274,6 +306,18 @@ export class Game {
       hero.object.rotation.y = Math.atan2(-fx, -fz);
       this.root.add(hero.object);
       this.landmarkObjects.push(hero.object);
+      keepOut.push({ x: spot.x, z: spot.z, r: 9 });
+    }
+    // Schools, churches and mosques, pitches and playgrounds.
+    this.civic = new Civic(pois);
+    this.root.add(this.civic.group);
+    if (this.civic.walls.length) this.index.addChunk("civic", new Float32Array(this.civic.walls), new Float32Array());
+    keepOut.push(...this.civic.keepOut);
+    // Rows of dukas along streets the map left bare, so riding feels like a real town.
+    if (frontage) {
+      this.frontage = new Frontage(frontage, keepOut);
+      this.root.add(this.frontage.group);
+      if (this.frontage.walls.length) this.index.addChunk("frontage", new Float32Array(this.frontage.walls), new Float32Array());
     }
     this.collectibles = new Collectibles(nav, this.cityId, usePlayer.getState().collectibles, (id) => {
       const p = usePlayer.getState();
@@ -394,12 +438,103 @@ export class Game {
   }
 
   private navTimer = 0;
+  /** Kilometres already moved off the odometer into the save (telemetry adds the live odometer on top). */
+  private telemetryKm = 0;
+  /** The rider asked for directions to the nearest sheli ("Tafuta sheli"). */
+  private fuelNav = false;
+  private fuelTarget: { x: number; z: number; name: string } | null = null;
+  private fuelRouteAge = 0;
 
-  /** Refresh the top-of-screen arrow: along the job route, or to the nearest sheli when the tank runs low. */
+  /** Shortest drive over the lane network from the rider to (x, z), as a flat [x, z, ...] polyline. */
+  private routeTo(x: number, z: number): Float32Array | null {
+    const nav = this.nav;
+    if (!nav) return null;
+    const bike = this.bike.state;
+    const from = nav.nearestOnNetwork(bike.x, bike.z);
+    const lane = nav.lanes[from.lane]!;
+    const target = nav.nearestNode(x, z);
+    const best = [lane.to, lane.from]
+      .map((node) => {
+        const lanes = nav.route(node, target) ?? [];
+        return { node, lanes, cost: Math.hypot(nav.nodeX(node) - bike.x, nav.nodeZ(node) - bike.z) + lanes.reduce((sum, id) => sum + nav.lanes[id]!.length, 0) };
+      })
+      .sort((a, b) => a.cost - b.cost)[0]!;
+    const pts: number[] = [bike.x, bike.z, from.x, from.z, nav.nodeX(best.node), nav.nodeZ(best.node)];
+    for (const id of best.lanes) {
+      const l = nav.lanes[id]!;
+      for (let i = 2; i < l.pts.length; i += 2) pts.push(l.pts[i]!, l.pts[i + 1]!);
+    }
+    pts.push(x, z);
+    return new Float32Array(pts);
+  }
+
+  /** Petrol stations by distance from the rider. */
+  private nearestFuel() {
+    const s = this.bike.state;
+    return this.services.filter((p) => p.fuel).sort((a, b) => Math.hypot(a.x - s.x, a.z - s.z) - Math.hypot(b.x - s.x, b.z - s.z))[0] ?? null;
+  }
+
+  /** Turn directions to the nearest sheli on or off. Returns whether they're on. */
+  toggleFuelNav(): boolean {
+    this.fuelNav = !this.fuelNav && Boolean(this.nearestFuel());
+    this.fuelTarget = null;
+    navHud.fuelRoute = null;
+    this.navTimer = 0;
+    return this.fuelNav;
+  }
+
+  get fuelNavOn() {
+    return this.fuelNav;
+  }
+
+  /** Refresh the top-of-screen arrow: along the job route, or to a sheli when asked or when the tank runs low. */
   private updateNav(dt: number) {
     this.navTimer -= dt;
+    this.fuelRouteAge += dt;
     if (this.navTimer > 0) return;
     this.navTimer = 0.12;
+    const s = this.bike.state;
+    const lowFuel = s.fuel / this.stats.tank < 0.2;
+
+    // A job's route takes priority, unless the rider asked for a sheli.
+    if (missionHud.active && missionHud.route && missionHud.route.length >= 4 && !this.fuelNav) {
+      this.guideAlong("job", missionHud.route, missionHud.stopName, missionHud.distance);
+      return;
+    }
+    if (this.fuelNav || (lowFuel && !missionHud.active)) {
+      const near = this.nearestFuel();
+      if (!near) {
+        this.fuelNav = false;
+        navHud.mode = null;
+        return;
+      }
+      // Re-plan every few seconds (or when a nearer sheli comes up) so turns follow the rider.
+      if (!this.fuelTarget || this.fuelTarget !== near || this.fuelRouteAge > 3 || !navHud.fuelRoute) {
+        this.fuelTarget = near;
+        navHud.fuelRoute = this.routeTo(near.x, near.z);
+        this.fuelRouteAge = 0;
+      }
+      const dist = Math.hypot(near.x - s.x, near.z - s.z);
+      if (this.fuelNav && dist < 16) {
+        // Arrived: hand over to the station panel.
+        this.fuelNav = false;
+        navHud.fuelRoute = null;
+        navHud.mode = null;
+        events.emit("toast", { text: currentDictionary().nav.atFuel, tone: "sky" });
+        return;
+      }
+      if (navHud.fuelRoute) {
+        this.guideAlong("fuel", navHud.fuelRoute, near.name, dist);
+        navHud.asked = this.fuelNav;
+        return;
+      }
+    }
+    navHud.fuelRoute = null;
+    navHud.mode = null;
+  }
+
+  /** Point the arrow down the route and find the next turn. */
+  private guideAlong(mode: "job" | "fuel", route: Float32Array, label: string, distance: number) {
     const s = this.bike.state;
     const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
     // Unwrapped against the last value so the arrow turns the short way.
@@ -408,78 +543,53 @@ export class Game {
       const tau = Math.PI * 2;
       return navHud.angle + ((((a - navHud.angle) % tau) + tau * 1.5) % tau) - Math.PI;
     };
-    const route = missionHud.active ? missionHud.route : null;
-    if (route && route.length >= 4) {
-      // Resample the route from the point nearest the rider.
-      let start = 0, best = Infinity;
-      for (let i = 0; i < route.length; i += 2) {
-        const d = (route[i]! - s.x) ** 2 + (route[i + 1]! - s.z) ** 2;
-        if (d < best) {
-          best = d;
-          start = i;
-        }
-      }
-      const cum: number[] = [0];
-      for (let i = start + 2; i < route.length; i += 2) cum.push(cum[cum.length - 1]! + Math.hypot(route[i]! - route[i - 2]!, route[i + 1]! - route[i - 1]!));
-      const total = cum[cum.length - 1]!;
-      const at = (d: number): [number, number] => {
-        const t = Math.min(Math.max(d, 0), total);
-        let k = 1;
-        while (k < cum.length - 1 && cum[k]! < t) k++;
-        const a = start + (k - 1) * 2, b = start + k * 2;
-        if (b >= route.length) return [route[route.length - 2]!, route[route.length - 1]!];
-        const f = (t - cum[k - 1]!) / Math.max(cum[k]! - cum[k - 1]!, 1e-3);
-        return [route[a]! + (route[b]! - route[a]!) * f, route[a + 1]! + (route[b + 1]! - route[a + 1]!) * f];
-      };
-      const dir = (d: number) => {
-        const [ax, az] = at(d), [bx, bz] = at(d + 10);
-        const l = Math.hypot(bx - ax, bz - az) || 1;
-        return [(bx - ax) / l, (bz - az) / l] as const;
-      };
-      const [lx, lz] = at(Math.min(22, total));
-      navHud.mode = "job";
-      navHud.angle = relative(lx - s.x, lz - s.z);
-      navHud.distance = missionHud.distance;
-      navHud.label = missionHud.stopName;
-      navHud.turn = "straight";
-      navHud.turnIn = 0;
-      if (total < 30) navHud.turn = "arrive";
-      else {
-        const [rx, rz] = dir(4);
-        for (let d = 10; d < Math.min(total - 10, 220); d += 5) {
-          const [dx, dz] = dir(d);
-          const turn = Math.atan2(dx * -rz + dz * rx, dx * rx + dz * rz);
-          if (Math.abs(turn) > 0.6) {
-            navHud.turn = Math.abs(turn) > 2.4 ? "uturn" : turn > 0 ? "right" : "left";
-            navHud.turnIn = d;
-            break;
-          }
-        }
-      }
-      return;
-    }
-    // Low tank and no job: point at the nearest petrol station.
-    if (s.fuel / this.stats.tank < 0.2) {
-      let target: (typeof this.services)[number] | null = null, bestD = Infinity;
-      for (const p of this.services) {
-        if (!p.fuel) continue;
-        const d = Math.hypot(p.x - s.x, p.z - s.z);
-        if (d < bestD) {
-          bestD = d;
-          target = p;
-        }
-      }
-      if (target) {
-        navHud.mode = "fuel";
-        navHud.angle = relative(target.x - s.x, target.z - s.z);
-        navHud.distance = bestD;
-        navHud.label = target.name;
-        navHud.turn = bestD < 25 ? "arrive" : "straight";
-        navHud.turnIn = 0;
-        return;
+    // Resample the route from the point nearest the rider.
+    let start = 0, best = Infinity;
+    for (let i = 0; i < route.length; i += 2) {
+      const d = (route[i]! - s.x) ** 2 + (route[i + 1]! - s.z) ** 2;
+      if (d < best) {
+        best = d;
+        start = i;
       }
     }
-    navHud.mode = null;
+    const cum: number[] = [0];
+    for (let i = start + 2; i < route.length; i += 2) cum.push(cum[cum.length - 1]! + Math.hypot(route[i]! - route[i - 2]!, route[i + 1]! - route[i - 1]!));
+    const total = cum[cum.length - 1]!;
+    const at = (d: number): [number, number] => {
+      const t = Math.min(Math.max(d, 0), total);
+      let k = 1;
+      while (k < cum.length - 1 && cum[k]! < t) k++;
+      const a = start + (k - 1) * 2, b = start + k * 2;
+      if (b >= route.length) return [route[route.length - 2]!, route[route.length - 1]!];
+      const f = (t - cum[k - 1]!) / Math.max(cum[k]! - cum[k - 1]!, 1e-3);
+      return [route[a]! + (route[b]! - route[a]!) * f, route[a + 1]! + (route[b + 1]! - route[a + 1]!) * f];
+    };
+    const dir = (d: number) => {
+      const [ax, az] = at(d), [bx, bz] = at(d + 10);
+      const l = Math.hypot(bx - ax, bz - az) || 1;
+      return [(bx - ax) / l, (bz - az) / l] as const;
+    };
+    const [lx, lz] = at(Math.min(22, total));
+    navHud.mode = mode;
+    navHud.asked = false;
+    navHud.angle = relative(lx - s.x, lz - s.z);
+    navHud.distance = Math.max(distance, total);
+    navHud.label = label;
+    navHud.turn = "straight";
+    navHud.turnIn = 0;
+    if (total < 30) navHud.turn = "arrive";
+    else {
+      const [rx, rz] = dir(4);
+      for (let d = 10; d < Math.min(total - 10, 220); d += 5) {
+        const [dx, dz] = dir(d);
+        const turn = Math.atan2(dx * -rz + dz * rx, dx * rx + dz * rz);
+        if (Math.abs(turn) > 0.6) {
+          navHud.turn = Math.abs(turn) > 2.4 ? "uturn" : turn > 0 ? "right" : "left";
+          navHud.turnIn = d;
+          break;
+        }
+      }
+    }
   }
 
   /** Pump price here, TZS per litre. */
@@ -550,7 +660,9 @@ export class Game {
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
     document.addEventListener("visibilitychange", onVisibility);
+    setRealTime(useSettings.getState().realClock);
     const unsubSettings = useSettings.subscribe((s) => {
+      setRealTime(s.realClock);
       audio.setVolumes(s.masterVolume, s.musicVolume, s.sfxVolume);
       if (s.musicVolume <= 0 || s.radio === "off") {
         audio.stopMusic();
@@ -653,7 +765,8 @@ export class Game {
     this.obstacles.length = 0;
     this.peds?.obstacles(this.obstacles);
     this.traffic?.update(dt, this.bike, this.stats, this.obstacles);
-    this.peds?.update(dt, this.bike, this.stats);
+    this.peds?.update(dt, this.bike, this.stats, this.traffic ?? undefined);
+    this.civic?.update(dt);
     const player = usePlayer.getState();
     const licence = { valid: this.licenceHours > 0, hesabu: HESABU[this.cityId] };
     const fine = (amount: number) => player.spend(Math.min(usePlayer.getState().wallet, amount));
@@ -840,6 +953,7 @@ export class Game {
     }
     if (s.odometer > 0) {
       player.bumpStat("distanceKm", s.odometer / 1000);
+      this.telemetryKm += s.odometer / 1000;
       s.odometer = 0;
     }
   }
@@ -860,6 +974,8 @@ export class Game {
     this.banners?.dispose();
     this.markets?.dispose();
     this.fuelStations?.dispose();
+    this.frontage?.dispose();
+    this.civic?.dispose();
     this.disposeAds?.();
     for (const o of this.landmarkObjects) {
       o.traverse((child) => {

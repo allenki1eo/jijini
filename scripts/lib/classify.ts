@@ -166,6 +166,8 @@ const HEALTHCARE: Record<string, PoiKind> = {
 };
 
 export const poiKind = (tags: Tags): PoiKind | null => {
+  if (tags.leisure === "playground") return "playground";
+  if (tags.leisure === "pitch") return "pitch";
   if (tags.amenity === "car_repair" || tags.amenity === "motorcycle_repair" || tags.craft === "motorcycle_repair" || GARAGE_SHOPS.has(tags.shop ?? "")) return "garage";
   if (tags.amenity && POI_MAP[tags.amenity]) return POI_MAP[tags.amenity]!;
   if (tags.healthcare && HEALTHCARE[tags.healthcare]) return HEALTHCARE[tags.healthcare]!;
@@ -181,6 +183,9 @@ export const poiKind = (tags: Tags): PoiKind | null => {
 
 /** The OSM value that says what kind of place this is, for signs and shop menus. */
 export const poiSubtype = (tags: Tags): string | undefined => {
+  // Churches and mosques keep their religion (it picks the tower), pitches their sport.
+  if (tags.amenity === "place_of_worship") return tags.religion?.slice(0, 24);
+  if (tags.leisure === "pitch") return tags.sport?.split(";")[0]?.slice(0, 24);
   const v = tags.shop ?? tags.office ?? tags.healthcare ?? tags.craft ?? tags.amenity ?? tags.tourism;
   return v && v !== "yes" ? v.slice(0, 24) : undefined;
 };

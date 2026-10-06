@@ -38,4 +38,8 @@ export const navHud = {
   /** Metres left to the destination. */
   distance: 0,
   label: "",
+  /** Fuel mode because the rider asked (rather than the tank running low). */
+  asked: false,
+  /** The drive to the sheli, for the minimap. */
+  fuelRoute: null as Float32Array | null,
 };

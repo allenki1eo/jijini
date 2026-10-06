@@ -2,7 +2,7 @@
   "format": 1,
   "id": "mbeya",
   "name": "Mbeya",
-  "generatedAt": "2026-10-06T10:31:11.364Z",
+  "generatedAt": "2026-10-06T16:37:40.848Z",
   "source": "osm-api",
   "origin": {
     "lat": -8.9095,
@@ -20,127 +20,127 @@
       "key": "-4_-4",
       "cx": -4,
       "cz": -4,
-      "bytes": 38164
+      "bytes": 36099
     },
     {
       "key": "-4_-3",
       "cx": -4,
       "cz": -3,
-      "bytes": 25135
+      "bytes": 22825
     },
     {
       "key": "-4_-2",
       "cx": -4,
       "cz": -2,
-      "bytes": 16559
+      "bytes": 15699
     },
     {
       "key": "-4_-1",
       "cx": -4,
       "cz": -1,
-      "bytes": 11324
+      "bytes": 11075
     },
     {
       "key": "-4_0",
       "cx": -4,
       "cz": 0,
-      "bytes": 6751
+      "bytes": 6704
     },
     {
       "key": "-4_1",
       "cx": -4,
       "cz": 1,
-      "bytes": 4126
+      "bytes": 4065
     },
     {
       "key": "-4_2",
       "cx": -4,
       "cz": 2,
-      "bytes": 14030
+      "bytes": 13495
     },
     {
       "key": "-4_3",
       "cx": -4,
       "cz": 3,
-      "bytes": 26160
+      "bytes": 24961
     },
     {
       "key": "-3_-4",
       "cx": -3,
       "cz": -4,
-      "bytes": 32618
+      "bytes": 32444
     },
     {
       "key": "-3_-3",
       "cx": -3,
       "cz": -3,
-      "bytes": 30354
+      "bytes": 29268
     },
     {
       "key": "-3_-2",
       "cx": -3,
       "cz": -2,
-      "bytes": 31191
+      "bytes": 30822
     },
     {
       "key": "-3_-1",
       "cx": -3,
       "cz": -1,
-      "bytes": 35087
+      "bytes": 31441
     },
     {
       "key": "-3_0",
       "cx": -3,
       "cz": 0,
-      "bytes": 20516
+      "bytes": 18278
     },
     {
       "key": "-3_1",
       "cx": -3,
       "cz": 1,
-      "bytes": 5416
+      "bytes": 5160
     },
     {
       "key": "-3_2",
       "cx": -3,
       "cz": 2,
-      "bytes": 4719
+      "bytes": 4143
     },
     {
       "key": "-3_3",
       "cx": -3,
       "cz": 3,
-      "bytes": 9018
+      "bytes": 8671
     },
     {
       "key": "-2_-4",
       "cx": -2,
       "cz": -4,
-      "bytes": 23142
+      "bytes": 21080
     },
     {
       "key": "-2_-3",
       "cx": -2,
       "cz": -3,
-      "bytes": 40461
+      "bytes": 39433
     },
     {
       "key": "-2_-2",
       "cx": -2,
       "cz": -2,
-      "bytes": 24842
+      "bytes": 22446
     },
     {
       "key": "-2_-1",
       "cx": -2,
       "cz": -1,
-      "bytes": 33475
+      "bytes": 32089
     },
     {
       "key": "-2_0",
       "cx": -2,
       "cz": 0,
-      "bytes": 15962
+      "bytes": 14282
     },
     {
       "key": "-2_1",
@@ -152,7 +152,7 @@
       "key": "-2_2",
       "cx": -2,
       "cz": 2,
-      "bytes": 4374
+      "bytes": 4256
     },
     {
       "key": "-2_3",
@@ -164,43 +164,43 @@
       "key": "-1_-4",
       "cx": -1,
       "cz": -4,
-      "bytes": 19624
+      "bytes": 17811
     },
     {
       "key": "-1_-3",
       "cx": -1,
       "cz": -3,
-      "bytes": 27223
+      "bytes": 26056
     },
     {
       "key": "-1_-2",
       "cx": -1,
       "cz": -2,
-      "bytes": 37237
+      "bytes": 35700
     },
     {
       "key": "-1_-1",
       "cx": -1,
       "cz": -1,
-      "bytes": 27163
+      "bytes": 23876
     },
     {
       "key": "-1_0",
       "cx": -1,
       "cz": 0,
-      "bytes": 14685
+      "bytes": 13449
     },
     {
       "key": "-1_1",
       "cx": -1,
       "cz": 1,
-      "bytes": 7629
+      "bytes": 7469
     },
     {
       "key": "-1_2",
       "cx": -1,
       "cz": 2,
-      "bytes": 5403
+      "bytes": 5276
     },
     {
       "key": "-1_3",
@@ -212,37 +212,37 @@
       "key": "0_-4",
       "cx": 0,
       "cz": -4,
-      "bytes": 9187
+      "bytes": 8729
     },
     {
       "key": "0_-3",
       "cx": 0,
       "cz": -3,
-      "bytes": 26781
+      "bytes": 25728
     },
     {
       "key": "0_-2",
       "cx": 0,
       "cz": -2,
-      "bytes": 26369
+      "bytes": 25506
     },
     {
       "key": "0_-1",
       "cx": 0,
       "cz": -1,
-      "bytes": 32513
+      "bytes": 30316
     },
     {
       "key": "0_0",
       "cx": 0,
       "cz": 0,
-      "bytes": 23355
+      "bytes": 22616
     },
     {
       "key": "0_1",
       "cx": 0,
       "cz": 1,
-      "bytes": 11800
+      "bytes": 11540
     },
     {
       "key": "0_2",
@@ -260,31 +260,31 @@
       "key": "1_-4",
       "cx": 1,
       "cz": -4,
-      "bytes": 7038
+      "bytes": 6800
     },
     {
       "key": "1_-3",
       "cx": 1,
       "cz": -3,
-      "bytes": 31487
+      "bytes": 30271
     },
     {
       "key": "1_-2",
       "cx": 1,
       "cz": -2,
-      "bytes": 35749
+      "bytes": 31926
     },
     {
       "key": "1_-1",
       "cx": 1,
       "cz": -1,
-      "bytes": 36317
+      "bytes": 34262
     },
     {
       "key": "1_0",
       "cx": 1,
       "cz": 0,
-      "bytes": 25778
+      "bytes": 22515
     },
     {
       "key": "1_1",
@@ -308,43 +308,43 @@
       "key": "2_-4",
       "cx": 2,
       "cz": -4,
-      "bytes": 13268
+      "bytes": 12388
     },
     {
       "key": "2_-3",
       "cx": 2,
       "cz": -3,
-      "bytes": 23655
+      "bytes": 23295
     },
     {
       "key": "2_-2",
       "cx": 2,
       "cz": -2,
-      "bytes": 26013
+      "bytes": 22991
     },
     {
       "key": "2_-1",
       "cx": 2,
       "cz": -1,
-      "bytes": 28383
+      "bytes": 26418
     },
     {
       "key": "2_0",
       "cx": 2,
       "cz": 0,
-      "bytes": 22796
+      "bytes": 20162
     },
     {
       "key": "2_1",
       "cx": 2,
       "cz": 1,
-      "bytes": 5429
+      "bytes": 4952
     },
     {
       "key": "2_2",
       "cx": 2,
       "cz": 2,
-      "bytes": 5544
+      "bytes": 4747
     },
     {
       "key": "2_3",
@@ -356,13 +356,13 @@
       "key": "3_-4",
       "cx": 3,
       "cz": -4,
-      "bytes": 16379
+      "bytes": 15510
     },
     {
       "key": "3_-3",
       "cx": 3,
       "cz": -3,
-      "bytes": 23006
+      "bytes": 20431
     },
     {
       "key": "3_-2",
@@ -380,7 +380,7 @@
       "key": "3_0",
       "cx": 3,
       "cz": 0,
-      "bytes": 16958
+      "bytes": 16257
     },
     {
       "key": "3_1",
@@ -392,7 +392,7 @@
       "key": "3_2",
       "cx": 3,
       "cz": 2,
-      "bytes": 5582
+      "bytes": 5463
     },
     {
       "key": "3_3",
@@ -407,13 +407,32 @@
     "heading": -1.595
   },
   "stats": {
-    "buildings": 8347,
-    "roads": 385,
+    "buildings": 7839,
+    "roads": 380,
     "pois": 98,
-    "navNodes": 517,
-    "navEdges": 650,
-    "trees": 1367
+    "navNodes": 518,
+    "navEdges": 649,
+    "trees": 1446,
+    "roadKm": 76.1,
+    "shopfronts": 1100,
+    "places": {
+      "hospital": 3,
+      "pharmacy": 2,
+      "school": 10,
+      "market": 5,
+      "fuel": 6,
+      "bus_station": 2,
+      "place_of_worship": 1,
+      "bank": 11,
+      "restaurant": 2,
+      "bar": 4,
+      "shop": 37,
+      "office": 5,
+      "other": 4,
+      "bus_stop": 5,
+      "garage": 1
+    }
   },
-  "totalBytes": 1187616,
+  "totalBytes": 1157200,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

@@ -47,7 +47,7 @@ const a = c();
 const b = c();
 
 export const env = {
-  /** Game clock in hours (0..24). */
+  /** Time of day in hours (0..24): real local time by default. */
   hour: 16.5,
   /** Real seconds per game hour. */
   secondsPerHour: 40,
@@ -72,6 +72,16 @@ export const env = {
   nextWeatherChange: 3,
   /** Freeze the clock (tutorial, debugging). */
   frozen: false,
+  /** Follow the device's local time instead of the fast game clock. */
+  realTime: true,
+  /** Hours added to the real clock (debug time-of-day buttons). */
+  offset: 0,
+};
+
+/** The device's local time of day in hours (0..24). */
+const localHour = () => {
+  const d = new Date();
+  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
 };
 
 export const setWeather = (w: Weather) => {
@@ -80,6 +90,16 @@ export const setWeather = (w: Weather) => {
 
 export const setHour = (h: number) => {
   env.hour = ((h % 24) + 24) % 24;
+  // On the real clock, jump by shifting it rather than fighting it.
+  if (env.realTime) env.offset = env.hour - localHour();
+};
+
+/** Switch between the real local clock and the fast game clock. */
+export const setRealTime = (on: boolean) => {
+  if (on === env.realTime) return;
+  env.realTime = on;
+  env.offset = 0;
+  if (on) env.hour = localHour();
 };
 
 /** Hour formatted HH:MM. */
@@ -108,7 +128,7 @@ const sample = (hour: number) => {
 
 /** Advance clock and weather. `random` is injectable for deterministic tests. */
 export const updateEnvironment = (dt: number, random: () => number = Math.random) => {
-  if (!env.frozen) env.hour = (env.hour + dt / env.secondsPerHour) % 24;
+  if (!env.frozen) env.hour = env.realTime ? (((localHour() + env.offset) % 24) + 24) % 24 : (env.hour + dt / env.secondsPerHour) % 24;
   envUniforms.uTime.value += dt;
 
   // Weather changes every few game hours.

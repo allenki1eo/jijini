@@ -1,7 +1,10 @@
 /**
- * Pedestrians walking the sidewalks, now and then stepping out to cross.
- * Denser around markets. They're obstacles for traffic and the player, and
- * hurry off the road when someone honks.
+ * Pedestrians walking the sidewalks, now and then crossing. Denser around
+ * markets. They're careful: before stepping out they stop at the kerb and
+ * look both ways, waiting for a gap in the traffic and for the boda; while
+ * crossing they hurry if something comes, and turn back to the kerb if it's
+ * too close; on the pavement they step aside from a boda riding at them.
+ * They hurry off the road when someone honks.
  */
 import * as THREE from "three";
 import { createInstancedMaterial, setInstanceHex } from "@/game/world/meshKit";
@@ -11,7 +14,7 @@ import type { RideStats } from "@/game/vehicles/bikes";
 import type { LanePoint, NavNetwork } from "./NavNetwork";
 import type { Obstacle } from "./TrafficSystem";
 
-type PedState = "walk" | "cross" | "fallen";
+type PedState = "walk" | "wait" | "cross" | "fallen";
 
 interface Ped {
   active: boolean;
@@ -30,12 +33,22 @@ interface Ped {
   t: number;
   timer: number;
   phase: number;
+  /** Sideways step away from the road (m) when a boda rides close on the pavement. */
+  dodge: number;
+  /** Seconds spent waiting at the kerb for a gap. */
+  waited: number;
   shirt: string;
   kind: PersonKind;
   obstacle: Obstacle;
 }
 
 const pt: LanePoint = { x: 0, z: 0, dx: 0, dz: 0 };
+const vehicles: number[] = [];
+
+/** A vehicle this close to the crossing line, or heading for it this fast, means "wait". */
+const GAP = 26;
+/** Give up waiting and walk on after this long. */
+const PATIENCE = 9;
 const dummy = new THREE.Object3D();
 
 
@@ -59,6 +72,8 @@ export class Pedestrians {
       s: 0,
       side: 1 as const,
       speed: 1.3,
+      dodge: 0,
+      waited: 0,
       state: "walk" as PedState,
       x: 0,
       z: 0,
@@ -145,14 +160,28 @@ export class Pedestrians {
         speed: 0.9 + Math.random() * 0.7,
         state: "walk",
         timer: 0,
+        dodge: 0,
+        waited: 0,
         shirt: CLOTHES[p.kind][Math.floor(Math.random() * CLOTHES[p.kind].length)]!,
       });
       return;
     }
   }
 
-  update(dt: number, bike: BikePhysics, stats: RideStats) {
+  /** Is it safe to cross between (ax, az) and (bx, bz)? Checks traffic and the boda (position and speed). */
+  private clear(ax: number, az: number, bx: number, bz: number, bike: BikePhysics) {
+    const mx = (ax + bx) / 2, mz = (az + bz) / 2;
+    for (let i = 0; i < vehicles.length; i += 2) if ((vehicles[i]! - mx) ** 2 + (vehicles[i + 1]! - mz) ** 2 < GAP * GAP) return false;
     const b = bike.state;
+    const d = Math.hypot(b.x - mx, b.z - mz);
+    // A boda at speed needs a bigger gap: about three seconds' worth.
+    return d > Math.max(10, Math.abs(b.speed) * 3);
+  }
+
+  update(dt: number, bike: BikePhysics, stats: RideStats, traffic?: { positions(out: number[]): number[] }) {
+    const b = bike.state;
+    if (traffic) traffic.positions(vehicles);
+    else vehicles.length = 0;
     let active = 0;
     for (const p of this.peds) {
       if (p.active && Math.hypot(p.x - b.x, p.z - b.z) > 180) p.active = false;
@@ -164,6 +193,7 @@ export class Pedestrians {
       this.spawn(p, b.x, b.z);
       if (p.active) active++;
     }
+    const bikeFast = Math.abs(b.speed) > 3;
 
     for (const p of this.peds) {
       if (!p.active) continue;
@@ -176,23 +206,49 @@ export class Pedestrians {
           p.lane = this.nav.nextLane(p.lane, Math.random(), 0);
         }
         this.nav.sample(p.lane, p.s, pt);
-        const off = this.sidewalk(p) * p.side;
+        // Step back from the kerb when a boda comes along the pavement at them.
+        const near = Math.hypot(p.x - b.x, p.z - b.z);
+        p.dodge += ((bikeFast && near < 4 ? 1.4 : 0) - p.dodge) * Math.min(1, dt * 6);
+        const off = (this.sidewalk(p) + p.dodge) * p.side;
         p.x = pt.x + pt.dz * off;
         p.z = pt.z - pt.dx * off;
         p.yaw = Math.atan2(-pt.dx, -pt.dz);
-        // Step out to cross now and then (more often on small streets).
-        if (Math.random() < dt * (lane.cls >= 3 ? 0.03 : 0.012)) {
-          p.state = "cross";
+        // Now and then they want to cross (less on busy main roads); first they stop at the kerb.
+        if (p.dodge < 0.2 && Math.random() < dt * (lane.cls >= 3 ? 0.025 : 0.008)) {
+          p.state = "wait";
+          p.waited = 0;
           p.fromX = p.x;
           p.fromZ = p.z;
-          p.toX = pt.x - pt.dz * off;
-          p.toZ = pt.z + pt.dx * off;
+          const across = this.sidewalk(p) * p.side;
+          p.toX = pt.x - pt.dz * across;
+          p.toZ = pt.z + pt.dx * across;
           p.t = 0;
-          p.yaw = Math.atan2(-(p.toX - p.fromX), -(p.toZ - p.fromZ));
         }
+      } else if (p.state === "wait") {
+        // Look left and right (turning the head is a slow sway of the whole body).
+        p.waited += dt;
+        const facing = Math.atan2(-(p.toX - p.fromX), -(p.toZ - p.fromZ));
+        p.yaw = facing + Math.sin(p.waited * 2.2) * 0.7;
+        p.phase = 0;
+        if (this.clear(p.fromX, p.fromZ, p.toX, p.toZ, bike) && p.waited > 1.2) {
+          p.state = "cross";
+          p.yaw = facing;
+        } else if (p.waited > PATIENCE) p.state = "walk";
       } else if (p.state === "cross") {
         const len = Math.hypot(p.toX - p.fromX, p.toZ - p.fromZ) || 1;
-        p.t += (p.speed * dt) / len;
+        // Something coming: hurry, or go back to the kerb if they've barely started.
+        const db = Math.hypot(b.x - p.x, b.z - p.z);
+        const threat = (bikeFast && db < Math.max(8, Math.abs(b.speed) * 1.6)) || !this.clear(p.x, p.z, p.x, p.z, bike);
+        if (threat && p.t < 0.3 && p.speed > 0) {
+          // Turn back.
+          [p.fromX, p.toX] = [p.toX, p.fromX];
+          [p.fromZ, p.toZ] = [p.toZ, p.fromZ];
+          p.t = 1 - p.t;
+          p.side = p.side === 1 ? -1 : 1;
+          p.yaw = Math.atan2(-(p.toX - p.fromX), -(p.toZ - p.fromZ));
+        }
+        const pace = threat ? 2.6 : p.speed;
+        p.t += (pace * dt) / len;
         p.x = p.fromX + (p.toX - p.fromX) * Math.min(1, p.t);
         p.z = p.fromZ + (p.toZ - p.fromZ) * Math.min(1, p.t);
         if (p.t >= 1) {

@@ -71,7 +71,7 @@ export function IncomingCall({ game }: { game: Game }) {
         <m.div
           role="alertdialog"
           aria-label={`${call.caller} · ${t.phone.incoming}`}
-          className="pointer-events-auto w-[min(23rem,calc(100vw-2rem))] overflow-hidden rounded-[1.6rem] bg-night-800/95 shadow-2xl ring-1 ring-white/12 backdrop-blur"
+          className="pointer-events-auto w-[23rem] max-w-full overflow-hidden rounded-[1.6rem] bg-night-800/95 shadow-2xl ring-1 ring-white/12 backdrop-blur"
           initial={{ opacity: 0, y: -30, scale: 0.94 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -24, scale: 0.96, transition: { duration: 0.18 } }}
@@ -98,11 +98,12 @@ export function IncomingCall({ game }: { game: Game }) {
               <span className="font-display text-sm font-extrabold tabular">{formatTzs(call.offer.fare)}</span>
             </div>
           </div>
-          <p className="mx-3 rounded-2xl rounded-tl-sm bg-night-600 px-3 py-2 text-sm leading-snug text-cream/90">“{call.text}”</p>
-          <p className="mx-3 mt-1.5 text-xs text-cream/50">
+          {/* On landscape phones the card keeps to caller, fare and the two buttons, clear of the steering pad. */}
+          <p className="mx-3 rounded-2xl rounded-tl-sm bg-night-600 px-3 py-2 text-sm leading-snug text-cream/90 short:hidden">“{call.text}”</p>
+          <p className="mx-3 mt-1.5 text-xs text-cream/50 short:hidden">
             {t.missions.types[call.offer.type]} · {formatDistance(call.offer.distance)}
           </p>
-          <div className="mt-2 grid grid-cols-2 gap-2 p-3 pt-1">
+          <div className="mt-2 grid grid-cols-2 gap-2 p-3 pt-1 short:mt-0">
             <button
               type="button"
               onClick={() => game.phone?.decline()}

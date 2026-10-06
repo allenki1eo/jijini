@@ -2,7 +2,7 @@
   "format": 1,
   "id": "shinyanga",
   "name": "Shinyanga",
-  "generatedAt": "2026-10-06T08:08:46.951Z",
+  "generatedAt": "2026-10-06T16:37:12.521Z",
   "source": "overpass",
   "origin": {
     "lat": -3.6639,
@@ -44,7 +44,7 @@
       "key": "-4_0",
       "cx": -4,
       "cz": 0,
-      "bytes": 5849
+      "bytes": 5333
     },
     {
       "key": "-4_1",
@@ -86,25 +86,25 @@
       "key": "-3_-1",
       "cx": -3,
       "cz": -1,
-      "bytes": 3169
+      "bytes": 2998
     },
     {
       "key": "-3_0",
       "cx": -3,
       "cz": 0,
-      "bytes": 7786
+      "bytes": 7267
     },
     {
       "key": "-3_1",
       "cx": -3,
       "cz": 1,
-      "bytes": 6317
+      "bytes": 5879
     },
     {
       "key": "-3_2",
       "cx": -3,
       "cz": 2,
-      "bytes": 3480
+      "bytes": 3353
     },
     {
       "key": "-3_3",
@@ -146,13 +146,13 @@
       "key": "-2_1",
       "cx": -2,
       "cz": 1,
-      "bytes": 6952
+      "bytes": 6643
     },
     {
       "key": "-2_2",
       "cx": -2,
       "cz": 2,
-      "bytes": 4983
+      "bytes": 4856
     },
     {
       "key": "-2_3",
@@ -170,7 +170,7 @@
       "key": "-1_-3",
       "cx": -1,
       "cz": -3,
-      "bytes": 7243
+      "bytes": 7108
     },
     {
       "key": "-1_-2",
@@ -188,7 +188,7 @@
       "key": "-1_0",
       "cx": -1,
       "cz": 0,
-      "bytes": 6712
+      "bytes": 6315
     },
     {
       "key": "-1_1",
@@ -206,7 +206,7 @@
       "key": "-1_3",
       "cx": -1,
       "cz": 3,
-      "bytes": 13435
+      "bytes": 13301
     },
     {
       "key": "0_-4",
@@ -218,13 +218,13 @@
       "key": "0_-3",
       "cx": 0,
       "cz": -3,
-      "bytes": 7004
+      "bytes": 6742
     },
     {
       "key": "0_-2",
       "cx": 0,
       "cz": -2,
-      "bytes": 7358
+      "bytes": 7204
     },
     {
       "key": "0_-1",
@@ -236,7 +236,7 @@
       "key": "0_0",
       "cx": 0,
       "cz": 0,
-      "bytes": 4281
+      "bytes": 4292
     },
     {
       "key": "0_1",
@@ -248,13 +248,13 @@
       "key": "0_2",
       "cx": 0,
       "cz": 2,
-      "bytes": 9520
+      "bytes": 9408
     },
     {
       "key": "0_3",
       "cx": 0,
       "cz": 3,
-      "bytes": 9121
+      "bytes": 9058
     },
     {
       "key": "1_-4",
@@ -266,31 +266,31 @@
       "key": "1_-3",
       "cx": 1,
       "cz": -3,
-      "bytes": 12931
+      "bytes": 12795
     },
     {
       "key": "1_-2",
       "cx": 1,
       "cz": -2,
-      "bytes": 9046
+      "bytes": 8919
     },
     {
       "key": "1_-1",
       "cx": 1,
       "cz": -1,
-      "bytes": 6308
+      "bytes": 5999
     },
     {
       "key": "1_0",
       "cx": 1,
       "cz": 0,
-      "bytes": 2456
+      "bytes": 2275
     },
     {
       "key": "1_1",
       "cx": 1,
       "cz": 1,
-      "bytes": 5175
+      "bytes": 5056
     },
     {
       "key": "1_2",
@@ -302,19 +302,19 @@
       "key": "1_3",
       "cx": 1,
       "cz": 3,
-      "bytes": 5191
+      "bytes": 5145
     },
     {
       "key": "2_-4",
       "cx": 2,
       "cz": -4,
-      "bytes": 9108
+      "bytes": 8987
     },
     {
       "key": "2_-3",
       "cx": 2,
       "cz": -3,
-      "bytes": 6481
+      "bytes": 6271
     },
     {
       "key": "2_-2",
@@ -326,7 +326,7 @@
       "key": "2_-1",
       "cx": 2,
       "cz": -1,
-      "bytes": 8723
+      "bytes": 8480
     },
     {
       "key": "2_0",
@@ -350,25 +350,25 @@
       "key": "2_3",
       "cx": 2,
       "cz": 3,
-      "bytes": 3488
+      "bytes": 3193
     },
     {
       "key": "3_-4",
       "cx": 3,
       "cz": -4,
-      "bytes": 8972
+      "bytes": 8845
     },
     {
       "key": "3_-3",
       "cx": 3,
       "cz": -3,
-      "bytes": 7425
+      "bytes": 7079
     },
     {
       "key": "3_-2",
       "cx": 3,
       "cz": -2,
-      "bytes": 8902
+      "bytes": 8775
     },
     {
       "key": "3_-1",
@@ -398,7 +398,7 @@
       "key": "3_3",
       "cx": 3,
       "cz": 3,
-      "bytes": 4286
+      "bytes": 4199
     }
   ],
   "spawn": {
@@ -407,13 +407,35 @@
     "heading": -2.051
   },
   "stats": {
-    "buildings": 2636,
-    "roads": 276,
-    "pois": 185,
+    "buildings": 2580,
+    "roads": 275,
+    "pois": 189,
     "navNodes": 519,
-    "navEdges": 739,
-    "trees": 1843
+    "navEdges": 738,
+    "trees": 1882,
+    "roadKm": 75.2,
+    "shopfronts": 750,
+    "places": {
+      "hospital": 4,
+      "clinic": 3,
+      "pharmacy": 10,
+      "school": 24,
+      "market": 8,
+      "fuel": 5,
+      "bus_station": 6,
+      "place_of_worship": 15,
+      "bank": 11,
+      "restaurant": 6,
+      "bar": 13,
+      "shop": 31,
+      "hotel": 23,
+      "office": 15,
+      "other": 9,
+      "bus_stop": 1,
+      "garage": 1,
+      "pitch": 4
+    }
   },
-  "totalBytes": 460370,
+  "totalBytes": 478123,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

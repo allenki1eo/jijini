@@ -28,6 +28,7 @@ import { unlockedTypes, type MissionDef } from "@/game/missions/types";
 import { CITIES } from "@/data/cities/config";
 import { FUEL_PRICE_PER_L, REPAIR_PRICE_PER_POINT } from "@/game/vehicles/bikes";
 import { useMissions } from "@/stores/missions";
+import { attachProgression } from "@/game/systems/progression";
 import type { Quality } from "@/stores/settings";
 import { attachInputs, clearPressed, controls, pollControls } from "./controls";
 import { events } from "./events";
@@ -72,6 +73,7 @@ export class Game {
   /** Called when the player presses Esc / P / Start. */
   onPauseRequest: (() => void) | null = null;
   private sinceSave = 0;
+  private topSpeedSeen = 0;
   private disposed = false;
   private detach: (() => void) | null = null;
   private unsubPlayer: () => void;
@@ -125,7 +127,12 @@ export class Game {
 
   /** Attach input and load the traffic network and points of interest. */
   async start() {
-    this.detach = attachInputs();
+    const detachInputs = attachInputs();
+    const detachProgression = attachProgression();
+    this.detach = () => {
+      detachInputs();
+      detachProgression();
+    };
     const [nav, pois] = await Promise.all([
       loadNavNetwork(this.baseUrl),
       fetch(`${this.baseUrl}/pois.json`)
@@ -153,9 +160,19 @@ export class Game {
   /** Generate a fresh mission board around the rider. */
   refreshOffers() {
     if (!this.generator || !this.nav) return;
+    // Reputation (Sifa) shapes the board: trusted riders see more and better-paid jobs.
+    const rep = usePlayer.getState().reputation;
+    const offers = this.generator.offers(this.generatorContext(), rep < 2 ? 3 : rep >= 4 ? 5 : 4).map((o) => ({
+      ...o,
+      fare: Math.round((o.fare * (0.85 + rep * 0.06)) / 100) * 100,
+    }));
+    useMissions.getState().set({ offers });
+  }
+
+  private generatorContext() {
     const p = usePlayer.getState();
-    const offers = this.generator.offers({
-      nav: this.nav,
+    return {
+      nav: this.nav!,
       pois: this.pois,
       x: this.bike.state.x,
       z: this.bike.state.z,
@@ -164,8 +181,23 @@ export class Game {
       night: env.night > 0.5,
       rain: env.rain > 0.4,
       difficulty: CITIES[this.cityId].difficulty,
-    });
-    useMissions.getState().set({ offers });
+    };
+  }
+
+  /** Tutorial: a guaranteed short first job, free fuel, fixed sunny afternoon. */
+  startTutorialMission() {
+    if (!this.generator || !this.nav) return false;
+    this.missions?.start(this.generator.tutorial(this.generatorContext()), this.bike.state);
+    return true;
+  }
+
+  setTutorial(on: boolean) {
+    this.fuelUse = on ? 0 : 1;
+    env.frozen = on;
+    if (on) {
+      env.hour = 16.5;
+      env.weather = "sunny";
+    }
   }
 
   acceptMission(def: MissionDef) {
@@ -281,6 +313,10 @@ export class Game {
     streamFocus.z = s.z - Math.cos(s.heading) * Math.min(60, s.speed * 3);
 
     hud.speedKmh = Math.abs(s.speed) * 3.6;
+    if (hud.speedKmh > Math.max(20, this.topSpeedSeen + 5)) {
+      this.topSpeedSeen = hud.speedKmh;
+      events.emit("topSpeed", { kmh: Math.round(hud.speedKmh) });
+    }
     hud.fuel = s.fuel / this.stats.tank;
     hud.fuelLiters = s.fuel;
     hud.boost = s.boost;

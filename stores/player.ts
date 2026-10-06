@@ -36,6 +36,7 @@ export interface PlayerStats {
   emergencies: number;
   fiveStars: number;
   photos: number;
+  politeCheckpoints: number;
 }
 
 export interface ChallengeState {
@@ -73,6 +74,8 @@ export interface Profile {
   /** Best race times (s) and ghost paths per course id. */
   bests: Record<string, { time: number; ghost: number[] }>;
   lastCity: CityId;
+  /** Purchased accessories (stickers, LED, mud flaps). */
+  cosmetics: string[];
 }
 
 const EMPTY_STATS: PlayerStats = {
@@ -91,6 +94,7 @@ const EMPTY_STATS: PlayerStats = {
   emergencies: 0,
   fiveStars: 0,
   photos: 0,
+  politeCheckpoints: 0,
 };
 
 export const NEW_PROFILE: Profile = {
@@ -126,6 +130,7 @@ export const NEW_PROFILE: Profile = {
   photos: [],
   bests: {},
   lastCity: "shinyanga",
+  cosmetics: [],
 };
 
 /** XP needed to go from `level` to `level + 1`. */

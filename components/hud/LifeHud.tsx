@@ -71,6 +71,10 @@ export function useSkillToasts() {
       events.on("nearMiss", ({ combo }) => events.emit("toast", { text: fmt(t.life.nearMiss, { combo }), tone: "sky" })),
       events.on("wheelie", ({ meters }) => events.emit("toast", { text: fmt(t.life.wheelie, { m: Math.round(meters) }), tone: "sun" })),
       events.on("drift", () => events.emit("toast", { text: t.life.drift, tone: "forest" })),
+      events.on("achievement", ({ id }) =>
+        events.emit("toast", { text: fmt(t.progress.unlockedToast, { title: t.progress.achievementTitles[id as keyof typeof t.progress.achievementTitles] ?? id }), tone: "sun" }),
+      ),
+      events.on("levelUp", ({ level }) => events.emit("toast", { text: fmt(t.progress.levelUp, { level }), tone: "forest" })),
     ];
     return () => offs.forEach((off) => off());
   }, [t]);

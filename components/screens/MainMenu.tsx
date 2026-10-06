@@ -66,6 +66,7 @@ export function MainMenu() {
   const wallet = usePlayer((s) => s.wallet);
   const level = usePlayer((s) => s.level);
   const xp = usePlayer((s) => s.xp / xpForLevel(s.level));
+  const reputation = usePlayer((s) => s.reputation);
   const locale = useSettings((s) => s.locale);
   const setSetting = useSettings((s) => s.set);
 
@@ -84,7 +85,11 @@ export function MainMenu() {
           <span className="sr-only">{t.menu.wallet}: </span>
           {formatTzs(wallet)} <span className="text-cream/60">{t.common.tzs}</span>
         </Chip>
-        <Chip tone="night" icon={<Star className="fill-sun text-sun" />}>
+        <Chip tone="night" icon={<Star className="fill-sun text-sun" />} className="tabular">
+          <span className="sr-only">Sifa</span>
+          {reputation.toFixed(1)}
+        </Chip>
+        <Chip tone="night" className="hidden sm:inline-flex">
           {t.common.level} {level}
           <span className="ml-1 inline-block h-1.5 w-10 overflow-hidden rounded-full bg-night-500 align-middle" aria-hidden="true">
             <span className="block h-full rounded-full bg-forest-400" style={{ width: `${Math.max(xp * 100, 6)}%` }} />
@@ -133,9 +138,9 @@ export function MainMenu() {
         </m.div>
 
         <m.nav variants={rise} className="grid grid-cols-2 gap-3 sm:grid-cols-4 short:gap-2" aria-label="Menu">
-          <MenuTile icon={Wrench} label={t.menu.garage} accent="bg-coral text-cream" soon={t.common.soon} />
-          <MenuTile icon={PackageOpen} label={t.menu.missions} accent="bg-sky text-night" soon={t.common.soon} />
-          <MenuTile icon={CalendarCheck} label={t.menu.daily} accent="bg-forest text-sun" soon={t.common.soon} />
+          <MenuTile icon={Wrench} label={t.menu.garage} accent="bg-coral text-cream" href="/garage" />
+          <MenuTile icon={PackageOpen} label={t.menu.missions} accent="bg-sky text-night" href="/play?board=1" />
+          <MenuTile icon={CalendarCheck} label={t.menu.daily} accent="bg-forest text-sun" href="/daily" />
           <MenuTile icon={Settings} label={t.menu.settings} accent="bg-cream text-night" href="/settings" />
         </m.nav>
       </m.section>

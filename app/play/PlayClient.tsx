@@ -8,6 +8,7 @@ import { isCityId } from "@/data/cities/config";
 const WorldView = dynamic(() => import("@/game/world/WorldView"), { ssr: false });
 
 export function PlayClient() {
-  const param = useSearchParams().get("city") ?? "shinyanga";
-  return <WorldView cityId={isCityId(param) ? param : "shinyanga"} />;
+  const params = useSearchParams();
+  const city = params.get("city") ?? "shinyanga";
+  return <WorldView cityId={isCityId(city) ? city : "shinyanga"} openBoard={params.get("board") === "1"} />;
 }

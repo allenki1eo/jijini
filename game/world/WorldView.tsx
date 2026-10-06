@@ -20,7 +20,7 @@ import type { CityManifest } from "./format";
 import { WorldScene } from "./WorldScene";
 
 /** The play screen: loads a baked city, creates the Game, renders the scene and HUD. */
-export default function WorldView({ cityId }: { cityId: CityId }) {
+export default function WorldView({ cityId, openBoard }: { cityId: CityId; openBoard?: boolean }) {
   const t = useT();
   const [game, setGame] = useState<Game | null>(null);
   const preset = QUALITY_PRESETS[useSettings((s) => s.quality)];
@@ -86,7 +86,7 @@ export default function WorldView({ cityId }: { cityId: CityId }) {
         </Canvas>
       )}
 
-      {status === "ready" && manifest && game && <GameHud game={game} manifest={manifest} />}
+      {status === "ready" && manifest && game && <GameHud game={game} manifest={manifest} openBoardOnStart={openBoard} />}
 
       <AnimatePresence>
         {status === "loading" && (

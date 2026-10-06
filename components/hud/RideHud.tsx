@@ -49,10 +49,12 @@ interface RideHudProps {
   topRight?: ReactNode;
   pauseExtra?: ReactNode;
   onRestart?: () => void;
+  /** Hide the keyboard hint (e.g. while the tutorial talks). */
+  quiet?: boolean;
 }
 
 /** In-game overlay: speedometer, touch controls, pause, toasts and the debug tools. */
-export function RideHud({ game, manifest, children, topCenter, topRight, pauseExtra, onRestart }: RideHudProps) {
+export function RideHud({ game, manifest, children, topCenter, topRight, pauseExtra, onRestart, quiet }: RideHudProps) {
   const t = useT();
   const w = useWorld();
   const touch = useTouchDevice();
@@ -149,7 +151,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
           </div>
           {touch && <TouchControls />}
           <AnimatePresence>
-            {!touch && showKeys && (
+            {!touch && showKeys && !quiet && (
               <m.p
                 className="absolute bottom-48 left-1/2 -translate-x-1/2 rounded-full bg-night/75 px-4 py-2 text-center font-display text-sm font-semibold text-cream/90 backdrop-blur"
                 initial={{ opacity: 0 }}

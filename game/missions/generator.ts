@@ -269,6 +269,22 @@ export class MissionGenerator {
     return picks.map(([px, pz], i) => ({ x: px, z: pz, kind: "checkpoint" as const, name: `${i + 1}/${picks.length}` }));
   }
 
+  /** The tutorial's first job: a short, untimed passenger ride close by. */
+  tutorial(ctx: GeneratorContext): MissionDef {
+    this.rand = ctx.random ?? Math.random;
+    const a = this.place(["shop", "market", "bus_station", "restaurant", "bank"], ctx.x, ctx.z, 40, 170);
+    const b = this.place(null, a.x, a.z, 220, 480);
+    const def = this.build("abiria", ctx, [this.stop(a, "pickup"), this.stop(b, "dropoff")], {
+      client: "Mama Neema",
+      passenger: "mama",
+      speed: 0,
+      slack: 0,
+      base: 2000,
+      perKm: 3500,
+    });
+    return { ...def, risks: [] };
+  }
+
   /** A fresh board of offers. */
   offers(ctx: GeneratorContext, count = 4): MissionDef[] {
     this.rand = ctx.random ?? Math.random;

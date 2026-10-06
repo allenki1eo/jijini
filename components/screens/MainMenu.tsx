@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Coins, Map as MapIcon, Maximize, PackageOpen, Play, Settings, Star, Wrench, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Coins, Map as MapIcon, Maximize, PackageOpen, Play, Radio, Settings, Star, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Skyline } from "@/components/brand/Skyline";
 import { Logo } from "@/components/brand/Logo";
@@ -119,6 +119,18 @@ export function MainMenu() {
           <MenuTile icon={CalendarCheck} label={t.menu.daily} accent="bg-forest text-sun" href="/daily" />
           <MenuTile icon={MapIcon} label={t.cities.title} accent="bg-cream text-night" href="/cities" />
         </nav>
+        <Link
+          href="/radio"
+          className="chunky flex items-center gap-3 rounded-[1.25rem] bg-night-700/90 px-3 py-2.5 ring-1 ring-white/10 [--edge:var(--color-night)] short:py-2"
+        >
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sky text-night short:size-9">
+            <Radio className="size-6 short:size-5" strokeWidth={2.4} />
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="font-display text-lg leading-none font-bold short:text-base">{t.menu.radio}</span>
+            <span className="truncate text-sm text-cream/65 short:text-xs">{t.menu.radioHint}</span>
+          </span>
+        </Link>
       </section>
 
       <footer className="safe-x safe-bottom absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-4 text-xs text-cream/60">

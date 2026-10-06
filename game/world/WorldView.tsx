@@ -5,7 +5,7 @@ import { AnimatePresence, m } from "motion/react";
 import { RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { RideHud } from "@/components/hud/RideHud";
+import { GameHud } from "@/components/hud/GameHud";
 import { LoadingScreen } from "@/components/screens/LoadingScreen";
 import { Button, Card } from "@/components/ui";
 import { CITIES, type CityId } from "@/data/cities/config";
@@ -86,7 +86,7 @@ export default function WorldView({ cityId }: { cityId: CityId }) {
         </Canvas>
       )}
 
-      {status === "ready" && manifest && game && <RideHud game={game} manifest={manifest} />}
+      {status === "ready" && manifest && game && <GameHud game={game} manifest={manifest} />}
 
       <AnimatePresence>
         {status === "loading" && (

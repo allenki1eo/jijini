@@ -21,6 +21,13 @@ import { Pedestrians } from "@/game/traffic/Pedestrians";
 import { TrafficSystem, type Obstacle } from "@/game/traffic/TrafficSystem";
 import { POI_KINDS, type Poi } from "@/game/world/format";
 import { RainField } from "@/game/world/RainField";
+import { MissionGenerator } from "@/game/missions/generator";
+import { MissionRunner, missionHud } from "@/game/missions/MissionRunner";
+import { RouteGuide } from "@/game/missions/RouteGuide";
+import { unlockedTypes, type MissionDef } from "@/game/missions/types";
+import { CITIES } from "@/data/cities/config";
+import { FUEL_PRICE_PER_L, REPAIR_PRICE_PER_POINT } from "@/game/vehicles/bikes";
+import { useMissions } from "@/stores/missions";
 import type { Quality } from "@/stores/settings";
 import { attachInputs, clearPressed, controls, pollControls } from "./controls";
 import { events } from "./events";
@@ -46,6 +53,11 @@ export class Game {
   traffic: TrafficSystem | null = null;
   peds: Pedestrians | null = null;
   checkpoints: Checkpoints | null = null;
+  missions: MissionRunner | null = null;
+  private generator: MissionGenerator | null = null;
+  private guide = new RouteGuide();
+  /** Fuel stations (m), for refuelling and the minimap. */
+  stations: [number, number][] = [];
   private rain: RainField;
   private headlight = new THREE.SpotLight("#FFF1D0", 0, 48, 0.55, 0.65, 1.1);
   private obstacles: Obstacle[] = [];
@@ -73,7 +85,7 @@ export class Game {
     const p = usePlayer.getState();
     this.quality = useSettings.getState().quality;
     this.rain = new RainField(DENSITY.high.rain);
-    this.root.add(this.model.root, this.rain.mesh, this.headlight, this.headlight.target);
+    this.root.add(this.model.root, this.rain.mesh, this.headlight, this.headlight.target, this.guide.group);
     this.stats = currentRideStats(p);
     this.bike.place(manifest.spawn.x, manifest.spawn.z, manifest.spawn.heading);
     this.bike.state.fuel = Math.min(p.fuel, this.stats.tank);
@@ -131,6 +143,79 @@ export class Game {
     this.checkpoints = new Checkpoints(nav, this.manifest.spawn, this.cityId.length * 7919);
     this.applyDensity();
     this.root.add(this.traffic.group, this.peds.group, this.checkpoints.group);
+    const fuel = POI_KINDS.indexOf("fuel");
+    this.stations = pois.filter((poi) => poi.k === fuel).map((poi) => [poi.x / 10, poi.z / 10]);
+    this.generator = new MissionGenerator(nav, pois);
+    this.missions = new MissionRunner(nav, this.model, this.guide, this.cityId);
+    this.refreshOffers();
+  }
+
+  /** Generate a fresh mission board around the rider. */
+  refreshOffers() {
+    if (!this.generator || !this.nav) return;
+    const p = usePlayer.getState();
+    const offers = this.generator.offers({
+      nav: this.nav,
+      pois: this.pois,
+      x: this.bike.state.x,
+      z: this.bike.state.z,
+      types: unlockedTypes(p.level, p.storyChapter),
+      hour: env.hour,
+      night: env.night > 0.5,
+      rain: env.rain > 0.4,
+      difficulty: CITIES[this.cityId].difficulty,
+    });
+    useMissions.getState().set({ offers });
+  }
+
+  acceptMission(def: MissionDef) {
+    this.missions?.start(def, this.bike.state);
+    useMissions.getState().set({ offers: useMissions.getState().offers.filter((o) => o.id !== def.id) });
+  }
+
+  /** Debug: drop the rider next to the current mission stop. */
+  debugJumpToTarget() {
+    const { targetX, targetZ, active } = missionHud;
+    if (!active) return;
+    this.bike.place(targetX + 3, targetZ + 3, this.bike.state.heading);
+    this.chase.snap();
+  }
+
+  /** Fuel station within reach, if the rider has stopped at one. */
+  stationNearby(): boolean {
+    const s = this.bike.state;
+    return Math.abs(s.speed) < 1.5 && this.stations.some(([x, z]) => Math.hypot(x - s.x, z - s.z) < 22);
+  }
+
+  refuelCost() {
+    return Math.ceil(((this.stats.tank - this.bike.state.fuel) * FUEL_PRICE_PER_L) / 50) * 50;
+  }
+
+  repairCost() {
+    return Math.ceil((this.bike.state.damage * REPAIR_PRICE_PER_POINT) / 50) * 50;
+  }
+
+  /** Fill up as far as the wallet allows. Returns liters added. */
+  refuel(): number {
+    const s = this.bike.state;
+    const player = usePlayer.getState();
+    const want = this.stats.tank - s.fuel;
+    const liters = Math.min(want, player.wallet / FUEL_PRICE_PER_L);
+    if (liters <= 0.01) return 0;
+    const cost = Math.ceil((liters * FUEL_PRICE_PER_L) / 50) * 50;
+    player.spend(Math.min(cost, player.wallet));
+    s.fuel += liters;
+    events.emit("refuel", { liters, cost });
+    this.saveRide();
+    return liters;
+  }
+
+  repair(): boolean {
+    const cost = this.repairCost();
+    if (cost <= 0 || !usePlayer.getState().spend(cost)) return false;
+    this.bike.state.damage = 0;
+    this.saveRide();
+    return true;
   }
 
   private applyDensity() {
@@ -182,6 +267,8 @@ export class Game {
       (d) => usePlayer.getState().adjustReputation(d),
     );
 
+    this.missions?.update(dt, s);
+
     // Headlight comes on at dusk and in the rain.
     const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
     this.headlight.intensity = Math.max(env.night, env.rain * 0.4) * 60;
@@ -229,6 +316,8 @@ export class Game {
     this.traffic?.dispose();
     this.peds?.dispose();
     this.checkpoints?.dispose();
+    this.missions?.dispose();
+    this.guide.dispose();
     this.rain.dispose();
     this.detach?.();
     this.unsubPlayer();

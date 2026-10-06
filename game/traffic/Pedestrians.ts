@@ -4,7 +4,8 @@
  * hurry off the road when someone honks.
  */
 import * as THREE from "three";
-import { block, createInstancedMaterial, merge, part, setInstanceHex } from "@/game/world/meshKit";
+import { createInstancedMaterial, setInstanceHex } from "@/game/world/meshKit";
+import { CLOTHES, PERSON_GEOMETRY, PERSON_KINDS, personKindFor, type PersonKind } from "@/game/world/people";
 import type { BikePhysics } from "@/game/vehicles/BikePhysics";
 import type { RideStats } from "@/game/vehicles/bikes";
 import type { LanePoint, NavNetwork } from "./NavNetwork";
@@ -30,27 +31,18 @@ interface Ped {
   timer: number;
   phase: number;
   shirt: string;
+  kind: PersonKind;
   obstacle: Obstacle;
 }
 
-const SHIRTS = ["#E0457B", "#F2994A", "#2F80ED", "#27AE60", "#F2C94C", "#EB5757", "#9B51E0", "#F4F1EA", "#1F3A63", "#C62828", "#FFC72C", "#00A3DD"];
 const pt: LanePoint = { x: 0, z: 0, dx: 0, dz: 0 };
 const dummy = new THREE.Object3D();
 
-const pedGeometry = () =>
-  merge([
-    part(block(0.13, 0.78, 0.15, -0.09, 0.39, 0), "#2A2A33"),
-    part(block(0.13, 0.78, 0.15, 0.09, 0.39, 0), "#2A2A33"),
-    part(block(0.4, 0.6, 0.24, 0, 1.08, 0), "#FFFFFF", { tint: true }),
-    part(block(0.1, 0.55, 0.12, -0.26, 1.06, 0), "#FFFFFF", { tint: true }),
-    part(block(0.1, 0.55, 0.12, 0.26, 1.06, 0), "#FFFFFF", { tint: true }),
-    part(new THREE.SphereGeometry(0.14, 8, 6).translate(0, 1.55, 0), "#4A2E1E"),
-  ]);
 
 export class Pedestrians {
   readonly group = new THREE.Group();
   private peds: Ped[];
-  private mesh: THREE.InstancedMesh;
+  private meshes: Record<PersonKind, THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>>;
   private material = createInstancedMaterial();
   private target: number;
   /** Market positions attract crowds. */
@@ -79,12 +71,23 @@ export class Pedestrians {
       timer: 0,
       phase: Math.random() * 6,
       shirt: "#FFFFFF",
+      kind: "man" as PersonKind,
       obstacle: { x: 0, z: 0, radius: 0.5 },
     }));
-    this.mesh = new THREE.InstancedMesh(pedGeometry(), this.material, capacity);
-    this.mesh.count = 0;
-    this.mesh.frustumCulled = false;
-    this.group.add(this.mesh);
+    this.peds.forEach((p, i) => {
+      p.kind = personKindFor(i);
+      const clothes = CLOTHES[p.kind];
+      p.shirt = clothes[(i * 7) % clothes.length]!;
+    });
+    this.meshes = Object.fromEntries(
+      PERSON_KINDS.map((kind) => {
+        const mesh = new THREE.InstancedMesh(PERSON_GEOMETRY[kind](), this.material, capacity);
+        mesh.count = 0;
+        mesh.frustumCulled = false;
+        this.group.add(mesh);
+        return [kind, mesh];
+      }),
+    ) as Record<PersonKind, THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>>;
   }
 
   setHotspots(points: [number, number][]) {
@@ -142,7 +145,7 @@ export class Pedestrians {
         speed: 0.9 + Math.random() * 0.7,
         state: "walk",
         timer: 0,
-        shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)]!,
+        shirt: CLOTHES[p.kind][Math.floor(Math.random() * CLOTHES[p.kind].length)]!,
       });
       return;
     }
@@ -214,25 +217,31 @@ export class Pedestrians {
       }
     }
 
-    let i = 0;
+    const counts = Object.fromEntries(PERSON_KINDS.map((k) => [k, 0])) as Record<PersonKind, number>;
     for (const p of this.peds) {
       if (!p.active) continue;
+      const mesh = this.meshes[p.kind];
+      const i = counts[p.kind]++;
       const bob = p.state === "fallen" ? 0 : Math.abs(Math.sin(p.phase)) * 0.05;
       dummy.position.set(p.x, bob, p.z);
       dummy.rotation.set(p.state === "fallen" ? -1.2 : 0, p.yaw, p.state === "fallen" ? 0 : Math.sin(p.phase) * 0.05);
       dummy.updateMatrix();
-      this.mesh.setMatrixAt(i, dummy.matrix);
-      setInstanceHex(this.mesh, i, p.shirt);
-      i++;
+      mesh.setMatrixAt(i, dummy.matrix);
+      setInstanceHex(mesh, i, p.shirt);
     }
-    this.mesh.count = i;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    for (const kind of PERSON_KINDS) {
+      const mesh = this.meshes[kind];
+      mesh.count = counts[kind];
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
   }
 
   dispose() {
-    this.mesh.geometry.dispose();
-    this.mesh.dispose();
+    for (const mesh of Object.values(this.meshes)) {
+      mesh.geometry.dispose();
+      mesh.dispose();
+    }
     this.material.dispose();
   }
 }

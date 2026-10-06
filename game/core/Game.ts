@@ -20,12 +20,14 @@ import { Checkpoints } from "@/game/traffic/Checkpoints";
 import { loadNavNetwork, type NavNetwork } from "@/game/traffic/NavNetwork";
 import { Pedestrians } from "@/game/traffic/Pedestrians";
 import { TrafficSystem, type Obstacle } from "@/game/traffic/TrafficSystem";
-import { POI_KINDS, type Poi } from "@/game/world/format";
+import { POI_KINDS, ROAD_CLASSES, ROAD_SPEED, type Poi } from "@/game/world/format";
 import { RainField } from "@/game/world/RainField";
 import { PlaceSigns, synthesizeBusStops } from "@/game/world/PlaceSigns";
-import { loadAds } from "@/game/world/adAtlas";
+import { buildHeroBillboard, loadAds } from "@/game/world/adAtlas";
 import { RoadBanners } from "@/game/world/RoadBanners";
+import { Markets } from "@/game/world/Markets";
 import { Radio } from "@/game/audio/Radio";
+import { liveStations, livePlayer, loadLiveStations } from "@/game/audio/LiveRadio";
 import { fetchJson } from "@/lib/fetchJson";
 import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
 import { Particles } from "@/game/world/Particles";
@@ -39,6 +41,7 @@ import { unlockedTypes, type MissionDef, type MissionType } from "@/game/mission
 import { CITIES } from "@/data/cities/config";
 import { BODA_OWNER, FUEL_PRICE, HESABU, HESABU_HOUR, LICENCE_FEE, LICENCE_HOURS, REPAIR_RATE } from "@/data/prices";
 import { Police, policeHud } from "@/game/traffic/Police";
+import { TrafficLights } from "@/game/traffic/TrafficLights";
 import { usePhone } from "@/stores/phone";
 import { useMissions } from "@/stores/missions";
 import { attachProgression } from "@/game/systems/progression";
@@ -72,6 +75,9 @@ export class Game {
   peds: Pedestrians | null = null;
   checkpoints: Checkpoints | null = null;
   police: Police | null = null;
+  lights: TrafficLights | null = null;
+  /** Junction node last run on red (one ticket per crossing). */
+  private redRunAt = -1;
   missions: MissionRunner | null = null;
   phone: PhoneSystem | null = null;
   private generator: MissionGenerator | null = null;
@@ -80,6 +86,7 @@ export class Game {
   /** Signposts, shelters and labels for real places. */
   places: PlaceSigns | null = null;
   private banners: RoadBanners | null = null;
+  private markets: Markets | null = null;
   private radio: Radio | null = null;
   private disposeAds: (() => void) | null = null;
   private landmarkObjects: THREE.Object3D[] = [];
@@ -179,6 +186,10 @@ export class Game {
     this.disposeAds = loadAds(this.cityId);
     this.banners = new RoadBanners(nav);
     this.root.add(this.banners.group);
+    // Street markets around the marketplaces, with solid stall fronts.
+    this.markets = new Markets(nav, pois);
+    this.root.add(this.markets.group);
+    if (this.markets.walls.length) this.index.addChunk("markets", new Float32Array(this.markets.walls), new Float32Array());
     const busy = new Set([POI_KINDS.indexOf("market"), POI_KINDS.indexOf("bus_station")]);
     this.radio = new Radio(this.cityId, [...new Set(pois.filter((p) => busy.has(p.k) && p.n).map((p) => p.n!))]);
     const cap = DENSITY.high;
@@ -188,6 +199,10 @@ export class Game {
     this.peds.setHotspots(pois.filter((poi) => poi.k === market).map((poi) => [poi.x / 10, poi.z / 10]));
     this.checkpoints = new Checkpoints(nav, this.manifest.spawn, this.cityId.length * 7919);
     this.applyDensity();
+    // Dar has lights everywhere; Shinyanga only at a couple of big junctions.
+    this.lights = new TrafficLights(nav, { kariakoo: 14, arusha: 8, mwanza: 8, shinyanga: 3 }[this.cityId]);
+    this.traffic.lights = this.lights;
+    this.root.add(this.lights.group);
     this.police = new Police(nav, this.index, this.manifest.spawn, this.checkpoints.points, this.cityId.length * 104729);
     this.root.add(this.traffic.group, this.peds.group, this.checkpoints.group, this.police.group);
     const fuel = POI_KINDS.indexOf("fuel");
@@ -242,6 +257,13 @@ export class Game {
       // Left of (fx, fz) is (fz, −fx).
       const at = curb(x + fx * 10 + fz * 6, z + fz * 10 - fx * 6, 3.2);
       place("kijiwe", at.x, at.z, at.yaw);
+      // The sponsor's hero billboard, across the road and further on, facing the rider at the start.
+      const hero = buildHeroBillboard();
+      const spot = curb(x + fx * 38 - fz * 6, z + fz * 38 + fx * 6, 4.5);
+      hero.object.position.set(spot.x, 0, spot.z);
+      hero.object.rotation.y = Math.atan2(-fx, -fz);
+      this.root.add(hero.object);
+      this.landmarkObjects.push(hero.object);
     }
     this.collectibles = new Collectibles(nav, this.cityId, usePlayer.getState().collectibles, (id) => {
       const p = usePlayer.getState();
@@ -403,16 +425,33 @@ export class Game {
       audio.unlock();
       const s = useSettings.getState();
       audio.setVolumes(s.masterVolume, s.musicVolume, s.sfxVolume);
-      if (s.musicVolume > 0 && s.radio !== "off") audio.startMusic();
+      if (s.musicVolume > 0 && s.radio !== "off") this.applyRadio();
     };
-    const onVisibility = () => (document.hidden ? audio.suspend() : audio.resume());
+    const onVisibility = () => {
+      if (document.hidden) {
+        audio.suspend();
+        livePlayer.pause();
+      } else {
+        audio.resume();
+        if (useSettings.getState().radio.startsWith("live:")) livePlayer.resume();
+      }
+    };
+    void loadLiveStations();
+    // A live stream that won't play (offline, down, blocked): back to the house station.
+    livePlayer.onError = (station) => {
+      events.emit("toast", { text: fmt(currentDictionary().radio.liveDown, { name: station.name }), tone: "coral" });
+      useSettings.getState().set("radio", "kijiweni");
+    };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
     document.addEventListener("visibilitychange", onVisibility);
     const unsubSettings = useSettings.subscribe((s) => {
       audio.setVolumes(s.masterVolume, s.musicVolume, s.sfxVolume);
-      if (s.musicVolume <= 0 || s.radio === "off") audio.stopMusic();
-      else if (audio.ready) audio.startMusic();
+      if (s.musicVolume <= 0 || s.radio === "off") {
+        audio.stopMusic();
+        livePlayer.stop();
+      } else if (audio.ready) this.applyRadio();
+      livePlayer.setVolume(s.masterVolume * s.musicVolume);
     });
     const offs = [
       events.on("horn", () => audio.horn(this.missions?.active?.type === "dharura")),
@@ -445,7 +484,29 @@ export class Game {
       audio.stopContinuous();
       audio.stopMusic();
       audio.ring(false);
+      livePlayer.stop();
+      livePlayer.onError = null;
     };
+  }
+
+  private liveNoticeShown = false;
+
+  /** Start whichever station is selected: the procedural ones through Web Audio, live ones as a stream. */
+  private applyRadio() {
+    const s = useSettings.getState();
+    const live = liveStations.find((st) => st.id === s.radio);
+    if (live) {
+      audio.stopMusic();
+      if (!navigator.onLine) return livePlayer.onError?.(live);
+      livePlayer.play(live, s.masterVolume * s.musicVolume);
+      if (!this.liveNoticeShown) {
+        this.liveNoticeShown = true;
+        events.emit("toast", { text: currentDictionary().radio.liveData, tone: "sky" });
+      }
+    } else {
+      livePlayer.stop();
+      audio.startMusic();
+    }
   }
 
   private applyDensity() {
@@ -507,6 +568,8 @@ export class Game {
       audio.siren(d, ((dx * Math.cos(s.heading) - dz * Math.sin(s.heading)) / d) * 0.8);
     } else audio.siren(Infinity, 0);
 
+    this.lights?.update(dt);
+    this.checkRedLight(s);
     this.missions?.update(dt, s);
     this.phone?.update(dt);
     this.radio?.update(dt);
@@ -553,6 +616,14 @@ export class Game {
     hud.surface = s.surface;
     hud.outOfFuel = s.fuel <= 0;
     hud.heading = s.heading;
+    const surface = this.index.surfaceAt(s.x, s.z);
+    hud.limitKmh = surface.cls >= 0 ? ROAD_SPEED[ROAD_CLASSES[surface.cls]!] : 30;
+    const frac = Math.abs(s.speed) / this.stats.topSpeed;
+    hud.gear = Math.abs(s.speed) < 0.5 ? 0 : frac < 0.18 ? 1 : frac < 0.36 ? 2 : frac < 0.55 ? 3 : frac < 0.75 ? 4 : 5;
+    const ahead = this.lights?.ahead(s.x, s.z, fx, fz) ?? null;
+    hud.light = ahead?.signal ?? null;
+    hud.lightDistance = ahead?.distance ?? 0;
+    hud.headlight = this.headlight.intensity > 1;
     hud.x = s.x;
     hud.z = s.z;
 
@@ -627,6 +698,20 @@ export class Game {
     return true;
   }
 
+  /** Crossing a junction on red: police nearby wave you down; otherwise it's a dent in your reputation. */
+  private checkRedLight(s: { x: number; z: number; heading: number; speed: number }) {
+    if (!this.lights || Math.abs(s.speed) < 3) return;
+    const approach = this.lights.approachAt(s.x, s.z, -Math.sin(s.heading), -Math.cos(s.heading));
+    if (!approach || approach.distance > 6) {
+      if (!approach) this.redRunAt = -1;
+      return;
+    }
+    if (this.lights.signal(approach.lane) !== "red" || this.redRunAt === approach.lane) return;
+    this.redRunAt = approach.lane;
+    usePlayer.getState().adjustReputation(-0.04);
+    if (!this.police?.reportRedLight(this.bike.state)) events.emit("toast", { text: currentDictionary().police.redLightNoPolice, tone: "coral" });
+  }
+
   private sinceConductor = 20;
 
   /** Daladala conductors call out destinations when you ride past a bus stand. */
@@ -661,12 +746,14 @@ export class Game {
     this.peds?.dispose();
     this.checkpoints?.dispose();
     this.police?.dispose();
+    this.lights?.dispose();
     audio.siren(Infinity, 0);
     this.missions?.dispose();
     this.phone?.dispose();
     this.collectibles?.dispose();
     this.places?.dispose();
     this.banners?.dispose();
+    this.markets?.dispose();
     this.disposeAds?.();
     for (const o of this.landmarkObjects) {
       o.traverse((child) => {

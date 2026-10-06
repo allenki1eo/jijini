@@ -30,6 +30,8 @@ const PASSENGER_LOOK: Record<Exclude<PassengerKind, "none">, { top: string; bott
 
 const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
 const cyl = (r: number, len: number, seg = 8) => new THREE.CylinderGeometry(r, r, len, seg);
+/** A capsule limb of length `len` (end to end), lying along y before rotation. */
+const limb = (r: number, len: number) => new THREE.CapsuleGeometry(r, Math.max(0.01, len - r * 2), 3, 8);
 
 const plateTexture = (text: string) => {
   const canvas = document.createElement("canvas");
@@ -124,14 +126,14 @@ export class BikeModel {
       return mesh;
     };
 
-    // Wheels.
+    // Wheels: a round tyre, a rim and wire spokes that blur when they spin.
     const wheel = (z: number, parent: THREE.Object3D) => {
       const w = new THREE.Group();
       w.position.set(0, 0.31, z);
-      add(w, cyl(0.31, 0.11, 14), m.tyre, 0, 0, 0, 0, 0, Math.PI / 2);
-      add(w, cyl(0.19, 0.12, 10), m.rim, 0, 0, 0, 0, 0, Math.PI / 2);
-      add(w, box(0.125, 0.34, 0.04), m.metal, 0, 0, 0);
-      add(w, box(0.125, 0.04, 0.34), m.metal, 0, 0, 0);
+      add(w, new THREE.TorusGeometry(0.255, 0.058, 8, 22), m.tyre, 0, 0, 0, 0, Math.PI / 2, 0);
+      add(w, new THREE.TorusGeometry(0.2, 0.014, 4, 22), m.rim, 0, 0, 0, 0, Math.PI / 2, 0);
+      add(w, cyl(0.045, 0.13, 8), m.metal, 0, 0, 0, 0, 0, Math.PI / 2);
+      for (let i = 0; i < 6; i++) add(w, box(0.012, 0.4, 0.012), m.metal, 0, 0, 0, (i / 6) * Math.PI);
       parent.add(w);
       this.wheels.push(w);
     };
@@ -145,7 +147,8 @@ export class BikeModel {
     this.exhaust2 = add(body, cyl(0.045, 0.9), m.metal, -0.17, 0.32, 0.42, Math.PI / 2 - 0.12);
 
     // Tank, side panels, seat.
-    this.tank = add(body, box(0.3, 0.2, 0.42), m.body, 0, 0.76, -0.16);
+    this.tank = add(body, new THREE.SphereGeometry(0.2, 14, 10).scale(0.82, 0.62, 1.15), m.body, 0, 0.77, -0.16);
+    add(body, cyl(0.045, 0.04, 10), m.metal, 0, 0.9, -0.18);
     add(body, box(0.32, 0.16, 0.36), m.body, 0, 0.62, 0.3);
     add(body, box(0.27, 0.07, 0.62), m.seat, 0, 0.75, 0.32);
     for (const [i, x] of [-0.152, 0.152].entries()) {
@@ -176,7 +179,16 @@ export class BikeModel {
     wheel(-0.16, fa);
     add(fa, box(0.16, 0.04, 0.5), m.body, 0, 0.66, -0.2, -0.25);
     this.headlight = add(fa, cyl(0.08, 0.05, 12), m.lamp, 0, 1.0, -0.06, Math.PI / 2 - 0.2);
+    add(fa, cyl(0.098, 0.07, 12), m.frame, 0, 1.0, -0.03, Math.PI / 2 - 0.2);
     add(fa, cyl(0.02, 0.72), m.frame, 0, 1.12, 0.06, 0, 0, Math.PI / 2);
+    // Grips and the round mirrors every boda wears.
+    for (const x of [-0.33, 0.33]) {
+      add(fa, cyl(0.028, 0.12, 8), m.seat, x, 1.12, 0.06, 0, 0, Math.PI / 2);
+      add(fa, cyl(0.008, 0.3, 4), m.frame, x * 0.82, 1.28, 0.1, -0.2);
+      // Black housing, with the glass facing the rider.
+      add(fa, cyl(0.055, 0.025, 12), m.seat, x * 0.82, 1.43, 0.13, Math.PI / 2);
+      add(fa, cyl(0.045, 0.01, 12), m.visor, x * 0.82, 1.43, 0.145, Math.PI / 2);
+    }
     add(fa, box(0.05, 0.12, 0.05), m.frame, 0.3, 1.2, 0.08);
     add(fa, box(0.05, 0.12, 0.05), m.frame, -0.3, 1.2, 0.08);
     this.fairing = add(fa, box(0.34, 0.3, 0.12), m.body, 0, 1.02, 0.0, -0.35);
@@ -186,20 +198,28 @@ export class BikeModel {
     rider.position.set(0, 0.78, 0.28);
     body.add(rider);
     for (const x of [-0.13, 0.13]) {
-      add(rider, box(0.13, 0.13, 0.42), m.trousers, x, 0.05, -0.12, -0.1);
-      add(rider, box(0.12, 0.4, 0.13), m.trousers, x * 1.15, -0.2, -0.32, 0.25);
-      add(rider, box(0.12, 0.08, 0.2), m.shoes, x * 1.15, -0.42, -0.38);
+      // Thigh along the seat, shin down to the footpeg, shoe.
+      add(rider, limb(0.075, 0.44), m.trousers, x, 0.04, -0.12, Math.PI / 2 - 0.1);
+      add(rider, limb(0.065, 0.44), m.trousers, x * 1.15, -0.2, -0.33, 0.28);
+      add(rider, box(0.11, 0.08, 0.22), m.shoes, x * 1.15, -0.42, -0.4);
     }
     rider.add(this.riderTorso);
     const t = this.riderTorso;
-    add(t, box(0.4, 0.5, 0.24), m.jacket, 0, 0.36, 0.0, -0.32);
-    this.vest = add(t, box(0.42, 0.34, 0.26), m.vest, 0, 0.36, 0.0, -0.32);
+    add(t, limb(0.19, 0.58), m.jacket, 0, 0.36, 0.0, -0.32);
+    this.vest = add(t, limb(0.2, 0.42), m.vest, 0, 0.34, 0.0, -0.32);
+    // Reflective tape wrapped round the vest.
+    for (const y of [-0.08, 0.08]) add(this.vest, new THREE.CylinderGeometry(0.203, 0.203, 0.035, 18, 1, true), m.metal, 0, y, 0);
     for (const x of [-0.22, 0.22]) {
-      add(t, box(0.1, 0.1, 0.5), m.jacket, x, 0.48, -0.28, -0.35);
-      add(t, box(0.09, 0.09, 0.09), m.skin, x * 1.25, 0.32, -0.56);
+      // Upper arm and forearm reaching for the grips, then the hand.
+      add(t, limb(0.055, 0.32), m.jacket, x, 0.5, -0.16, -0.9, 0, -Math.sign(x) * 0.15);
+      add(t, limb(0.048, 0.32), m.jacket, x * 1.2, 0.38, -0.42, -1.35);
+      add(t, new THREE.SphereGeometry(0.05, 8, 6), m.skin, x * 1.3, 0.33, -0.58);
     }
-    add(t, new THREE.SphereGeometry(0.15, 12, 10), m.helmet, 0, 0.75, -0.12);
-    add(t, box(0.2, 0.08, 0.06), m.visor, 0, 0.74, -0.25);
+    add(t, cyl(0.06, 0.1, 8), m.skin, 0, 0.66, -0.08);
+    // Full-face helmet: shell, chin bar and a curved visor.
+    add(t, new THREE.SphereGeometry(0.16, 16, 12), m.helmet, 0, 0.78, -0.12);
+    add(t, new THREE.SphereGeometry(0.162, 16, 8, -0.9, 1.8, 1.15, 0.55), m.visor, 0, 0.78, -0.12, 0, Math.PI, 0);
+    add(t, box(0.18, 0.06, 0.08), m.helmet, 0, 0.66, -0.24);
 
     // Passenger (Abiria) and cargo (Mzigo, crates, chai, food).
     body.add(this.passenger);
@@ -219,11 +239,13 @@ export class BikeModel {
     const p = this.passenger;
     p.position.set(0, 0.8, 0.66);
     for (const x of [-0.13, 0.13]) {
-      add(p, box(0.12, 0.12, 0.36), m.pBottom, x, 0.03, -0.1);
-      add(p, box(0.11, 0.38, 0.12), m.pBottom, x * 1.2, -0.2, -0.24);
+      add(p, limb(0.07, 0.38), m.pBottom, x, 0.03, -0.1, Math.PI / 2);
+      add(p, limb(0.062, 0.4), m.pBottom, x * 1.2, -0.2, -0.26, 0.2);
     }
-    add(p, box(0.38, 0.48, 0.24), m.pTop, 0, 0.34, 0.06, 0.08);
-    add(p, new THREE.SphereGeometry(0.13, 10, 8), m.pSkin, 0, 0.7, 0.06);
+    add(p, limb(0.18, 0.54), m.pTop, 0, 0.34, 0.06, 0.08);
+    // Hands on the rider's waist.
+    for (const x of [-0.2, 0.2]) add(p, limb(0.045, 0.34), m.pTop, x, 0.36, -0.12, -1.2);
+    add(p, new THREE.SphereGeometry(0.13, 12, 10), m.pSkin, 0, 0.72, 0.06);
     p.userData.extras = {
       basket: add(p, cyl(0.2, 0.16, 10), m.pExtra, 0, 0.92, 0.06),
       bag: add(p, box(0.32, 0.36, 0.14), m.pExtra, 0, 0.36, 0.26),

@@ -514,6 +514,8 @@ export const sw = {
   police: {
     flagged: "Tochi! {speed} km/h kwenye {limit}. Simama kando!",
     chase: "Polisi wanakufukuza!",
+    redLight: "Umepita taa nyekundu! Trafiki anakuita — simama kando.",
+    redLightNoPolice: "Umepita taa nyekundu! Bahati yako, hakuna trafiki.",
     behind: "{m} m nyuma",
     escape: "Kutoroka",
     escaped: "Umewatoroka! Polisi wanakutafuta kwa muda.",
@@ -524,6 +526,8 @@ export const sw = {
   radio: {
     off: "Redio imezimwa",
     change: "Badilisha stesheni (R)",
+    liveData: "Redio ya moja kwa moja inatumia data (karibu MB 1 kwa dakika).",
+    liveDown: "{name} haipatikani sasa. Tunarudi Kijiweni FM.",
     dj: {
       kijiweni: ["Mko na Kijiweni FM 88.5, sauti ya bodaboda! Singeli inaendelea…", "Wanaboda wa {city}, mko poa? Mapigo makali yanakuja!", "Kijiweni FM — tunaendesha pamoja nawe kila kona ya {city}!"],
       bongo: ["Bongo Vibes 94.2, mapigo ya kisasa. Kaa nasi!", "Hii ni Bongo Vibes, nyimbo za nyumbani kwa watu wa nyumbani.", "Saa {time} hapa {city} — Bongo Vibes, hatulali!"],

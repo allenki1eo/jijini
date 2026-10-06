@@ -197,6 +197,8 @@ const BUILDERS: Record<string, () => LandmarkBuild> = {
     group.add(new THREE.Mesh(merge(parts), createInstancedMaterial({ glowStrength: 1.4 })));
     const sign = textSign(3.6, 0.8, "KIJIWE CHA MZEE JUMA", "Boda safi · Bei poa", "#FFC72C", "#10131A", "#10131A");
     sign.position.set(0, 3.25, 0.05);
+    // Readable from the road (local −z).
+    sign.rotation.y = Math.PI;
     group.add(sign);
     return { object: group, walls: [] };
   },

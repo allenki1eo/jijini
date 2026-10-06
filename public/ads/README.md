@@ -4,6 +4,8 @@ BodaGo shows local businesses on roadside billboards and on banners strung acros
 
 To put a **real** business in the game, add it to `manifest.json` here. Sponsors take the first ad slots in the cities you list.
 
+**The first sponsor also gets the hero billboard:** a big board on tall legs that faces the rider at the start of every ride, in every city it's listed for.
+
 ```json
 {
   "sponsors": [

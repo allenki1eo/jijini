@@ -51,4 +51,9 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+/** Live radio streams never end: let the browser fetch them directly instead of caching them. */
+self.addEventListener("fetch", (event) => {
+  if (event.request.destination === "audio" && new URL(event.request.url).origin !== self.location.origin) event.stopImmediatePropagation();
+});
+
 serwist.addEventListeners();

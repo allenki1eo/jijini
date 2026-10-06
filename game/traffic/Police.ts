@@ -21,6 +21,8 @@ export const policeHud = {
   state: "none" as PoliceState,
   /** Seconds left to stop when flagged. */
   timeLeft: 0,
+  /** What you were waved down for. */
+  reason: "speed" as "speed" | "redLight",
   /** Measured speed and the limit when the tochi caught you (km/h). */
   measured: 0,
   limit: 0,
@@ -181,6 +183,7 @@ export class Police {
       // Caught on the tochi: you're being waved down.
       trap.cooldown = TRAP_COOLDOWN;
       this.flaggedBy = trap;
+      policeHud.reason = "speed";
       policeHud.state = "flagged";
       policeHud.timeLeft = STOP_TIME;
       policeHud.measured = Math.round(speedKmh);
@@ -194,7 +197,8 @@ export class Police {
       const d = Math.hypot(t.x - bike.x, t.z - bike.z);
       policeHud.timeLeft -= dt;
       policeHud.distance = d;
-      if (d < STOP_RADIUS && Math.abs(bike.speed) < 2.5) {
+      // Speeding: stop by the officer. Red light: pull over where you are; they walk up.
+      if ((d < STOP_RADIUS || policeHud.reason === "redLight") && Math.abs(bike.speed) < 2.5) {
         // Pulled over: pay the fine (and the licence penalty).
         this.charge(ctx, "speeding", false);
         policeHud.state = "paid";
@@ -203,11 +207,24 @@ export class Police {
         this.clearLater("paid");
         return;
       }
-      if (policeHud.timeLeft <= 0 || d > RADAR_RANGE + 25) this.startChase(t, bike);
+      if (policeHud.timeLeft <= 0 || (policeHud.reason === "speed" && d > RADAR_RANGE + 25)) this.startChase(t, bike);
       return;
     }
 
     if (policeHud.state === "chase") this.updateChase(dt, bike, ctx);
+  }
+
+  /** Ran a red light: an officer within sight waves you down. Returns false when no police saw it. */
+  reportRedLight(bike: BikeState): boolean {
+    if (policeHud.state === "flagged" || policeHud.state === "chase") return false;
+    const trap = this.traps.find((t) => Math.hypot(t.x - bike.x, t.z - bike.z) < 160 && this.index.raycastWalls(t.x, t.z, bike.x, bike.z) >= 1);
+    if (!trap) return false;
+    this.flaggedBy = trap;
+    policeHud.reason = "redLight";
+    policeHud.state = "flagged";
+    policeHud.timeLeft = STOP_TIME + 3;
+    events.emit("police", { kind: "flagged" });
+    return true;
   }
 
   private startChase(trap: Trap, bike: BikeState) {

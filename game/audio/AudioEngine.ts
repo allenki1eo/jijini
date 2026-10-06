@@ -253,14 +253,15 @@ export class AudioEngine {
    * voice: two-tone car horns, the daladala's musical air horn, a truck's
    * low blare, the bajaji's nasal squeak and the boda's quick "pipi".
    */
-  honk(distance: number, kind: "car" | "daladala" | "bajaji" | "truck" | "boda" = "car", mood: "nudge" | "angry" | "friendly" = "nudge", pan = 0) {
+  honk(distance: number, kind: "car" | "suv" | "daladala" | "bajaji" | "truck" | "boda" = "car", mood: "nudge" | "angry" | "friendly" = "nudge", pan = 0) {
     const level = Math.max(0, 1 - distance / 140);
     if (level < 0.06) return;
     const g = (v: number) => v * level;
     const long = mood === "angry";
     const hold = (base: number) => (long ? base * 2.6 : base) * (0.9 + Math.random() * 0.2);
     switch (kind) {
-      case "car": {
+      case "car":
+      case "suv": {
         const d = hold(0.22);
         const pitch = 0.9 + Math.random() * 0.2;
         const beeps = long ? 1 : 2;

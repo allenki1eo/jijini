@@ -32,7 +32,7 @@ export function PoliceBanner() {
           >
             <p className="flex items-center gap-2 font-display text-lg leading-tight font-extrabold">
               <Siren className={cn("size-6 shrink-0", (s === "chase" || s === "flagged") && "animate-pulse text-sun")} />
-              {s === "flagged" && fmt(t.police.flagged, { speed: policeHud.measured, limit: policeHud.limit })}
+              {s === "flagged" && (policeHud.reason === "redLight" ? t.police.redLight : fmt(t.police.flagged, { speed: policeHud.measured, limit: policeHud.limit }))}
               {s === "chase" && t.police.chase}
               {s === "escaped" && t.police.escaped}
               {s === "caught" && fmt(t.police.caught, { fine: formatTzs(fine) })}

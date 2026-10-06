@@ -515,6 +515,8 @@ export const en: Dictionary = {
   police: {
     flagged: "Speed gun! {speed} km/h in a {limit}. Pull over!",
     chase: "The police are after you!",
+    redLight: "You ran a red light! The officer is waving you over — pull in.",
+    redLightNoPolice: "You ran a red light! Lucky no police saw that.",
     behind: "{m} m behind",
     escape: "Escape",
     escaped: "You lost them! The police are looking for you for a while.",
@@ -525,6 +527,8 @@ export const en: Dictionary = {
   radio: {
     off: "Radio off",
     change: "Change station (R)",
+    liveData: "Live radio uses mobile data (about 1 MB a minute).",
+    liveDown: "{name} isn't available right now. Back to Kijiweni FM.",
     dj: {
       kijiweni: ["You're on Kijiweni FM 88.5, the voice of the bodas! More Singeli coming up…", "Bodas of {city}, how are you doing? Big beats on the way!", "Kijiweni FM — riding with you on every corner of {city}!"],
       bongo: ["Bongo Vibes 94.2, the modern beat. Stay with us!", "This is Bongo Vibes, home music for home people.", "It's {time} here in {city} — Bongo Vibes never sleeps!"],

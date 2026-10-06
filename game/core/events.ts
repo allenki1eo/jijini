@@ -11,7 +11,7 @@ export interface GameEvents {
   drift: { seconds: number };
   horn: Record<string, never>;
   /** An NPC sounded its horn. `mood`: nudge (move along), angry (you hit or cut them up), friendly (a passing boda's hello). */
-  honked: { x: number; z: number; kind: "car" | "daladala" | "bajaji" | "truck" | "boda"; mood: "nudge" | "angry" | "friendly" };
+  honked: { x: number; z: number; kind: "car" | "suv" | "daladala" | "bajaji" | "truck" | "boda"; mood: "nudge" | "angry" | "friendly" };
   delivery: {
     type: string;
     stars: number;

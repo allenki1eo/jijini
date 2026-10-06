@@ -10,6 +10,7 @@ import { createInstancedMaterial, setInstanceHex } from "@/game/world/meshKit";
 import type { BikePhysics } from "@/game/vehicles/BikePhysics";
 import type { RideStats } from "@/game/vehicles/bikes";
 import type { LanePoint, NavNetwork } from "./NavNetwork";
+import { STOP_BACK, type TrafficLights } from "./TrafficLights";
 import { VEHICLE_GEOMETRY, VEHICLE_KINDS, VEHICLE_SPECS, type VehicleKind } from "./vehicleMeshes";
 
 interface Agent {
@@ -63,9 +64,11 @@ const angleLerp = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b
 export class TrafficSystem {
   readonly group = new THREE.Group();
   private agents: Agent[];
-  private meshes: Record<VehicleKind, THREE.InstancedMesh>;
+  private meshes: Record<VehicleKind, THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>>;
   private material = createInstancedMaterial({ glowStrength: 2.6 });
   private byLane = new Map<number, Agent[]>();
+  /** Signals at the big junctions (set once the city loads). */
+  lights: TrafficLights | null = null;
   private combo = 0;
   private comboTimer = 0;
   private target: number;
@@ -104,7 +107,7 @@ export class TrafficSystem {
       this.group.add(mesh);
       return mesh;
     };
-    this.meshes = { car: make("car"), daladala: make("daladala"), bajaji: make("bajaji"), truck: make("truck"), boda: make("boda") };
+    this.meshes = Object.fromEntries(VEHICLE_KINDS.map((kind) => [kind, make(kind)])) as Record<VehicleKind, THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>>;
   }
 
   /** Active vehicle count target (quality presets change it live). */
@@ -252,8 +255,17 @@ export class TrafficSystem {
         }
       }
 
+      // Traffic lights: hold at the stop line on red (and on amber when there's room).
+      const atRed = this.lights !== null && remaining < 45 && this.lights.holds(a.lane, remaining);
+      if (atRed) {
+        const g = remaining - STOP_BACK - spec.length / 2;
+        if (g < gap) {
+          gap = Math.max(0, g);
+          leadV = 0;
+        }
+      }
       // Junction right-of-way: bigger road first, then whoever is closer.
-      if (remaining < 12 && a.next >= 0 && a.waiting < 4) {
+      if (!atRed && remaining < 12 && a.next >= 0 && a.waiting < 4) {
         for (const [laneId, others] of this.byLane) {
           if (laneId === a.lane) continue;
           const other = this.nav.lanes[laneId]!;
@@ -265,7 +277,8 @@ export class TrafficSystem {
           }
         }
       }
-      if (gap < 1 && a.v < 0.5) a.waiting += dt;
+      // Waiting at a red light is patience, not a jam: no honking.
+      if (gap < 1 && a.v < 0.5 && !atRed) a.waiting += dt;
       else a.waiting = Math.max(0, a.waiting - dt * 2);
       if (a.waiting > 4 && a.honkCooldown <= 0) {
         a.honkCooldown = 5;
@@ -307,7 +320,7 @@ export class TrafficSystem {
     }
 
     // Instances.
-    const counts: Record<VehicleKind, number> = { car: 0, daladala: 0, bajaji: 0, truck: 0, boda: 0 };
+    const counts = Object.fromEntries(VEHICLE_KINDS.map((kind) => [kind, 0])) as Record<VehicleKind, number>;
     for (const a of this.agents) {
       if (!a.active) continue;
       const mesh = this.meshes[a.kind];

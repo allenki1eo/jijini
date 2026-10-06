@@ -23,7 +23,8 @@ export interface SettingsState {
   /** Set once the graphics preset was picked from the device tier. */
   tierDetected: boolean;
   /** Radio station playing while you ride (or "off"). */
-  radio: "kijiweni" | "bongo" | "pwani" | "off";
+  /** "kijiweni" | "bongo" | "pwani", a live station "live:<n>", or "off". */
+  radio: string;
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 

@@ -242,3 +242,43 @@ export const createAdMaterial = (kind: "boards" | "strips") => {
   uniforms.uMap = kind === "boards" ? adUniforms.uBoards : adUniforms.uStrips;
   return new THREE.ShaderMaterial({ vertexShader: AD_VERTEX, fragmentShader: AD_FRAGMENT, uniforms, fog: true });
 };
+
+/**
+ * The hero billboard: a big double-sided board on tall legs that always
+ * shows ad slot 0 — the first sponsor in public/ads/manifest.json, or the
+ * first local business when there are none.
+ */
+export const buildHeroBillboard = () => {
+  const group = new THREE.Group();
+  const frameMaterial = new THREE.MeshLambertMaterial({ color: "#2A3040" });
+  const legs = new THREE.CylinderGeometry(0.16, 0.2, 7.5, 8);
+  for (const x of [-3.2, 3.2]) {
+    const leg = new THREE.Mesh(legs, frameMaterial);
+    leg.position.set(x, 3.75, 0);
+    group.add(leg);
+  }
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(9.4, 4.9, 0.3), frameMaterial);
+  frame.position.y = 9.6;
+  group.add(frame);
+  const walkway = new THREE.Mesh(new THREE.BoxGeometry(9.4, 0.08, 0.8), frameMaterial);
+  walkway.position.set(0, 7.1, -0.5);
+  group.add(walkway);
+  const poster = new THREE.PlaneGeometry(9, 4.5);
+  poster.setAttribute("aCell", new THREE.Float32BufferAttribute(new Array(poster.attributes.position!.count).fill(0), 1));
+  const material = createAdMaterial("boards");
+  for (const side of [-1, 1]) {
+    const face = new THREE.Mesh(poster, material);
+    face.position.set(0, 9.6, side * 0.17);
+    if (side < 0) face.rotation.y = Math.PI;
+    group.add(face);
+  }
+  // Floodlights for the night.
+  const lampMaterial = new THREE.MeshBasicMaterial({ color: "#FFF1C9" });
+  const lamp = new THREE.BoxGeometry(0.5, 0.18, 0.3);
+  for (const x of [-2.5, 2.5]) {
+    const m = new THREE.Mesh(lamp, lampMaterial);
+    m.position.set(x, 12.2, 0.6);
+    group.add(m);
+  }
+  return { object: group, walls: [-3.4, 0, 3.4, 0] };
+};

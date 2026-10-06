@@ -15,6 +15,7 @@ import { currentAds } from "@/game/world/adAtlas";
 import { currentDictionary, fmt, formatTzs } from "@/i18n";
 import { useSettings } from "@/stores/settings";
 import { audio, type MusicStyle } from "./AudioEngine";
+import { liveStations } from "./LiveRadio";
 import { playVoice } from "./voices";
 
 export type StationId = "kijiweni" | "bongo" | "pwani";
@@ -44,14 +45,16 @@ export class Radio {
   /** Next station (or off), as the HUD button and the R key do. */
   static cycle() {
     const s = useSettings.getState();
-    const order = [...STATIONS.map((st) => st.id), "off"] as const;
+    const order = [...STATIONS.map((st) => st.id as string), ...liveStations.map((st) => st.id), "off"];
     s.set("radio", order[(order.indexOf(s.radio) + 1) % order.length]!);
   }
 
   update(dt: number) {
-    const station = useSettings.getState().radio;
-    if (station === "off" || useSettings.getState().musicVolume <= 0) return;
-    const info = STATIONS.find((s) => s.id === station)!;
+    const id = useSettings.getState().radio;
+    const info = STATIONS.find((s) => s.id === id);
+    // Live stations bring their own DJs.
+    if (!info || useSettings.getState().musicVolume <= 0) return;
+    const station = info.id;
     audio.setStyle(info.style);
 
     // The evening reminder goes out once, half an hour before the owners collect.

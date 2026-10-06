@@ -3,6 +3,7 @@
 import { AnimatePresence, m } from "motion/react";
 import { Radio as RadioIcon, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
+import { liveStations } from "@/game/audio/LiveRadio";
 import { Radio, STATIONS } from "@/game/audio/Radio";
 import { events } from "@/game/core/events";
 import { useT } from "@/i18n";
@@ -14,7 +15,8 @@ const SHOW_FOR = 9000;
 export function RadioChip() {
   const t = useT();
   const station = useSettings((s) => s.radio);
-  const info = STATIONS.find((s) => s.id === station);
+  const live = liveStations.find((s) => s.id === station);
+  const info = STATIONS.find((s) => s.id === station) ?? live;
   const [line, setLine] = useState<{ id: number; text: string; color: string } | null>(null);
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export function RadioChip() {
         {info ? <RadioIcon className="size-5" style={{ color: info.color }} /> : <VolumeX className="size-5 text-cream/50" />}
         {info ? (
           <span className="flex items-baseline gap-1.5 tabular">
+            {live && <span className="animate-pulse rounded bg-coral px-1 text-[10px] leading-4 font-extrabold text-cream">LIVE</span>}
             {info.freq}
             <span className="hidden text-cream/60 xl:inline">{info.name}</span>
           </span>

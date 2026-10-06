@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { MissionDef } from "@/game/missions/types";
 
-export type PhoneTab = "messages" | "calls" | "pesa";
+export type PhoneTab = "messages" | "calls" | "pesa" | "hustles";
 
 export interface PhoneMessage {
   id: number;

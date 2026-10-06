@@ -19,7 +19,8 @@ const PHONE_JOBS: [MissionType, number][] = [
   ["abiria", 0.34],
   ["ninunulie", 0.28],
   ["haraka", 0.2],
-  ["stendi", 0.18],
+  ["stendi", 0.14],
+  ["wahibasi", 0.12],
 ];
 const RING_SECONDS = 16;
 /** A waiting customer texts after this long. */
@@ -102,7 +103,7 @@ export class PhoneSystem {
       const first = offer.stops[0]!;
       const t = currentDictionary();
       const place = first.name || (first.poi ? (t.missions.poi as Record<string, string>)[first.poi] : "") || t.missions.poi.street;
-      const key = regular && type === "abiria" ? "callRegular" : type === "ninunulie" ? "callErrand" : type === "haraka" ? "callHurry" : type === "stendi" ? "callStendi" : "callPickup";
+      const key = regular && type === "abiria" ? "callRegular" : type === "ninunulie" ? "callErrand" : type === "haraka" ? "callHurry" : type === "stendi" ? "callStendi" : type === "wahibasi" ? "callBus" : "callPickup";
       usePhone.getState().set({ call: { id: Date.now(), caller: who, text: line(key, { place }), offer, regular, ringsLeft: RING_SECONDS } });
       events.emit("ringing", { on: true });
       return true;

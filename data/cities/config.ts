@@ -13,10 +13,15 @@ export interface LatLon {
 }
 
 export interface Landmark {
+  /** Model id in game/world/landmarks.ts. */
   id: string;
   name: string;
   lat: number;
   lon: number;
+  /** "curb": stand at the roadside nearest the point, facing the road (flags, shopfronts). */
+  placement?: "center" | "curb";
+  /** Rotation in degrees (center placement). */
+  yaw?: number;
 }
 
 export interface CityConfig {
@@ -55,7 +60,10 @@ export const CITIES: Record<CityId, CityConfig> = {
     accent: "#0B6E4F",
     treeMix: [5, 4, 1],
     unlock: { level: 1, price: 0 },
-    landmarks: [{ id: "nguzo-nane", name: "Nguzo Nane", lat: -3.66807, lon: 33.41694 }],
+    landmarks: [
+      { id: "nguzo-nane", name: "Nguzo Nane", lat: -3.66807, lon: 33.41694 },
+      { id: "kambarage-stadium", name: "Uwanja wa Kambarage", lat: -3.6616, lon: 33.41561 },
+    ],
   },
   arusha: {
     id: "arusha",
@@ -69,7 +77,10 @@ export const CITIES: Record<CityId, CityConfig> = {
     accent: "#00A3DD",
     treeMix: [4, 3, 1],
     unlock: { level: 3, price: 20_000 },
-    landmarks: [{ id: "clock-tower", name: "Clock Tower", lat: -3.36996, lon: 36.69443 }],
+    landmarks: [
+      { id: "clock-tower", name: "Clock Tower", lat: -3.37236, lon: 36.69441 },
+      { id: "uhuru-torch", name: "Mnara wa Azimio la Arusha", lat: -3.3697, lon: 36.6881 },
+    ],
   },
   mwanza: {
     id: "mwanza",
@@ -83,7 +94,10 @@ export const CITIES: Record<CityId, CityConfig> = {
     accent: "#FFC72C",
     treeMix: [5, 2, 2],
     unlock: { level: 5, price: 40_000 },
-    landmarks: [{ id: "bismarck-rock", name: "Bismarck Rock", lat: -2.5195, lon: 32.8975 }],
+    landmarks: [
+      { id: "bismarck-rock", name: "Bismarck Rock", lat: -2.5195, lon: 32.8975 },
+      { id: "mwanza-clock", name: "Saa ya Mwanza", lat: -2.5176, lon: 32.89849 },
+    ],
   },
   kariakoo: {
     id: "kariakoo",
@@ -97,7 +111,11 @@ export const CITIES: Record<CityId, CityConfig> = {
     accent: "#FF5A4F",
     treeMix: [4, 1, 4],
     unlock: { level: 8, price: 75_000 },
-    landmarks: [{ id: "kariakoo-market", name: "Soko la Kariakoo", lat: -6.81606, lon: 39.2739 }],
+    landmarks: [
+      { id: "kariakoo-market", name: "Soko la Kariakoo", lat: -6.81606, lon: 39.2739 },
+      { id: "yanga-tawi", name: "Tawi la Yanga, Mtaa wa Uhuru", lat: -6.82308, lon: 39.27147, placement: "curb" },
+      { id: "simba-duka", name: "Duka la Simba, Msimbazi", lat: -6.82217, lon: 39.27334, placement: "curb" },
+    ],
   },
 };
 

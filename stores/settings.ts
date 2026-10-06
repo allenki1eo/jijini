@@ -22,6 +22,8 @@ export interface SettingsState {
   hudScale: number;
   /** Set once the graphics preset was picked from the device tier. */
   tierDetected: boolean;
+  /** Radio station playing while you ride (or "off"). */
+  radio: "kijiweni" | "bongo" | "pwani" | "off";
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 
@@ -42,6 +44,7 @@ export const useSettings = create<SettingsState>()(
       cameraView: "chase",
       hudScale: 1,
       tierDetected: false,
+      radio: "kijiweni",
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
     }),
     {

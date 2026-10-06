@@ -38,6 +38,8 @@ export default function WorldView({ cityId, openBoard }: { cityId: CityId; openB
         streamFocus.z = m.spawn.z;
         set({ manifest: m });
         const g = new Game(cityId, m, baseUrl);
+        // Dev builds expose the game for automated play tests.
+        if (process.env.NODE_ENV === "development") (window as unknown as { __bodago?: Game }).__bodago = g;
         g.start().catch((e: Error) => !cancelled && set({ status: "error", error: e.message }));
         setGame((old) => {
           old?.dispose();

@@ -1,4 +1,4 @@
-import { Apple, Bus, Camera, Coffee, Flag, Moon, Package, School, ShoppingBasket, Siren, Timer, User, Utensils, type LucideIcon } from "lucide-react";
+import { Apple, Bus, BusFront, Camera, Coffee, Flag, Megaphone, Moon, Package, PackageCheck, School, ShoppingBasket, Siren, Timer, User, Utensils, type LucideIcon } from "lucide-react";
 import type { MissionType } from "@/game/missions/types";
 
 const ICONS: Record<MissionType, LucideIcon> = {
@@ -15,6 +15,9 @@ const ICONS: Record<MissionType, LucideIcon> = {
   ninunulie: ShoppingBasket,
   haraka: Timer,
   stendi: Bus,
+  wahibasi: BusFront,
+  delivery: PackageCheck,
+  matangazo: Megaphone,
 };
 
 export const MISSION_ACCENT: Record<MissionType, string> = {
@@ -31,6 +34,9 @@ export const MISSION_ACCENT: Record<MissionType, string> = {
   ninunulie: "bg-forest text-cream",
   haraka: "bg-coral text-night",
   stendi: "bg-sun-300 text-night",
+  wahibasi: "bg-coral-700 text-sun",
+  delivery: "bg-sky-700 text-cream",
+  matangazo: "bg-[#6A1B9A] text-sun",
 };
 
 export function MissionIcon({ type, className }: { type: MissionType; className?: string }) {

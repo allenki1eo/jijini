@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import type { Game } from "@/game/core/Game";
 import { missionHud } from "@/game/missions/MissionRunner";
 import { PLACE_STYLE, atlasCell, placeAtlas } from "@/game/world/places";
+import { POI_KINDS } from "@/game/world/format";
+import { policeHud } from "@/game/traffic/Police";
 import { useSettings } from "@/stores/settings";
 
 const SIZE = 168;
@@ -104,6 +106,29 @@ export function Minimap({ game }: { game: Game }) {
         ctx.beginPath();
         ctx.arc(x, y, 4.5, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      // Traffic police with speed guns, and the pursuit pickup (flashing, pinned to the rim when far).
+      const [px, py, pc] = atlasCell(POI_KINDS.indexOf("police"));
+      for (const trap of game.police?.points ?? []) {
+        const [x, y] = tx(trap.x, trap.z);
+        ctx.drawImage(atlas, px, py, pc, pc, x - 7, y - 7, 14, 14);
+      }
+      if (game.police?.chasing) {
+        let [x, y] = tx(policeHud.px, policeHud.pz);
+        const dx = x - SIZE / 2, dy = y - SIZE / 2;
+        const d = Math.hypot(dx, dy);
+        if (d > SIZE / 2 - 9) {
+          x = SIZE / 2 + (dx / d) * (SIZE / 2 - 9);
+          y = SIZE / 2 + (dy / d) * (SIZE / 2 - 9);
+        }
+        ctx.fillStyle = Math.floor(now / 250) % 2 ? "#FF2D3A" : "#2D6BFF";
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
       }
 
       // Traffic.

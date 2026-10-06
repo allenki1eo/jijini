@@ -3,7 +3,7 @@ import type { Seller, ShoppingItem } from "@/data/prices";
 import type { CargoKind, PassengerKind } from "@/game/vehicles/BikeModel";
 import type { PoiKind } from "@/game/world/format";
 
-export const MISSION_TYPES = ["abiria", "mzigo", "dharura", "chai", "soko", "shule", "wageni", "mbio", "chipsi", "usiku", "ninunulie", "haraka", "stendi"] as const;
+export const MISSION_TYPES = ["abiria", "mzigo", "dharura", "chai", "soko", "shule", "wageni", "mbio", "chipsi", "usiku", "ninunulie", "haraka", "stendi", "wahibasi", "delivery", "matangazo"] as const;
 export type MissionType = (typeof MISSION_TYPES)[number];
 
 /** "buy": stop at a shop or market stall and pay for a customer's shopping list. */
@@ -16,7 +16,7 @@ export interface Stop {
   /** POI or place name, shown on cards and the tracker. */
   name: string;
   /** Category, used for a fallback label when the place has no name. */
-  poi?: PoiKind | "start";
+  poi?: PoiKind | "start" | "bus";
 }
 
 export type RiskTag = "fast" | "fragile" | "crowded" | "night" | "rain" | "long" | "vip";
@@ -49,6 +49,10 @@ export interface MissionDef {
   /** Races: fixed course id for personal bests and ghosts. */
   courseId?: string;
   errand?: Errand;
+  /** Wahi Basi: the lanes the missed bus drives along. */
+  busRoute?: number[];
+  /** Matangazo: the business being promoted. */
+  promo?: { name: string; tagline: string };
   /** Set when the customer phoned in the job (regulars, hurry calls). */
   phoned?: boolean;
 }
@@ -58,7 +62,7 @@ export interface MissionResult {
   type: MissionType;
   success: boolean;
   /** i18n key for failures (e.g. "timeout", "spilled"). */
-  reason?: "timeout" | "spilled" | "abandoned" | "lost";
+  reason?: "timeout" | "spilled" | "abandoned" | "lost" | "missedBus";
   fare: number;
   tip: number;
   combo: number;
@@ -93,6 +97,9 @@ export const MISSION_META: Record<MissionType, { icon: string; accent: string; l
   ninunulie: { icon: "shopping-basket", accent: "forest", level: 1 },
   haraka: { icon: "timer", accent: "coral", level: 2 },
   stendi: { icon: "bus", accent: "sun", level: 1 },
+  wahibasi: { icon: "bus-front", accent: "coral", level: 2 },
+  delivery: { icon: "package-check", accent: "sky", level: 1 },
+  matangazo: { icon: "megaphone", accent: "sun", level: 1 },
 };
 
 export const CLIENTS = [

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { BatteryMedium, MessageSquare, Phone as PhoneIcon, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Signal, Smartphone, Star, Wallet, X } from "lucide-react";
+import { BatteryMedium, Briefcase, HandCoins, IdCard, Megaphone, MessageSquare, PackageCheck, Phone as PhoneIcon, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Signal, Smartphone, Star, Wallet, X } from "lucide-react";
 import { useEffect } from "react";
 import { MISSION_ACCENT, MissionIcon } from "@/components/missions/MissionIcon";
 import { formatDistance } from "@/components/missions/stopLabel";
@@ -131,6 +131,12 @@ const TABS: { id: PhoneTab; icon: typeof MessageSquare }[] = [
   { id: "messages", icon: MessageSquare },
   { id: "calls", icon: PhoneIcon },
   { id: "pesa", icon: Wallet },
+  { id: "hustles", icon: Briefcase },
+];
+
+const HUSTLES = [
+  { type: "delivery" as const, icon: PackageCheck, accent: "bg-sky-700 text-cream" },
+  { type: "matangazo" as const, icon: Megaphone, accent: "bg-[#6A1B9A] text-sun" },
 ];
 
 /** The boda phone: messages, calls and regulars, and the mobile-money wallet. */
@@ -140,6 +146,8 @@ export function PhonePanel({ game }: { game: Game }) {
   const { open, tab, messages, calls, set, markRead } = usePhone();
   const wallet = usePlayer((s) => s.wallet);
   const regulars = usePlayer((s) => s.regulars);
+  const owed = usePlayer((s) => s.hesabuOwed);
+  const licenceDays = Math.ceil(game.licenceHours / 24);
 
   useEffect(() => {
     if (open) markRead();
@@ -253,6 +261,35 @@ export function PhonePanel({ game }: { game: Game }) {
                 </div>
               )}
 
+              {tab === "hustles" && (
+                <div className="flex flex-col gap-2">
+                  <p className="px-1 text-sm text-cream/60">{t.phone.hustles.intro}</p>
+                  {HUSTLES.map(({ type, icon: Icon, accent }) => (
+                    <div key={type} className="overflow-hidden rounded-2xl bg-night-700">
+                      <div className={cn("flex items-center gap-2 px-3 py-2", accent)}>
+                        <Icon className="size-5" />
+                        <span className="font-display font-extrabold">{t.missions.types[type]}</span>
+                      </div>
+                      <div className="flex items-end gap-2 p-3">
+                        <p className="flex-1 text-sm leading-snug text-cream/75">{t.phone.hustles[type]}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const r = game.startHustle(type);
+                            if (r === "busy") game.toast(t.phone.busy);
+                            else if (r === "none") game.toast(t.phone.hustles.none);
+                            else set({ open: false });
+                          }}
+                          className="chunky shrink-0 rounded-xl bg-sun px-3 py-2 font-display text-sm font-extrabold text-night [--edge:var(--color-sun-800)]"
+                        >
+                          {t.phone.hustles.start}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {tab === "pesa" && (
                 <div className="flex flex-col gap-3">
                   <div className="rounded-3xl bg-gradient-to-br from-forest to-forest-800 p-4 text-cream shadow-lg">
@@ -260,6 +297,43 @@ export function PhonePanel({ game }: { game: Game }) {
                     <p className="mt-2 text-xs opacity-75">{t.phone.balance}</p>
                     <p className="font-display text-3xl leading-none font-extrabold tabular">TSh {formatTzs(wallet)}</p>
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-night-700 p-3">
+                      <p className="flex items-center gap-1.5 text-xs font-bold text-cream/60">
+                        <IdCard className="size-4" /> {t.hesabu.licence}
+                      </p>
+                      <p className={cn("mt-1 font-display text-lg leading-tight font-extrabold", licenceDays <= 0 ? "text-coral" : licenceDays <= 2 ? "text-sun" : "text-cream")}>
+                        {licenceDays <= 0 ? t.hesabu.licenceExpired.split("!")[0] : fmt(t.hesabu.licenceLeft, { days: licenceDays })}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-night-700 p-3">
+                      <p className="flex items-center gap-1.5 text-xs font-bold text-cream/60">
+                        <HandCoins className="size-4" /> {t.hesabu.today}
+                      </p>
+                      <p className="mt-1 font-display text-lg leading-tight font-extrabold tabular">{game.onLoanBike ? `${formatTzs(game.hesabu)} · 20:00` : "—"}</p>
+                    </div>
+                  </div>
+                  {game.onLoanBike ? (
+                    <p className="px-1 text-xs leading-snug text-cream/55">{t.hesabu.owner}</p>
+                  ) : (
+                    <p className="px-1 text-xs text-cream/55">{t.hesabu.none}</p>
+                  )}
+                  {owed > 0 && (
+                    <div className="flex items-center gap-2 rounded-2xl bg-coral/15 p-2 pl-3">
+                      <span className="flex-1 text-sm font-semibold text-coral">
+                        {t.hesabu.owed}: TSh {formatTzs(owed)}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={wallet < owed}
+                        onClick={() => game.payHesabuDebt()}
+                        className="chunky rounded-xl bg-sun px-3 py-2 font-display text-sm font-extrabold text-night [--edge:var(--color-sun-800)] disabled:opacity-50"
+                      >
+                        {t.hesabu.pay}
+                      </button>
+                    </div>
+                  )}
+                  {licenceDays <= 0 && <p className="px-1 text-xs text-coral">{t.hesabu.renewHint}</p>}
                   <ul className="flex flex-col gap-1.5">
                     {pesa.map((msg) => (
                       <li key={msg.id} className="flex items-center gap-2 rounded-2xl bg-night-700 px-3 py-2">
@@ -276,7 +350,7 @@ export function PhonePanel({ game }: { game: Game }) {
               )}
             </div>
 
-            <nav className="grid grid-cols-3 gap-1 border-t border-white/8 p-2" aria-label={t.phone.open}>
+            <nav className="grid grid-cols-4 gap-1 border-t border-white/8 p-2" aria-label={t.phone.open}>
               {TABS.map(({ id, icon: Icon }) => {
                 const unread = messages.some((msg) => !msg.read && (id === "pesa" ? msg.kind === "pesa" : id === "messages" && msg.kind === "sms"));
                 return (

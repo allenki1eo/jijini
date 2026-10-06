@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { Chip } from "@/components/ui";
 import { events } from "@/game/core/events";
 import { clockText, env } from "@/game/systems/environment";
-import { CHECKPOINT_FINE, checkpointState } from "@/game/traffic/Checkpoints";
+import { checkpointState } from "@/game/traffic/Checkpoints";
 import { fmt, formatTzs, useT } from "@/i18n";
 import { useHudTick } from "./useHudTick";
 
@@ -34,7 +34,7 @@ export function CheckpointPrompt() {
       : phase === "passed"
         ? t.life.checkpointPassed
         : phase === "fined"
-          ? fmt(t.life.checkpointFined, { fine: formatTzs(CHECKPOINT_FINE) })
+          ? fmt(checkpointState.expired ? t.life.licenceExpiredFine : t.life.checkpointFined, { fine: formatTzs(checkpointState.fine) })
           : null;
   return (
     <AnimatePresence>

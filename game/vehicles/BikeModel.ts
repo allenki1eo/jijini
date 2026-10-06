@@ -9,7 +9,7 @@ import { BIKES, type BikeId } from "./bikes";
 import type { BikeState } from "./BikePhysics";
 
 export type PassengerKind = "none" | "mama" | "student" | "business" | "kid" | "tourist" | "elder";
-export type CargoKind = "none" | "parcel" | "crates" | "chai" | "food" | "groceries";
+export type CargoKind = "none" | "parcel" | "crates" | "chai" | "food" | "groceries" | "speaker";
 
 const STICKERS: Record<Customization["sticker"], [string, string] | null> = {
   none: null,
@@ -256,6 +256,16 @@ export class BikeModel {
         return g;
       })(),
       food: add(c, box(0.46, 0.4, 0.42), m.cargo2, 0, 0.2, 0),
+      // Matangazo: a loudspeaker horn on a pole and a little banner.
+      speaker: (() => {
+        const g = new THREE.Group();
+        c.add(g);
+        add(g, box(0.3, 0.26, 0.3), m.metal, 0, 0.13, 0);
+        add(g, cyl(0.025, 0.9, 6), m.metal, 0, 0.7, 0.05);
+        add(g, new THREE.CylinderGeometry(0.2, 0.05, 0.36, 10).rotateX(-Math.PI / 2), m.oil, 0, 1.15, -0.1);
+        add(g, box(0.62, 0.3, 0.02), m.cargo2, 0.32, 0.92, 0.12);
+        return g;
+      })(),
       // A woven kikapu with a bottle of cooking oil and greens poking out.
       groceries: (() => {
         const g = new THREE.Group();

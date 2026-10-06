@@ -13,6 +13,8 @@ import { cn } from "@/lib/cn";
 import { useSettings } from "@/stores/settings";
 import { useWorld, type CameraMode } from "@/stores/world";
 import { CheckpointPrompt, ClockChip, useSkillToasts } from "./LifeHud";
+import { PoliceBanner } from "./PoliceHud";
+import { RadioChip } from "./RadioHud";
 import { SpeedLines, useHaptics } from "./Juice";
 import { PauseMenu } from "./PauseMenu";
 import { Speedometer } from "./Speedometer";
@@ -95,6 +97,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
             {manifest.name}
           </Chip>
           <ClockChip />
+          <RadioChip />
         </div>
         <div className="flex flex-1 justify-center">{topCenter}</div>
         <div className="pointer-events-auto flex items-start gap-2">
@@ -113,6 +116,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
 
       <div className="absolute inset-x-0 top-20 flex flex-col items-center gap-2">
         <CheckpointPrompt />
+        <PoliceBanner />
         <ToastStack />
         <FuelWarning />
       </div>

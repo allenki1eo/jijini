@@ -5,6 +5,7 @@
 import type { CityId } from "@/data/cities/config";
 import { GOODS, priceOf, sellerOf, type GoodId, type Seller, type ShoppingItem } from "@/data/prices";
 import { POI_KINDS, type Poi, type PoiKind } from "@/game/world/format";
+import { currentAds } from "@/game/world/adAtlas";
 import type { NavNetwork } from "@/game/traffic/NavNetwork";
 import type { CargoKind, PassengerKind } from "@/game/vehicles/BikeModel";
 import { CLIENTS, TOURIST_NAMES, type MissionDef, type MissionType, type RiskTag, type Stop } from "./types";
@@ -319,6 +320,63 @@ export class MissionGenerator {
           perKm: 3800,
           risks: ["crowded"],
         });
+      }
+      case "wahibasi": {
+        // The bus left the stand a minute ago, heading out of town along the main road.
+        const stand = this.nearest(["bus_station"], x, z, 30) ?? this.nearest(["bus_stop"], x, z, 30);
+        if (!stand || Math.hypot(stand.x - x, stand.z - z) > 900) return null;
+        const nav = this.ctxNav;
+        const from = nav.nearestNode(stand.x, stand.z);
+        const far: number[] = [];
+        for (let n = 0; n < nav.out.length; n++) {
+          const d = Math.hypot(nav.nodeX(n) - stand.x, nav.nodeZ(n) - stand.z);
+          if (d > 900 && d < 1500 && nav.out[n]!.some((id) => nav.lanes[id]!.cls <= 2)) far.push(n);
+        }
+        const target = this.pick(far);
+        if (target === undefined) return null;
+        const route = nav.route(from, target);
+        if (!route || route.reduce((sum, id) => sum + nav.lanes[id]!.length, 0) < 700) return null;
+        const def = this.build(type, ctx, [this.stop(stand, "pickup"), { x: nav.nodeX(target), z: nav.nodeZ(target), kind: "dropoff", name: "", poi: "bus" }], {
+          client,
+          passenger: this.pick(["business", "mama", "student", "elder"] as PassengerKind[]),
+          speed: 0,
+          slack: 0,
+          base: 3500,
+          perKm: 5200,
+          risks: ["fast"],
+        });
+        return { ...def, busRoute: route };
+      }
+      case "delivery": {
+        // ChapChap Delivery: four orders back to back from restaurants and shops.
+        const stops: Stop[] = [];
+        let cx = x, cz = z;
+        for (let i = 0; i < 4; i++) {
+          const r = this.place(["restaurant", "shop", "market", "pharmacy"], cx, cz, i === 0 ? 30 : 0, 450);
+          const d = this.place(this.rand() < 0.3 ? ["office", "hotel", "school", "bank"] : null, r.x, r.z, 200, 650);
+          stops.push(this.stop(r, "pickup"), this.stop(d, "dropoff"));
+          cx = d.x;
+          cz = d.z;
+        }
+        return this.build(type, ctx, stops, { client: "ChapChap Delivery", cargo: "food", speed: 8, slack: 120, base: 6000, perKm: 3000, risks: ["long"] });
+      }
+      case "matangazo": {
+        // A promo ride: loudspeaker and banner through three of the busiest spots.
+        const ad = this.pick(currentAds);
+        if (!ad) return null;
+        const busy: PoiKind[] = ["market", "bus_station", "bus_stop"];
+        const stops: Stop[] = [];
+        let cx = x, cz = z;
+        for (let i = 0; i < 3; i++) {
+          const p = this.place(busy, cx, cz, 220, 750);
+          if (stops.some((s) => Math.hypot(s.x - p.x, s.z - p.z) < 150)) continue;
+          stops.push({ ...this.stop(p, "checkpoint"), name: p.name || `${i + 1}/3` });
+          cx = p.x;
+          cz = p.z;
+        }
+        if (stops.length < 2) return null;
+        const def = this.build(type, ctx, stops, { client: ad.name, cargo: "speaker", speed: 7, slack: 120, base: 4500, perKm: 2600, risks: ["crowded"] });
+        return { ...def, promo: { name: ad.name, tagline: ad.tagline } };
       }
       case "chipsi": {
         const stops: Stop[] = [];

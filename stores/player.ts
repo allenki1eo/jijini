@@ -80,6 +80,10 @@ export interface Profile {
   cityEarnings: Record<string, number>;
   /** Regular customers (name → rides together). They phone you for work. */
   regulars: Record<string, number>;
+  /** Game hours left on the riding licence (leseni). */
+  licenceHours: number;
+  /** Hesabu not yet paid to the owner of the Mkopo Ride. */
+  hesabuOwed: number;
 }
 
 const EMPTY_STATS: PlayerStats = {
@@ -137,6 +141,8 @@ export const NEW_PROFILE: Profile = {
   cosmetics: [],
   cityEarnings: {},
   regulars: {},
+  licenceHours: 72,
+  hesabuOwed: 0,
 };
 
 /** XP needed to go from `level` to `level + 1`. */

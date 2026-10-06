@@ -14,6 +14,8 @@ import { GHOST_SAMPLE_EVERY, type GhostRider } from "@/game/vehicles/GhostRider"
 import type { BikeState } from "@/game/vehicles/BikePhysics";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
+import type * as THREE from "three";
+import { BusChase } from "./BusChase";
 import type { RouteGuide } from "./RouteGuide";
 import type { MissionDef, MissionResult, MissionType } from "./types";
 
@@ -78,6 +80,10 @@ export class MissionRunner {
   private shopOpen = false;
   private sinceChatter = CHATTER_GAP;
   private sinceTalk = TALK_GAP;
+  /** Wahi Basi: the bus being chased. */
+  private bus: BusChase | null = null;
+  private sinceBusRoute = 0;
+  private sincePromo = 0;
   /** "Hold on tight" softens harsh riding for a few seconds. */
   private braced = 0;
 
@@ -87,6 +93,7 @@ export class MissionRunner {
     private readonly guide: RouteGuide,
     private readonly cityId: string,
     private readonly ghost: GhostRider,
+    private readonly scene: THREE.Group,
   ) {
     this.offs = [
       events.on("collision", ({ kind }) => {
@@ -135,6 +142,13 @@ export class MissionRunner {
     this.shopOpen = false;
     this.sinceChatter = CHATTER_GAP;
     this.ghost.stop();
+    this.clearBus();
+    this.sincePromo = 6;
+    // Promo rides carry the loudspeaker from the start.
+    if (def.cargo === "speaker") {
+      missionHud.carrying = true;
+      this.model.setCargo("speaker");
+    }
     // Errands: the customer sends the shopping money to the boda phone first.
     if (def.errand) {
       usePlayer.getState().transfer(def.errand.advance);
@@ -210,6 +224,30 @@ export class MissionRunner {
       }
     }
     const stop = def.stops[missionHud.stopIndex]!;
+    // Wahi Basi: the drop-off is wherever the bus is.
+    if (this.bus) {
+      this.bus.update(dt);
+      stop.x = this.bus.x;
+      stop.z = this.bus.z;
+      missionHud.targetX = stop.x;
+      missionHud.targetZ = stop.z;
+      this.guide.setStop(stop);
+      this.sinceBusRoute += dt;
+      if (this.sinceBusRoute > 1.2) {
+        this.sinceBusRoute = 0;
+        this.reroute(bike);
+      }
+      if (this.bus.gone) return this.finish(false, "missedBus");
+      if (!this.bus.stopped && Math.hypot(stop.x - bike.x, stop.z - bike.z) < 18) this.bus.pullOver();
+    }
+    // Promo rides: the loudspeaker calls out every few seconds.
+    if (def.promo) {
+      this.sincePromo += dt;
+      if (this.sincePromo > 13) {
+        this.sincePromo = 0;
+        say("promo", def.client, { name: def.promo.name, tagline: def.promo.tagline });
+      }
+    }
     const d = Math.hypot(stop.x - bike.x, stop.z - bike.z);
     missionHud.distance = d;
     missionHud.timeLeft = def.timeLimit !== null ? def.timeLimit - this.elapsed : 0;
@@ -256,8 +294,10 @@ export class MissionRunner {
     if (stop.kind === "checkpoint") {
       if (d < CHECKPOINT_RADIUS) this.advance(bike);
     } else {
-      const radius = stop.kind === "photo" ? STOP_RADIUS + 3 : STOP_RADIUS;
-      if (d < radius && Math.abs(bike.speed) < STOP_SPEED) {
+      // A passenger will run a little way to a bus that has pulled over.
+      const radius = stop.kind === "photo" ? STOP_RADIUS + 3 : this.bus ? 24 : STOP_RADIUS;
+      const waitingForBus = this.bus !== null && !this.bus.stopped;
+      if (d < radius && Math.abs(bike.speed) < STOP_SPEED && !waitingForBus) {
         this.loading += dt / (stop.kind === "photo" ? 0.9 : LOAD_TIME);
         if (this.loading >= 1) this.advance(bike);
       } else this.loading = Math.max(0, this.loading - dt * 2);
@@ -285,8 +325,14 @@ export class MissionRunner {
       missionHud.carrying = true;
       if (def.passenger !== "none") {
         this.model.setPassenger(def.passenger);
-        say(def.type === "stendi" ? "luggage" : def.type === "haraka" ? "hurry" : "greet", def.client);
+        say(def.type === "stendi" ? "luggage" : def.type === "haraka" ? "hurry" : def.type === "wahibasi" ? "busAhead" : "greet", def.client);
         this.sinceChatter = 0;
+        // The missed bus is already pulling away down the road.
+        if (def.busRoute) {
+          this.bus = new BusChase(this.nav, def.busRoute);
+          this.scene.add(this.bus.group);
+          this.sinceBusRoute = 9;
+        }
       } else this.model.setCargo(def.cargo);
     } else if (stop.kind === "buy") {
       missionHud.carrying = true;
@@ -305,6 +351,13 @@ export class MissionRunner {
     if (missionHud.stopIndex + 1 >= def.stops.length) return this.finish(true);
     missionHud.stopIndex++;
     this.focusStop(bike);
+  }
+
+  private clearBus() {
+    if (!this.bus) return;
+    this.scene.remove(this.bus.group);
+    this.bus.dispose();
+    this.bus = null;
   }
 
   /** True when there's a passenger on board to talk to. */
@@ -334,6 +387,13 @@ export class MissionRunner {
     const reply = { hello: "chatHello", sorry: "chatSorry", hold: "chatHold", near: delta > 0 ? "chatNear" : "hurry" } as const;
     window.setTimeout(() => this.def === def && say(reply[option], def.client), 900);
     this.sinceChatter = 0;
+  }
+
+  /** Something frightening (a police chase): passengers lose their nerve. */
+  scare() {
+    if (!this.def || !missionHud.carrying || this.def.passenger === "none") return;
+    this.mood = Math.max(0, this.mood - 0.004);
+    this.chatter("scared");
   }
 
   /** A passenger remark, at most one every few seconds. */
@@ -483,7 +543,8 @@ export class MissionRunner {
       this.pesa(def.client, -shopping.change);
       if (success) say(shopping.change > 0 ? "change" : "topup", def.client);
     }
-    if (success && def.passenger !== "none" && def.type !== "mbio") say("thanks", def.client);
+    if (success && def.passenger !== "none" && def.type !== "mbio") say(def.type === "wahibasi" ? "busCaught" : "thanks", def.client);
+    this.clearBus();
     // Happy customers save your number and call again.
     if (success && stars >= 4 && def.type !== "mbio" && def.type !== "wageni") {
       const regulars = usePlayer.getState().regulars;
@@ -523,6 +584,7 @@ export class MissionRunner {
   }
 
   dispose() {
+    this.clearBus();
     this.offs.forEach((off) => off());
     missionHud.active = false;
     missionHud.route = null;

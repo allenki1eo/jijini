@@ -51,8 +51,17 @@ A left-handed layout and auto-throttle are in Settings. Gamepads work (standard 
   - **Ninunulie:** the customer sends money to your phone, you buy their list at a real market stall, shop or pharmacy (haggle at the market), and bring it back with the change
   - **Haraka:** a late customer; every second you save is a tip, and they complain when you dawdle
   - **Stendi:** travellers with luggage at the bus stand
+  - **Wahi Basi:** your passenger missed the bus; chase it down the road until it pulls over
+  - **Side hustles** (phone → Vibarua): a ChapChap Delivery shift of four orders, or a Matangazo promo ride with a business's loudspeaker and banner past the markets and stands
 - **The boda phone:** customers call with jobs (answer or decline), regulars (anyone who gave you 4+ stars) call more often and pay more, and you can ring them for work. Waiting customers text when you're slow. The BodaPesa wallet logs money in and out. Talk to passengers on the way (keys 1–4): small talk, apologies and "hold on tight" change their mood.
 - **Street prices:** goods cost typical 2025 street prices with city differences (rice and fish are cheaper in the Lake Zone) and a small daily drift. Fuel follows the EWURA cap levels per city (about TSh 2,850/L in Dar, 2,990/L in Shinyanga), and mechanics (fundi) repair at local rates.
+- **Police and the law:**
+  - Traffic police with speed guns (tochi) stand on the main roads. Ride past over the limit and they wave you down: stop and pay TSh 30,000, or run, and the police pickup chases you with lights and siren. Lose them out of sight to escape; get boxed in and you pay for speeding and for running (TSh 60,000).
+  - Your licence (leseni) runs down with game time and is renewed with the police (TSh 70,000 for 10 game days). Ride on an expired one and any stop costs a whole day's hesabu on top.
+  - The Mkopo Ride belongs to Bosi Mrisho, who collects the daily hesabu at 20:00 (TSh 8,000–12,000 by city). Short days become debt you can pay from the phone; buy your own boda and the hesabu ends.
+- **Home landmarks:** Nguzo Nane and Kambarage Stadium (Shinyanga), the Clock Tower and the Arusha Declaration torch (Arusha), Bismarck Rock and the clock tower (Mwanza), Kariakoo market plus the Yanga branch on Uhuru Street and the Simba shop on Msimbazi (Kariakoo), and Mzee Juma's kijiwe where every ride starts.
+- **Local radio:** Kijiweni FM 88.5 (Singeli), Bongo Vibes 94.2 (Bongo flava) and Pwani Taarab 101.7, each with its own procedural music. DJs break in with traffic and weather from the live game, fuel prices, police warnings, the hesabu reminder, shout-outs and adverts. Change station with the radio chip or R.
+- **Bangos:** billboards and banners strung across main roads advertise local businesses, which also buy radio spots and promo rides. They're fictional; real sponsors can be added with permission in `public/ads/manifest.json` ([guide](public/ads/README.md)).
 - **Horns everywhere:** cars, daladalas (musical air horns), trucks, bajaji and bodas each sound different, panned to where they are. They honk when you block them, cut them up or hit them; fellow bodas beep hello. Conductors call out at bus stands.
 - **On the road:** passenger mood, tips, near-miss combos, clean-ride bonuses and 1–5 stars. A* routing gives glowing road arrows, a light beam over the stop and a rotating minimap.
 - **Economy and progression:**

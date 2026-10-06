@@ -3,8 +3,10 @@
  * painted kiosks, umbrella vendors, crate stacks and billboards.
  */
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { envUniforms } from "@/game/systems/environment";
 import { PROP_KINDS, PROP_STRIDE, type PropKind } from "./build/props";
+import { AD_SLOTS, createAdMaterial } from "./adAtlas";
 import { block, createInstancedMaterial, merge, part, setInstanceHex } from "./meshKit";
 
 const cyl = (r: number, h: number, x = 0, y = 0, z = 0, seg = 6) => new THREE.CylinderGeometry(r, r, h, seg).translate(x, y, z);
@@ -74,6 +76,9 @@ export class PropField {
   private poolMaterial: THREE.MeshBasicMaterial;
   private material = createInstancedMaterial({ doubleSide: true, glowStrength: 3 });
   private dummy = new THREE.Object3D();
+  /** Billboard posters: local businesses from the city's ad atlas, on both faces. */
+  private posters: THREE.InstancedMesh;
+  private posterCells: THREE.InstancedBufferAttribute;
 
   constructor() {
     this.group.name = "props";
@@ -94,6 +99,14 @@ export class PropField {
     this.pools.frustumCulled = false;
     this.pools.renderOrder = 2;
     this.group.add(this.pools);
+    const poster = mergeGeometries([new THREE.PlaneGeometry(4.36, 2.06).translate(0, 4.6, 0.08), new THREE.PlaneGeometry(4.36, 2.06).rotateY(Math.PI).translate(0, 4.6, -0.08)])!;
+    this.posterCells = new THREE.InstancedBufferAttribute(new Float32Array(CAPACITY.billboard), 1);
+    poster.setAttribute("aCell", this.posterCells);
+    this.posters = new THREE.InstancedMesh(poster, createAdMaterial("boards"), CAPACITY.billboard);
+    this.posters.count = 0;
+    this.posters.frustumCulled = false;
+    this.posters.name = "props-billboard-posters";
+    this.group.add(this.posters);
   }
 
   rebuild(sources: Iterable<Float32Array>) {
@@ -113,6 +126,10 @@ export class PropField {
         const palette = COLORS[kind];
         setInstanceHex(mesh, counts[kind], palette[Math.floor(seed * palette.length) % palette.length]!);
         counts[kind]++;
+        if (kind === "billboard") {
+          this.posters.setMatrixAt(counts.billboard - 1, this.dummy.matrix);
+          this.posterCells.setX(counts.billboard - 1, Math.floor(seed * 997) % AD_SLOTS);
+        }
         if (kind === "lamp") {
           // The pool sits under the lamp head, out over the road.
           this.dummy.position.set(x - Math.cos(yaw) * 1.5, 0.33, z + Math.sin(yaw) * 1.5);
@@ -130,6 +147,9 @@ export class PropField {
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
     this.pools.count = pools;
+    this.posters.count = counts.billboard;
+    this.posters.instanceMatrix.needsUpdate = true;
+    this.posterCells.needsUpdate = true;
     this.pools.instanceMatrix.needsUpdate = true;
   }
 
@@ -140,7 +160,8 @@ export class PropField {
   }
 
   dispose() {
-    for (const mesh of [...Object.values(this.meshes), this.pools]) {
+    (this.posters.material as THREE.Material).dispose();
+    for (const mesh of [...Object.values(this.meshes), this.pools, this.posters]) {
       mesh.geometry.dispose();
       mesh.dispose();
     }

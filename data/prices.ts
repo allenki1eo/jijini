@@ -143,3 +143,23 @@ export const sellerOf = (kind: string, subtype?: string): Seller | null => {
 
 /** Market stalls haggle; supermarkets and chemists don't. */
 export const canHaggle = (seller: Seller) => seller === "market" || seller === "hardware";
+
+/**
+ * Hesabu: what a rider on a borrowed boda hands the owner every evening.
+ * Typical daily rates; Dar is dearest.
+ */
+export const HESABU: Record<CityId, number> = {
+  kariakoo: 12_000,
+  arusha: 10_000,
+  mwanza: 10_000,
+  shinyanga: 8_000,
+};
+
+/** The owner who lends you the Mkopo Ride. */
+export const BODA_OWNER = "Bosi Mrisho";
+/** Hesabu is collected at this hour of the game day. */
+export const HESABU_HOUR = 20;
+
+/** Motorcycle (class A) licence renewal fee, and how long it lasts in game hours (10 game days). */
+export const LICENCE_FEE = 70_000;
+export const LICENCE_HOURS = 240;

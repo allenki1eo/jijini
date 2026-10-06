@@ -17,6 +17,9 @@ export const checkpointState = {
   timeLeft: 0,
   /** Set by the HUD button. */
   showRequested: false,
+  /** The last fine, and whether it was for an expired licence. */
+  fine: 0,
+  expired: false,
 };
 
 export const CHECKPOINT_FINE = 2000;
@@ -93,7 +96,11 @@ export class Checkpoints {
     return this.list;
   }
 
-  update(dt: number, bike: BikeState, fine: (amount: number) => void, adjustRep: (d: number) => void) {
+  /**
+   * `licence.valid` false: showing an expired leseni costs the day's hesabu
+   * (what the boda earns the owner in a day).
+   */
+  update(dt: number, bike: BikeState, fine: (amount: number) => void, adjustRep: (d: number) => void, licence: { valid: boolean; hesabu: number }) {
     for (const c of this.list) c.cooldown = Math.max(0, c.cooldown - dt);
     const st = checkpointState;
     if (!this.active) {
@@ -116,16 +123,28 @@ export class Checkpoints {
       st.phase = "show";
       c.waited += dt;
       if (st.showRequested || controls.pressed.action) {
-        this.finish(c, "passed");
-        adjustRep(0.05);
-        events.emit("checkpoint", { passed: true });
+        if (licence.valid) {
+          st.expired = false;
+          this.finish(c, "passed");
+          adjustRep(0.05);
+          events.emit("checkpoint", { passed: true });
+        } else {
+          st.fine = licence.hesabu;
+          st.expired = true;
+          fine(licence.hesabu);
+          adjustRep(-0.1);
+          this.finish(c, "fined");
+          events.emit("checkpoint", { passed: false });
+        }
       }
     }
     // Rode past without stopping, or left the zone.
     const leaving = d > c.minDist + 4 && c.minDist < STOP_ZONE + 4;
     if ((leaving && st.phase !== "passed") || st.timeLeft < -6 || d > ZONE + 15) {
       if (c.minDist < STOP_ZONE + 4) {
-        fine(CHECKPOINT_FINE);
+        st.fine = CHECKPOINT_FINE + (licence.valid ? 0 : licence.hesabu);
+        st.expired = !licence.valid;
+        fine(st.fine);
         adjustRep(-0.2);
         this.finish(c, "fined");
         events.emit("checkpoint", { passed: false });

@@ -34,6 +34,10 @@ export interface GameEvents {
   say: { key: string; who: string; text: string };
   /** The boda phone rings (true) or stops ringing (false). */
   ringing: { on: boolean };
+  /** Traffic police: waved down by a tochi, fined, a chase starting or ending. */
+  police: { kind: "flagged" | "fined" | "chase" | "caught" | "escaped" };
+  /** The radio DJ speaks between songs. */
+  radio: { station: string; text: string };
   /** A message or mobile-money alert arrived on the boda phone. */
   sms: { from: string };
 }

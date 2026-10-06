@@ -8,6 +8,7 @@ import type { BuiltChunk, MeshBuffers } from "./build";
 import type { ChunkRequest, ChunkResponse } from "./chunk.worker";
 import type { ChunkRef, CityManifest } from "./format";
 import type { WorldMaterials } from "./materials";
+import { PropField } from "./props";
 import { TreeField } from "./trees";
 import type { WorldIndex } from "./WorldIndex";
 
@@ -25,6 +26,7 @@ interface LoadedChunk {
   ref: ChunkRef;
   meshes: THREE.Mesh[];
   trees: Float32Array;
+  props: Float32Array;
   triangles: number;
 }
 
@@ -54,6 +56,7 @@ const rectDistance = (ref: ChunkRef, size: number, x: number, z: number) => {
 export class ChunkStreamer {
   readonly root = new THREE.Group();
   private readonly trees: TreeField;
+  private readonly props = new PropField();
   private readonly worker: Worker;
   private readonly loaded = new Map<string, LoadedChunk>();
   private readonly inFlight = new Map<number, ChunkRef>();
@@ -75,6 +78,7 @@ export class ChunkStreamer {
     this.root.name = `city-${manifest.id}`;
     this.trees = new TreeField(materials.trees, TREE_CAPACITY);
     this.root.add(this.trees.group);
+    this.root.add(this.props.group);
     this.worker = new Worker(new URL("./chunk.worker.ts", import.meta.url), { type: "module" });
     this.worker.onmessage = (e: MessageEvent<ChunkResponse>) => this.receive(e.data);
     this.worker.onerror = (e) => this.onError(e.message || "Chunk worker crashed");
@@ -107,7 +111,7 @@ export class ChunkStreamer {
         changed = true;
       }
     }
-    if (changed) this.trees.rebuild(this.treeSources());
+    if (changed) this.rebuildInstances();
     this.pump();
     this.report();
   }
@@ -154,9 +158,9 @@ export class ChunkStreamer {
     add(built.ground, this.materials.ground, "ground");
     add(built.water, this.materials.water, "water");
     add(built.buildings, this.materials.buildings, "buildings");
-    this.loaded.set(ref.key, { ref, meshes, trees: built.trees, triangles });
+    this.loaded.set(ref.key, { ref, meshes, trees: built.trees, props: built.props, triangles });
     this.index?.addChunk(ref.key, built.walls, built.roads);
-    this.trees.rebuild(this.treeSources());
+    this.rebuildInstances();
   }
 
   private unload(key: string) {
@@ -170,8 +174,15 @@ export class ChunkStreamer {
     this.index?.removeChunk(key);
   }
 
-  private *treeSources() {
-    for (const chunk of this.loaded.values()) yield chunk.trees;
+  private rebuildInstances() {
+    const chunks = [...this.loaded.values()];
+    this.trees.rebuild(chunks.map((c) => c.trees));
+    this.props.rebuild(chunks.map((c) => c.props));
+  }
+
+  /** Per-frame cosmetic updates (lamp light pools). */
+  tick() {
+    this.props.update();
   }
 
   private report() {
@@ -190,5 +201,6 @@ export class ChunkStreamer {
     this.worker.terminate();
     for (const key of [...this.loaded.keys()]) this.unload(key);
     this.trees.dispose();
+    this.props.dispose();
   }
 }

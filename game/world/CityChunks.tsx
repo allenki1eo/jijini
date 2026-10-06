@@ -71,7 +71,7 @@ export function CityChunks({ manifest, baseUrl, radius, index }: CityChunksProps
   useEffect(() => streamer.current?.setRadius(radius), [radius]);
 
   useFrame((_, dt) => {
-    materials.time.value += dt;
+    streamer.current?.tick();
     sinceFocus.current += dt;
     if (sinceFocus.current >= FOCUS_INTERVAL) {
       sinceFocus.current = 0;

@@ -123,6 +123,18 @@ export const sw = {
     stumble: "Pole! Umeanguka kidogo",
     surface: { tarmac: "Lami", dirt: "Vumbi", path: "Njia ndogo", earth: "Nje ya barabara", mud: "Matope" },
   },
+  life: {
+    weather: { sunny: "Jua", rain: "Mvua", haze: "Vumbi" },
+    night: "Usiku",
+    checkpointAhead: "Kituo cha polisi mbele — punguza mwendo!",
+    checkpointShow: "Onyesha leseni",
+    checkpointPassed: "Afande Salum: \"Safari njema, kijana!\"",
+    checkpointFined: "Faini TSh {fine}! Afande hakucheka leo.",
+    nearMiss: "Karibu kugonga! ×{combo}",
+    wheelie: "Wili {m} m!",
+    drift: "Kona safi!",
+    honk: "Piiip!",
+  },
   world: {
     loading: "Tunajenga mitaa ya {city}…",
     chunks: "Vipande {loaded}/{total}",

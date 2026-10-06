@@ -1,6 +1,7 @@
 import type { ChunkData } from "../format";
 import { buildBuildings } from "./buildings";
 import { buildRoadSegments, buildWalls } from "./collision";
+import { buildProps } from "./props";
 import { buildGround, buildWater } from "./ground";
 import { transferables, type MeshBuffers } from "./writer";
 
@@ -15,6 +16,8 @@ export interface BuiltChunk {
   walls: Float32Array;
   /** Road segments for surface queries and the minimap. */
   roads: Float32Array;
+  /** Street furniture instances (see props.ts). */
+  props: Float32Array;
 }
 
 export const buildChunk = (chunk: ChunkData): BuiltChunk => {
@@ -33,6 +36,7 @@ export const buildChunk = (chunk: ChunkData): BuiltChunk => {
     trees,
     walls: buildWalls(chunk),
     roads: buildRoadSegments(chunk),
+    props: buildProps(chunk),
   };
 };
 
@@ -43,6 +47,7 @@ export const chunkTransferables = (c: BuiltChunk): ArrayBuffer[] => [
   c.trees.buffer as ArrayBuffer,
   c.walls.buffer as ArrayBuffer,
   c.roads.buffer as ArrayBuffer,
+  c.props.buffer as ArrayBuffer,
 ];
 
 export type { MeshBuffers };

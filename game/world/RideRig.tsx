@@ -19,5 +19,5 @@ export function RideRig({ game, active }: { game: Game; active: boolean }) {
 
   useFrame((_, dt) => game.update(dt, camera));
 
-  return <primitive object={game.model.root} />;
+  return <primitive object={game.root} />;
 }

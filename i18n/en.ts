@@ -124,6 +124,18 @@ export const en: Dictionary = {
     stumble: "Pole! Small tumble",
     surface: { tarmac: "Tarmac", dirt: "Dirt road", path: "Footpath", earth: "Off-road", mud: "Mud" },
   },
+  life: {
+    weather: { sunny: "Sunny", rain: "Rain", haze: "Dusty haze" },
+    night: "Night",
+    checkpointAhead: "Police checkpoint ahead — slow down!",
+    checkpointShow: "Show licence",
+    checkpointPassed: "Afande Salum: \"Safe travels, young one!\"",
+    checkpointFined: "Fined TZS {fine}! Afande wasn't laughing today.",
+    nearMiss: "Near miss! ×{combo}",
+    wheelie: "Wheelie {m} m!",
+    drift: "Perfect corner!",
+    honk: "Beep!",
+  },
   world: {
     loading: "Building the streets of {city}…",
     chunks: "Chunks {loaded}/{total}",

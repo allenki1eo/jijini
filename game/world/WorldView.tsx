@@ -40,8 +40,8 @@ export default function WorldView({ cityId }: { cityId: CityId }) {
         streamFocus.x = m.spawn.x;
         streamFocus.z = m.spawn.z;
         set({ manifest: m });
-        const g = new Game(cityId, m);
-        g.start();
+        const g = new Game(cityId, m, baseUrl);
+        void g.start();
         setGame((old) => {
           old?.dispose();
           return g;

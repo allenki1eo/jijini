@@ -7,7 +7,7 @@ import { useWorld } from "@/stores/world";
 import { CameraRig } from "./CameraRig";
 import { CityChunks } from "./CityChunks";
 import { ChunkGridOverlay, NavGraphOverlay } from "./DebugOverlays";
-import { ENV } from "./environment";
+import { EnvironmentRig } from "./EnvironmentRig";
 import type { CityManifest } from "./format";
 import { SkyDome } from "./SkyDome";
 import { RideRig } from "./RideRig";
@@ -26,14 +26,10 @@ export function WorldScene({ cityId, manifest, baseUrl, preset, game }: WorldSce
   const showNavGraph = useWorld((s) => s.showNavGraph);
   const showChunkGrid = useWorld((s) => s.showChunkGrid);
   const loadedKeys = useWorld((s) => s.loadedKeys);
-  const sun = ENV.sunDirection;
 
   return (
     <>
-      <color attach="background" args={[ENV.horizon]} />
-      <fog attach="fog" args={[ENV.fog, preset.fogNear, preset.fogFar]} />
-      <hemisphereLight args={[ENV.hemiSky, ENV.hemiGround, 1.9]} />
-      <directionalLight color={ENV.sun} intensity={2.4} position={[sun.x * 100, sun.y * 100, sun.z * 100]} />
+      <EnvironmentRig preset={preset} />
 
       <SkyDome skyline={CITIES[cityId].skyline} />
       <CityChunks manifest={manifest} baseUrl={baseUrl} radius={preset.loadRadius} index={game.index} />

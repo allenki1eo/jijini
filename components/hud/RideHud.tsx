@@ -1,16 +1,18 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { BarChart3, Fuel, Grid3x3, Map as MapIcon, MapPin, Pause, Plane, Route, Video } from "lucide-react";
+import { BarChart3, CloudFog, CloudRain, Fuel, Grid3x3, Map as MapIcon, MapPin, Moon, Pause, Plane, Route, Sun, Video } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Chip, IconButton, Segmented } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
 import { hud } from "@/game/core/hud";
+import { setHour, setWeather } from "@/game/systems/environment";
 import type { CityManifest } from "@/game/world/format";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { useSettings } from "@/stores/settings";
 import { useWorld, type CameraMode } from "@/stores/world";
+import { CheckpointPrompt, ClockChip, useSkillToasts } from "./LifeHud";
 import { PauseMenu } from "./PauseMenu";
 import { Speedometer } from "./Speedometer";
 import { StatsPanel } from "./StatsPanel";
@@ -59,6 +61,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
   const setSetting = useSettings((s) => s.set);
   const [paused, setPaused] = useState(false);
   const [showKeys, setShowKeys] = useState(true);
+  useSkillToasts();
 
   useEffect(() => {
     game.setPaused(paused);
@@ -83,9 +86,10 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
       <div className="safe-top safe-x flex items-start justify-between gap-3">
         <div className="pointer-events-auto flex items-center gap-2">
           <IconButton label={t.ride.pause} icon={<Pause />} onClick={() => setPaused(true)} />
-          <Chip icon={<MapPin className="text-coral" />} className="hidden sm:inline-flex">
+          <Chip icon={<MapPin className="text-coral" />} className="hidden lg:inline-flex">
             {manifest.name}
           </Chip>
+          <ClockChip />
         </div>
         <div className="flex flex-1 justify-center">{topCenter}</div>
         <div className="pointer-events-auto flex items-start gap-2">
@@ -103,6 +107,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
       </div>
 
       <div className="absolute inset-x-0 top-20 flex flex-col items-center gap-2">
+        <CheckpointPrompt />
         <ToastStack />
         <FuelWarning />
       </div>
@@ -124,6 +129,12 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
             />
             <IconButton label={t.world.navgraph} icon={<Route />} active={w.showNavGraph} onClick={() => w.set({ showNavGraph: !w.showNavGraph })} />
             <IconButton label={t.world.chunkGrid} icon={<Grid3x3 />} active={w.showChunkGrid} onClick={() => w.set({ showChunkGrid: !w.showChunkGrid })} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <IconButton label={t.life.weather.sunny} icon={<Sun />} onClick={() => (setHour(13), setWeather("sunny"))} />
+            <IconButton label={t.life.night} icon={<Moon />} onClick={() => setHour(21)} />
+            <IconButton label={t.life.weather.rain} icon={<CloudRain />} onClick={() => setWeather("rain")} />
+            <IconButton label={t.life.weather.haze} icon={<CloudFog />} onClick={() => setWeather("haze")} />
           </div>
         </div>
       )}

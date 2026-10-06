@@ -3,7 +3,7 @@
  * single frame callback. React renders meshes and HUD from its state but
  * never drives the simulation.
  */
-import type * as THREE from "three";
+import * as THREE from "three";
 import type { CityId } from "@/data/cities/config";
 import { currentRideStats, usePlayer } from "@/stores/player";
 import { useSettings } from "@/stores/settings";
@@ -14,11 +14,24 @@ import { ChaseCamera } from "@/game/vehicles/ChaseCamera";
 import { streamFocus } from "@/game/world/focus";
 import type { CityManifest } from "@/game/world/format";
 import { WorldIndex } from "@/game/world/WorldIndex";
+import { env, updateEnvironment } from "@/game/systems/environment";
+import { Checkpoints } from "@/game/traffic/Checkpoints";
+import { loadNavNetwork, type NavNetwork } from "@/game/traffic/NavNetwork";
+import { Pedestrians } from "@/game/traffic/Pedestrians";
+import { TrafficSystem, type Obstacle } from "@/game/traffic/TrafficSystem";
+import { POI_KINDS, type Poi } from "@/game/world/format";
+import { RainField } from "@/game/world/RainField";
+import type { Quality } from "@/stores/settings";
 import { attachInputs, clearPressed, controls, pollControls } from "./controls";
 import { events } from "./events";
 import { hud } from "./hud";
 
 const SAVE_RIDE_EVERY = 3;
+const DENSITY: Record<Quality, { traffic: number; peds: number; rain: number }> = {
+  low: { traffic: 12, peds: 16, rain: 500 },
+  medium: { traffic: 22, peds: 30, rain: 900 },
+  high: { traffic: 34, peds: 48, rain: 1500 },
+};
 const MAX_DT = 1 / 20;
 
 export class Game {
@@ -26,6 +39,17 @@ export class Game {
   readonly bike = new BikePhysics();
   readonly model = new BikeModel();
   readonly chase = new ChaseCamera();
+  /** Everything the game owns in the scene. */
+  readonly root = new THREE.Group();
+  nav: NavNetwork | null = null;
+  pois: Poi[] = [];
+  traffic: TrafficSystem | null = null;
+  peds: Pedestrians | null = null;
+  checkpoints: Checkpoints | null = null;
+  private rain: RainField;
+  private headlight = new THREE.SpotLight("#FFF1D0", 0, 48, 0.55, 0.65, 1.1);
+  private obstacles: Obstacle[] = [];
+  private quality: Quality;
   stats: RideStats;
   paused = false;
   /** True while the player can ride (false in map/fly debug cameras). */
@@ -36,6 +60,7 @@ export class Game {
   /** Called when the player presses Esc / P / Start. */
   onPauseRequest: (() => void) | null = null;
   private sinceSave = 0;
+  private disposed = false;
   private detach: (() => void) | null = null;
   private unsubPlayer: () => void;
   private offEvents: (() => void)[] = [];
@@ -43,8 +68,12 @@ export class Game {
   constructor(
     readonly cityId: CityId,
     readonly manifest: CityManifest,
+    readonly baseUrl: string,
   ) {
     const p = usePlayer.getState();
+    this.quality = useSettings.getState().quality;
+    this.rain = new RainField(DENSITY.high.rain);
+    this.root.add(this.model.root, this.rain.mesh, this.headlight, this.headlight.target);
     this.stats = currentRideStats(p);
     this.bike.place(manifest.spawn.x, manifest.spawn.z, manifest.spawn.heading);
     this.bike.state.fuel = Math.min(p.fuel, this.stats.tank);
@@ -62,6 +91,11 @@ export class Game {
       }
     });
     this.offEvents.push(
+      events.on("horn", () => {
+        const { x, z } = this.bike.state;
+        this.traffic?.hornAt(x, z, this.stats.hornRange);
+        this.peds?.hornAt(x, z, this.stats.hornRange);
+      }),
       events.on("collision", ({ speed, kind }) => {
         this.chase.kick(Math.min(1, speed / 10));
         usePlayer.getState().adjustReputation(-(kind === "pedestrian" ? 0.15 : kind === "vehicle" ? 0.08 : 0.02) * Math.min(2, speed / 6));
@@ -77,8 +111,32 @@ export class Game {
     this.onPauseRequest = handler;
   }
 
-  start() {
+  /** Attach input and load the traffic network and points of interest. */
+  async start() {
     this.detach = attachInputs();
+    const [nav, pois] = await Promise.all([
+      loadNavNetwork(this.baseUrl),
+      fetch(`${this.baseUrl}/pois.json`)
+        .then((r) => r.json() as Promise<Poi[]>)
+        .catch(() => [] as Poi[]),
+    ]);
+    if (this.disposed) return;
+    this.nav = nav;
+    this.pois = pois;
+    const cap = DENSITY.high;
+    this.traffic = new TrafficSystem(nav, cap.traffic);
+    this.peds = new Pedestrians(nav, cap.peds);
+    const market = POI_KINDS.indexOf("market");
+    this.peds.setHotspots(pois.filter((poi) => poi.k === market).map((poi) => [poi.x / 10, poi.z / 10]));
+    this.checkpoints = new Checkpoints(nav, this.manifest.spawn, this.cityId.length * 7919);
+    this.applyDensity();
+    this.root.add(this.traffic.group, this.peds.group, this.checkpoints.group);
+  }
+
+  private applyDensity() {
+    const d = DENSITY[this.quality];
+    this.traffic?.setDensity(d.traffic);
+    this.peds?.setDensity(d.peds);
   }
 
   update(dt: number, camera: THREE.PerspectiveCamera) {
@@ -86,17 +144,49 @@ export class Game {
     const settings = useSettings.getState();
     if (controls.pressed.camera) settings.set("cameraView", settings.cameraView === "chase" ? "fpv" : "chase");
     if (controls.pressed.pause) this.onPauseRequest?.();
-    if (this.paused || !this.riding) {
+    if (settings.quality !== this.quality) {
+      this.quality = settings.quality;
+      this.applyDensity();
+    }
+    if (this.paused) {
+      clearPressed();
+      return;
+    }
+    updateEnvironment(dt);
+    this.wetness = env.wetness;
+    this.rain.update(dt, camera, env.rain * (DENSITY[this.quality].rain / DENSITY.high.rain));
+    if (!this.riding) {
       clearPressed();
       return;
     }
     pollControls(dt, { autoThrottle: settings.autoThrottle, tilt: settings.tiltSteer });
     if (controls.pressed.horn) events.emit("horn", {});
 
-    const env = { world: this.index, stats: this.stats, wetness: this.wetness, fuelUse: this.fuelUse };
-    this.bike.update(dt, controls, env);
+    const physicsEnv = { world: this.index, stats: this.stats, wetness: this.wetness, fuelUse: this.fuelUse };
+    this.bike.update(dt, controls, physicsEnv);
     const s = this.bike.state;
     this.model.update(s, dt);
+
+    // City life.
+    this.obstacles.length = 0;
+    this.peds?.obstacles(this.obstacles);
+    this.traffic?.update(dt, this.bike, this.stats, this.obstacles);
+    this.peds?.update(dt, this.bike, this.stats);
+    this.checkpoints?.update(
+      dt,
+      s,
+      (amount) => {
+        const player = usePlayer.getState();
+        player.spend(Math.min(player.wallet, amount));
+      },
+      (d) => usePlayer.getState().adjustReputation(d),
+    );
+
+    // Headlight comes on at dusk and in the rain.
+    const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
+    this.headlight.intensity = Math.max(env.night, env.rain * 0.4) * 60;
+    this.headlight.position.set(s.x + fx * 0.6, 1.05, s.z + fz * 0.6);
+    this.headlight.target.position.set(s.x + fx * 16, 0, s.z + fz * 16);
     this.chase.update(camera, s, dt, this.index, settings.cameraView, controls.boost && s.boost > 0.02);
 
     // Stream the city ahead of the rider.
@@ -134,7 +224,12 @@ export class Game {
   }
 
   dispose() {
+    this.disposed = true;
     this.saveRide();
+    this.traffic?.dispose();
+    this.peds?.dispose();
+    this.checkpoints?.dispose();
+    this.rain.dispose();
     this.detach?.();
     this.unsubPlayer();
     this.offEvents.forEach((off) => off());

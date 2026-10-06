@@ -1,6 +1,7 @@
 "use client";
 
-import { Fuel, IdCard, ShieldCheck, Wrench } from "lucide-react";
+import { Fuel, IdCard, ShieldCheck, Smartphone, Wrench } from "lucide-react";
+import { BankPanel, WakalaPanel } from "./BankPanel";
 import { LICENCE_FEE } from "@/data/prices";
 import { useState } from "react";
 import { Button } from "@/components/ui";
@@ -14,10 +15,13 @@ export function StationPanel({ game }: { game: Game }) {
   useHudTick(4);
   const t = useT();
   const wallet = usePlayer((s) => s.wallet);
+  const bodapesa = usePlayer((s) => s.bodapesa);
   const [, bump] = useState(0);
   const service = game.serviceNearby();
   if (!service) return null;
   if (service.police) return <LicencePanel game={game} name={service.name} />;
+  if (service.bank) return <BankPanel bank={service.bank} name={service.name} />;
+  if (service.wakala) return <WakalaPanel name={service.name} />;
   const fuelCost = game.refuelCost();
   const repairCost = game.repairCost();
   const Icon = service.fuel ? Fuel : Wrench;
@@ -43,6 +47,18 @@ export function StationPanel({ game }: { game: Game }) {
           }}
         >
           {fuelCost <= 0 ? t.station.full : `${t.station.refuel} · ${formatTzs(Math.min(fuelCost, wallet))}`}
+        </Button>
+      )}
+      {service.fuel && fuelCost > 0 && bodapesa > 0 && (
+        <Button
+          variant="forest"
+          icon={<Smartphone />}
+          onClick={() => {
+            game.refuel(true);
+            bump((n) => n + 1);
+          }}
+        >
+          {`${t.bank.payBodaPesa} · ${formatTzs(Math.min(fuelCost, bodapesa))}`}
         </Button>
       )}
       <Button

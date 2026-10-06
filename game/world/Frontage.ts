@@ -145,6 +145,8 @@ export class Frontage {
   /** Collision segments (shop fronts and sides), flat [x1, z1, x2, z2, ...]. */
   readonly walls: number[] = [];
   readonly count: number;
+  /** Wakala (money-agent) shops: where to stop in front of them. */
+  readonly wakala: { x: number; z: number; name: string }[] = [];
   private readonly material = createInstancedMaterial({ glowStrength: 1.4 });
   private readonly owned: { dispose(): void }[] = [];
 
@@ -163,6 +165,10 @@ export class Frontage {
     }
     this.count = shops.length;
     if (!shops.length) return;
+    for (const s of shops) {
+      if (s.kind !== "phone") continue;
+      this.wakala.push({ x: s.x - Math.sin(s.yaw) * 2, z: s.z - Math.cos(s.yaw) * 2, name: data.signs[s.sign] ?? "" });
+    }
 
     const dummy = new THREE.Object3D();
     const place = (mesh: THREE.InstancedMesh, i: number, s: Shop, sx: number, sy: number, sz: number, y = 0) => {

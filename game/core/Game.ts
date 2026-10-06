@@ -35,7 +35,10 @@ import { buildLandmark } from "@/game/world/landmarks";
 import { FuelStations } from "@/game/world/FuelStations";
 import { Frontage } from "@/game/world/Frontage";
 import { Civic } from "@/game/world/Civic";
+import { BankBranches } from "@/game/world/BankBranches";
+import { CASH_RISK_LEVEL, isWakala, type BankId } from "@/data/banks";
 import { attachTelemetry } from "@/lib/telemetry";
+import { accrueInterest } from "@/game/systems/money";
 import { makeProjector } from "@/game/world/projection";
 import { MissionGenerator } from "@/game/missions/generator";
 import { MissionRunner, missionHud, type TalkOption } from "@/game/missions/MissionRunner";
@@ -109,11 +112,12 @@ export class Game {
   private fuelStations: FuelStations | null = null;
   private frontage: Frontage | null = null;
   private civic: Civic | null = null;
+  private banks: BankBranches | null = null;
   private radio: Radio | null = null;
   private disposeAds: (() => void) | null = null;
   private landmarkObjects: THREE.Object3D[] = [];
   /** Petrol stations and fundi (mechanics), for refuelling and repairs. */
-  private services: { x: number; z: number; fuel: boolean; police?: boolean; name: string }[] = [];
+  private services: { x: number; z: number; fuel: boolean; police?: boolean; bank?: BankId; wakala?: boolean; name: string }[] = [];
   private rain: RainField;
   private headlight = new THREE.SpotLight("#FFF1D0", 0, 48, 0.55, 0.65, 1.1);
   private obstacles: Obstacle[] = [];
@@ -187,6 +191,7 @@ export class Game {
   async start() {
     const detachInputs = attachInputs();
     const detachProgression = attachProgression();
+    accrueInterest();
     // Anonymous counts for /stats: kilometres come off the bike's odometer since the last report.
     let reportedKm = 0;
     const detachTelemetry = attachTelemetry(this.cityId, () => {
@@ -224,6 +229,7 @@ export class Game {
     this.root.add(this.markets.group);
     if (this.markets.walls.length) this.index.addChunk("markets", new Float32Array(this.markets.walls), new Float32Array());
     const busy = new Set([POI_KINDS.indexOf("market"), POI_KINDS.indexOf("bus_station")]);
+    this.riskSpots = pois.filter((p) => busy.has(p.k)).map((p) => [p.x / 10, p.z / 10]);
     this.radio = new Radio(this.cityId, [...new Set(pois.filter((p) => busy.has(p.k) && p.n).map((p) => p.n!))]);
     const cap = DENSITY.high;
     this.traffic = new TrafficSystem(nav, cap.traffic);
@@ -313,11 +319,21 @@ export class Game {
     this.root.add(this.civic.group);
     if (this.civic.walls.length) this.index.addChunk("civic", new Float32Array(this.civic.walls), new Float32Array());
     keepOut.push(...this.civic.keepOut);
+    // Bank branches with ATMs, and mapped mobile-money agents.
+    this.banks = new BankBranches(pois);
+    this.root.add(this.banks.group);
+    if (this.banks.walls.length) this.index.addChunk("banks", new Float32Array(this.banks.walls), new Float32Array());
+    for (const b of this.banks.branches) {
+      this.services.push({ x: b.x, z: b.z, fuel: false, bank: b.bank, name: b.name });
+      keepOut.push({ x: b.x, z: b.z, r: 6 });
+    }
+    for (const poi of pois) if (isWakala(poi.n) && poi.r) this.services.push({ x: poi.r[0] / 10, z: poi.r[1] / 10, fuel: false, wakala: true, name: poi.n ?? "" });
     // Rows of dukas along streets the map left bare, so riding feels like a real town.
     if (frontage) {
       this.frontage = new Frontage(frontage, keepOut);
       this.root.add(this.frontage.group);
       if (this.frontage.walls.length) this.index.addChunk("frontage", new Float32Array(this.frontage.walls), new Float32Array());
+      for (const w of this.frontage.wakala) this.services.push({ x: w.x, z: w.z, fuel: false, wakala: true, name: w.name });
     }
     this.collectibles = new Collectibles(nav, this.cityId, usePlayer.getState().collectibles, (id) => {
       const p = usePlayer.getState();
@@ -422,19 +438,42 @@ export class Game {
   }
 
   /** The petrol station or fundi the rider has stopped at, if any. Fundi only repair. */
-  serviceNearby(): { fuel: boolean; police?: boolean; name: string } | null {
+  serviceNearby(): { fuel: boolean; police?: boolean; bank?: BankId; wakala?: boolean; name: string } | null {
     const s = this.bike.state;
     if (Math.abs(s.speed) > 1.5) return null;
     let best: (typeof this.services)[number] | null = null;
     let bestD = 22;
     for (const p of this.services) {
       const d = Math.hypot(p.x - s.x, p.z - s.z);
-      if (d < bestD && (p.fuel || d < 14)) {
+      if (d < bestD && d < (p.fuel ? 22 : p.bank ? 9 : p.wakala ? 6 : 14)) {
         bestD = d;
         best = p;
       }
     }
     return best;
+  }
+
+  private vibakaTimer = 10;
+  /** Busy places (markets, bus stations) where pickpockets work after dark. */
+  private riskSpots: [number, number][] = [];
+
+  /**
+   * Vibaka: riding slowly through a market or bus station after dark with a
+   * fat roll of cash can cost part of it. The cure is banking it or keeping it
+   * on BodaPesa.
+   */
+  private checkVibaka(dt: number) {
+    this.vibakaTimer -= dt;
+    if (this.vibakaTimer > 0) return;
+    this.vibakaTimer = 10;
+    const player = usePlayer.getState();
+    const s = this.bike.state;
+    if (env.night < 0.5 || player.wallet <= CASH_RISK_LEVEL || Math.abs(s.speed) > 3 || !player.tutorialDone) return;
+    if (!this.riskSpots.some(([x, z]) => (x - s.x) ** 2 + (z - s.z) ** 2 < 110 ** 2)) return;
+    if (Math.random() > 0.08) return;
+    const lost = Math.min(80_000, Math.round((player.wallet * (0.15 + Math.random() * 0.15)) / 500) * 500);
+    player.patch({ wallet: player.wallet - lost });
+    events.emit("toast", { text: fmt(currentDictionary().bank.vibaka, { amount: formatTzs(lost) }), tone: "coral" });
   }
 
   private navTimer = 0;
@@ -606,19 +645,26 @@ export class Game {
   }
 
   /** Fill up as far as the wallet allows. Returns liters added. */
-  refuel(): number {
+  /** Fill up, paying cash or (`bodapesa`) with Lipa kwa BodaPesa at the pump. */
+  refuel(bodapesa = false): number {
     const s = this.bike.state;
     const player = usePlayer.getState();
+    const funds = bodapesa ? player.bodapesa : player.wallet;
     const want = this.stats.tank - s.fuel;
-    const liters = Math.min(want, player.wallet / this.fuelPrice);
+    const liters = Math.min(want, funds / this.fuelPrice);
     if (liters <= 0.01) return 0;
-    const cost = Math.ceil((liters * this.fuelPrice) / 50) * 50;
-    player.spend(Math.min(cost, player.wallet));
+    const cost = Math.min(funds, Math.ceil((liters * this.fuelPrice) / 50) * 50);
+    if (bodapesa) {
+      player.patch({ bodapesa: player.bodapesa - cost });
+      const t = currentDictionary();
+      usePhone.getState().push({ from: t.phone.pesaName, kind: "pesa", amount: -cost, at: clockText(), text: fmt(t.phone.pesaOut, { amount: formatTzs(cost), who: t.station.title }) });
+    } else player.spend(cost);
     s.fuel += liters;
     events.emit("refuel", { liters, cost });
     this.saveRide();
     return liters;
   }
+
 
   repair(): boolean {
     const cost = this.repairCost();
@@ -767,6 +813,7 @@ export class Game {
     this.traffic?.update(dt, this.bike, this.stats, this.obstacles);
     this.peds?.update(dt, this.bike, this.stats, this.traffic ?? undefined);
     this.civic?.update(dt);
+    this.checkVibaka(dt);
     const player = usePlayer.getState();
     const licence = { valid: this.licenceHours > 0, hesabu: HESABU[this.cityId] };
     const fine = (amount: number) => player.spend(Math.min(usePlayer.getState().wallet, amount));
@@ -884,8 +931,9 @@ export class Game {
     const player = usePlayer.getState();
     if (!this.onLoanBike || !player.tutorialDone) return;
     const due = player.hesabuOwed + this.hesabu;
-    const paid = Math.min(player.wallet, due);
-    if (paid > 0) player.spend(paid);
+    // Cash first, then BodaPesa.
+    const paid = Math.min(player.wallet + player.bodapesa, due);
+    if (paid > 0) player.spendAny(paid);
     player.patch({ hesabuOwed: due - paid });
     const t = currentDictionary();
     const phone = usePhone.getState();
@@ -899,7 +947,7 @@ export class Game {
   payHesabuDebt(): boolean {
     const player = usePlayer.getState();
     const owed = player.hesabuOwed;
-    if (owed <= 0 || !player.spend(owed)) return false;
+    if (owed <= 0 || !player.spendAny(owed)) return false;
     player.patch({ hesabuOwed: 0 });
     const t = currentDictionary();
     usePhone.getState().push({ from: t.phone.pesaName, kind: "pesa", amount: -owed, at: clockText(), text: fmt(t.phone.pesaOut, { amount: formatTzs(owed), who: BODA_OWNER }) });
@@ -976,6 +1024,7 @@ export class Game {
     this.fuelStations?.dispose();
     this.frontage?.dispose();
     this.civic?.dispose();
+    this.banks?.dispose();
     this.disposeAds?.();
     for (const o of this.landmarkObjects) {
       o.traverse((child) => {

@@ -12,6 +12,8 @@ import type { NavNetwork } from "@/game/traffic/NavNetwork";
 import type { BikeModel } from "@/game/vehicles/BikeModel";
 import { GHOST_SAMPLE_EVERY, type GhostRider } from "@/game/vehicles/GhostRider";
 import type { BikeState } from "@/game/vehicles/BikePhysics";
+import { BODAPESA_FARE_SHARE } from "@/data/banks";
+import { fareByBodaPesa } from "@/game/systems/money";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
 import type * as THREE from "three";
@@ -538,6 +540,8 @@ export class MissionRunner {
 
     // Payout and bookkeeping.
     player.earn(result.total, result.xp);
+    // About a third of customers pay by BodaPesa rather than cash.
+    if (success && result.total > 0 && def.type !== "mbio" && Math.random() < BODAPESA_FARE_SHARE) fareByBodaPesa(result.total, def.client);
     if (shopping && shopping.change !== 0) {
       player.transfer(-shopping.change);
       this.pesa(def.client, -shopping.change);

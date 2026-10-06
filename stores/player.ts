@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { BankId } from "@/data/banks";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { CityId } from "@/data/cities/config";
 import { events } from "@/game/core/events";
@@ -86,6 +87,12 @@ export interface Profile {
   hesabuOwed: number;
   /** Days in a row the rider has opened the game, and the daily reward. */
   streak: { count: number; lastDay: string; claimedDay: string };
+  /** BodaPesa mobile-money balance (TZS); `wallet` is the cash in the rider's pocket. */
+  bodapesa: number;
+  /** Savings per bank (TZS). */
+  banks: Partial<Record<BankId, number>>;
+  /** Day key interest was last paid up to. */
+  interestDay: string;
 }
 
 const EMPTY_STATS: PlayerStats = {
@@ -146,6 +153,9 @@ export const NEW_PROFILE: Profile = {
   licenceHours: 72,
   hesabuOwed: 0,
   streak: { count: 0, lastDay: "", claimedDay: "" },
+  bodapesa: 0,
+  banks: {},
+  interestDay: "",
 };
 
 /** XP needed to go from `level` to `level + 1`. */
@@ -157,6 +167,8 @@ interface PlayerActions {
   earn: (amount: number, xp: number) => void;
   /** Spend money if affordable. Returns false when broke. */
   spend: (amount: number) => boolean;
+  /** Pay from cash first, then BodaPesa. Returns false when both together can't cover it. */
+  spendAny: (amount: number) => boolean;
   /** Money that isn't income: customers' shopping money in, change back out. Never below zero. */
   transfer: (amount: number) => void;
   buyBike: (id: BikeId) => boolean;
@@ -197,10 +209,17 @@ export const usePlayer = create<PlayerState>()(
         set((s) => ({ wallet: s.wallet - amount }));
         return true;
       },
+      spendAny: (amount) => {
+        const { wallet, bodapesa } = get();
+        if (wallet + bodapesa < amount) return false;
+        const cash = Math.min(wallet, amount);
+        set({ wallet: wallet - cash, bodapesa: bodapesa - (amount - cash) });
+        return true;
+      },
       transfer: (amount) => set((s) => ({ wallet: Math.max(0, s.wallet + amount) })),
       buyBike: (id) => {
         const s = get();
-        if (s.owned.includes(id) || !s.spend(BIKES[id].price)) return false;
+        if (s.owned.includes(id) || !s.spendAny(BIKES[id].price)) return false;
         set((p) => ({ owned: [...p.owned, id], equipped: id, fuel: BIKES[id].tank, custom: { ...p.custom, body: BIKES[id].color } }));
         return true;
       },
@@ -212,7 +231,7 @@ export const usePlayer = create<PlayerState>()(
         const s = get();
         const levels = s.upgrades[s.equipped] ?? {};
         const level = levels[id] ?? 0;
-        if (level >= MAX_UPGRADE || !s.spend(upgradeCost(s.equipped, id, level))) return false;
+        if (level >= MAX_UPGRADE || !s.spendAny(upgradeCost(s.equipped, id, level))) return false;
         set((p) => ({ upgrades: { ...p.upgrades, [p.equipped]: { ...levels, [id]: level + 1 } } }));
         return true;
       },
@@ -244,7 +263,7 @@ export const usePlayer = create<PlayerState>()(
       migrate: (persisted) => ({ ...NEW_PROFILE, ...(persisted as Partial<Profile>) }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Profile>;
-        return { ...current, ...p, stats: { ...EMPTY_STATS, ...p.stats }, custom: { ...NEW_PROFILE.custom, ...p.custom } };
+        return { ...current, ...p, stats: { ...EMPTY_STATS, ...p.stats }, custom: { ...NEW_PROFILE.custom, ...p.custom }, banks: { ...p.banks } };
       },
       onRehydrateStorage: () => () => usePlayer.setState({ hydrated: true }),
     },

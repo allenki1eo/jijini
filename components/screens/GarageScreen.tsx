@@ -170,11 +170,11 @@ export function GarageScreen() {
           <Button
             variant="sun"
             size="lg"
-            icon={p.wallet >= BIKES[selected].price ? <Coins /> : <Lock />}
-            disabled={p.wallet < BIKES[selected].price}
+            icon={p.wallet + p.bodapesa >= BIKES[selected].price ? <Coins /> : <Lock />}
+            disabled={p.wallet + p.bodapesa < BIKES[selected].price}
             onClick={() => p.buyBike(selected) && setToast(t.garage.bought)}
           >
-            {p.wallet >= BIKES[selected].price ? `${t.garage.buy} · ${formatTzs(BIKES[selected].price)}` : t.garage.notEnough}
+            {p.wallet + p.bodapesa >= BIKES[selected].price ? `${t.garage.buy} · ${formatTzs(BIKES[selected].price)}` : t.garage.notEnough}
           </Button>
         )}
       </div>
@@ -210,7 +210,7 @@ export function GarageScreen() {
                 </div>
                 <Button
                   variant={maxed ? "ghost" : "sun"}
-                  disabled={maxed || p.wallet < cost}
+                  disabled={maxed || p.wallet + p.bodapesa < cost}
                   onClick={() => p.buyUpgrade(id) && setToast(t.garage.upgraded)}
                   className="shrink-0 tabular"
                 >

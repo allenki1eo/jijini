@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Bike, Building2, Church, Clock, Coins, Fuel, Gauge, Map as MapIcon, MapPin, Medal, Megaphone, Play, Radio, Route, School, ShoppingBasket, Store, Users, type LucideIcon } from "lucide-react";
+import { Activity, Bike, Building2, Landmark, Church, Clock, Coins, Fuel, Gauge, Map as MapIcon, MapPin, Medal, Megaphone, Play, Radio, Route, School, ShoppingBasket, Store, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { LiveStats } from "@/app/api/stats/route";
@@ -244,7 +244,7 @@ export function StatsScreen() {
         </Section>
 
         <Section title={t.stats.world} hint={t.stats.worldHint}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <Tile icon={MapIcon} label={t.stats.cities} value={String(CITY_ORDER.length)} big />
             <Tile icon={Route} label={t.stats.roadKm} value={nf.format(Math.round(sum((m) => m.stats.roadKm ?? 0)))} big accent="text-sky-300" />
             <Tile icon={Building2} label={t.stats.buildings} value={compact.format(sum((m) => m.stats.buildings))} big accent="text-cream" />
@@ -254,6 +254,7 @@ export function StatsScreen() {
             <Tile icon={School} label={t.stats.schools} value={nf.format(sum(place("school")))} accent="text-sky-300" />
             <Tile icon={Church} label={t.stats.worship} value={nf.format(sum(place("place_of_worship")))} accent="text-[#B39DDB]" />
             <Tile icon={ShoppingBasket} label={t.stats.markets} value={nf.format(sum(place("market")))} />
+            <Tile icon={Landmark} label={t.stats.banks} value={nf.format(sum(place("bank")))} accent="text-forest-400" />
             <Tile icon={Medal} label={t.stats.achievements} value={String(ACHIEVEMENTS.length)} />
           </div>
           <div className="overflow-x-auto rounded-[1.4rem] bg-night-800/90 ring-1 ring-white/10">

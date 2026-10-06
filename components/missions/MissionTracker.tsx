@@ -1,7 +1,6 @@
 "use client";
 
-import { Frown, Meh, Navigation2, Smile, Timer, X } from "lucide-react";
-import { hud } from "@/game/core/hud";
+import { Frown, Meh, Smile, Timer, X } from "lucide-react";
 import { missionHud } from "@/game/missions/MissionRunner";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/cn";
@@ -10,16 +9,13 @@ import { useHudTick } from "@/components/hud/useHudTick";
 import { MISSION_ACCENT, MissionIcon } from "./MissionIcon";
 import { formatClock, formatDistance, stopLabel } from "./stopLabel";
 
-/** Top-center job card: where to go, how far, the clock, compass and passenger mood. */
+/** Top-center job card: where to go, how far, the clock and passenger mood (the direction arrow sits just below). */
 export function MissionTracker({ onAbandon }: { onAbandon: () => void }) {
   useHudTick(10);
   const t = useT();
   const active = useMissions((s) => s.active);
   if (!active || !missionHud.active) return null;
   const m = missionHud;
-  // Compass: bearing to target relative to the rider's heading (screen up = forward).
-  const bearing = Math.atan2(m.targetX - hud.x, m.targetZ - hud.z);
-  const relative = bearing - Math.atan2(-Math.sin(hud.heading), -Math.cos(hud.heading));
   const urgent = m.limit !== null && m.timeLeft < 20;
   const MoodIcon = m.mood > 0.66 ? Smile : m.mood > 0.33 ? Meh : Frown;
 
@@ -29,13 +25,6 @@ export function MissionTracker({ onAbandon }: { onAbandon: () => void }) {
         <MissionIcon type={active.type} className="size-6" />
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2">
-        <div
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-night-600 text-sun transition-transform duration-150"
-          style={{ transform: `rotate(${(-relative * 180) / Math.PI}deg)` }}
-          aria-hidden="true"
-        >
-          <Navigation2 className="size-5 fill-sun" />
-        </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-xs font-bold tracking-wide text-cream/60 uppercase">
             {t.missions.phase[m.stopKind]} · {m.stopIndex + 1}/{m.totalStops}

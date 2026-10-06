@@ -3,9 +3,9 @@
  * `npm run bake -- <id>` to generate its chunked data in /public/cities/<id>.
  */
 
-export type CityId = "shinyanga" | "arusha" | "mwanza" | "kariakoo";
+export type CityId = "shinyanga" | "dodoma" | "moshi" | "arusha" | "tanga" | "mwanza" | "mbeya" | "kariakoo";
 
-export type SkylineKind = "savanna" | "meru" | "lake" | "ocean";
+export type SkylineKind = "savanna" | "meru" | "kilimanjaro" | "highlands" | "lake" | "ocean";
 
 export interface LatLon {
   lat: number;
@@ -62,7 +62,41 @@ export const CITIES: Record<CityId, CityConfig> = {
     unlock: { level: 1, price: 0 },
     landmarks: [
       { id: "nguzo-nane", name: "Nguzo Nane", lat: -3.66807, lon: 33.41694 },
-      { id: "kambarage-stadium", name: "Uwanja wa Kambarage", lat: -3.6616, lon: 33.41561 },
+      { id: "kambarage-stadium", name: "Uwanja wa Kambarage", lat: -3.6616, lon: 33.41561, yaw: 19 },
+    ],
+  },
+  dodoma: {
+    id: "dodoma",
+    name: "Dodoma",
+    region: "Dodoma",
+    center: { lat: -6.1731, lon: 35.7419 },
+    halfSize: 750,
+    chunkSize: 200,
+    difficulty: 1,
+    skyline: "savanna",
+    accent: "#C8913A",
+    treeMix: [3, 6, 1],
+    unlock: { level: 2, price: 10_000 },
+    landmarks: [
+      { id: "nyerere-statue", name: "Sanamu ya Mwalimu Nyerere", lat: -6.17874, lon: 35.74731 },
+      { id: "jamhuri-stadium", name: "Uwanja wa Jamhuri", lat: -6.17313, lon: 35.74389, yaw: 18 },
+    ],
+  },
+  moshi: {
+    id: "moshi",
+    name: "Moshi",
+    region: "Kilimanjaro",
+    center: { lat: -3.3497, lon: 37.3404 },
+    halfSize: 750,
+    chunkSize: 200,
+    difficulty: 2,
+    skyline: "kilimanjaro",
+    accent: "#2E9E5B",
+    treeMix: [5, 2, 2],
+    unlock: { level: 3, price: 15_000 },
+    landmarks: [
+      { id: "moshi-clock", name: "Mnara wa Saa wa Moshi", lat: -3.34858, lon: 37.34354 },
+      { id: "karibu-moshi", name: "Karibu Moshi", lat: -3.35165, lon: 37.34208, placement: "curb" },
     ],
   },
   arusha: {
@@ -82,6 +116,23 @@ export const CITIES: Record<CityId, CityConfig> = {
       { id: "uhuru-torch", name: "Mnara wa Azimio la Arusha", lat: -3.3697, lon: 36.6881 },
     ],
   },
+  tanga: {
+    id: "tanga",
+    name: "Tanga",
+    region: "Tanga",
+    center: { lat: -5.0705, lon: 39.0985 },
+    halfSize: 750,
+    chunkSize: 200,
+    difficulty: 2,
+    skyline: "ocean",
+    accent: "#00B3A4",
+    treeMix: [4, 1, 5],
+    unlock: { level: 4, price: 30_000 },
+    landmarks: [
+      { id: "tanga-clock", name: "Mnara wa Saa, Jamhuri Park", lat: -5.06969, lon: 39.10158 },
+      { id: "mkwakwani-stadium", name: "Uwanja wa Mkwakwani", lat: -5.07336, lon: 39.1012, yaw: 89 },
+    ],
+  },
   mwanza: {
     id: "mwanza",
     name: "Mwanza",
@@ -97,6 +148,22 @@ export const CITIES: Record<CityId, CityConfig> = {
     landmarks: [
       { id: "bismarck-rock", name: "Bismarck Rock", lat: -2.5195, lon: 32.8975 },
       { id: "mwanza-clock", name: "Saa ya Mwanza", lat: -2.5176, lon: 32.89849 },
+    ],
+  },
+  mbeya: {
+    id: "mbeya",
+    name: "Mbeya",
+    region: "Mbeya",
+    center: { lat: -8.9095, lon: 33.4606 },
+    halfSize: 750,
+    chunkSize: 200,
+    difficulty: 3,
+    skyline: "highlands",
+    accent: "#7C3AED",
+    treeMix: [6, 1, 1],
+    unlock: { level: 6, price: 50_000 },
+    landmarks: [
+      { id: "karibu-mbeya", name: "Karibu Mbeya, Mwanjelwa", lat: -8.91008, lon: 33.45886, placement: "curb" },
     ],
   },
   kariakoo: {
@@ -119,6 +186,6 @@ export const CITIES: Record<CityId, CityConfig> = {
   },
 };
 
-export const CITY_ORDER: CityId[] = ["shinyanga", "arusha", "mwanza", "kariakoo"];
+export const CITY_ORDER: CityId[] = ["shinyanga", "dodoma", "moshi", "arusha", "tanga", "mwanza", "mbeya", "kariakoo"];
 
 export const isCityId = (value: string): value is CityId => value in CITIES;

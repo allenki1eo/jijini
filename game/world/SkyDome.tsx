@@ -74,31 +74,52 @@ const skyMaterial = () =>
   });
 
 /** A ring of low hills on the horizon (Shinyanga's granite kopjes, Meru, etc.). */
+/** Kibo's snowfields start this far up the backdrop (fraction of its height scale). */
+const SNOWLINE = 2.5;
+const SNOW = new THREE.Color("#F4F7FB");
+
+/** Skyline height at angle `a` (0..2π), in units of the backdrop's height. North is a ≈ 3π/2. */
+const skylineHeight = (kind: SkylineKind, a: number) => {
+  // Layered sines make a natural, seamless skyline; spikes become boulder clusters.
+  let h = 0.45 + 0.25 * Math.sin(a * 3 + 1.3) + 0.18 * Math.sin(a * 7 + 0.4) + 0.12 * Math.sin(a * 17 + 2.1);
+  h += Math.max(0, Math.sin(a * 11 + 0.7)) ** 6 * 0.5;
+  if (kind === "meru") h += Math.exp(-(((a - 4.5) * 3) ** 2)) * 2.2;
+  if (kind === "kilimanjaro") {
+    // Kibo's broad, flat-topped dome to the north-north-east, with jagged Mawenzi on its shoulder.
+    const kibo = Math.exp(-(((a - 4.95) * 1.5) ** 4));
+    h = h * (1 - kibo * 0.6) + kibo * 3.6 + Math.exp(-(((a - 5.55) * 9) ** 2)) * 1.1;
+  }
+  // Mbeya sits in a bowl: ridges all round, Loleza and Mbeya Peak towering to the north.
+  if (kind === "highlands") h += 0.55 + 0.3 * Math.sin(a * 2 + 0.8) + Math.exp(-(((a - 4.6) * 3.5) ** 2)) * 1.3;
+  // Open water: just the far shore (lake) or a flat sea horizon (ocean).
+  if (inWaterSector(kind, a)) h = kind === "lake" ? 0.1 + 0.06 * Math.sin(a * 9) : 0.015;
+  return Math.max(h, 0.1);
+};
+
 const hillsGeometry = (kind: SkylineKind) => {
   const { near, far, height } = BACKDROP[kind];
-  const steps = 160;
+  const steps = 200;
   const positions: number[] = [];
   const colors: number[] = [];
   const index: number[] = [];
   const top = new THREE.Color(near);
   const bottom = new THREE.Color(near).multiplyScalar(0.85);
   const farTop = new THREE.Color(far);
+  // Three vertices per step (foot, snowline, summit) so snow caps get a crisp edge.
   for (let i = 0; i <= steps; i++) {
     const a = (i / steps) * Math.PI * 2;
-    // Layered sines make a natural, seamless skyline; spikes become boulder clusters.
-    let h = 0.45 + 0.25 * Math.sin(a * 3 + 1.3) + 0.18 * Math.sin(a * 7 + 0.4) + 0.12 * Math.sin(a * 17 + 2.1);
-    h += Math.max(0, Math.sin(a * 11 + 0.7)) ** 6 * 0.5;
-    if (kind === "meru") h += Math.exp(-(((a - 4.5) * 3) ** 2)) * 2.2;
-    // Open water: just the far shore (lake) or a flat sea horizon (ocean).
-    if (inWaterSector(kind, a)) h = kind === "lake" ? 0.1 + 0.06 * Math.sin(a * 9) : 0.015;
+    const h = skylineHeight(kind, a);
     const x = Math.cos(a) * HILLS_RADIUS;
     const z = Math.sin(a) * HILLS_RADIUS;
     const peak = inWaterSector(kind, a) && kind === "ocean" ? new THREE.Color("#6E9FB8") : top.clone().lerp(farTop, (Math.sin(a * 2) + 1) / 4);
-    positions.push(x, -30, z, x, Math.max(h, 0.1) * height, z);
-    colors.push(bottom.r, bottom.g, bottom.b, peak.r, peak.g, peak.b);
+    const snowy = kind === "kilimanjaro" && h > SNOWLINE;
+    const mid = snowy ? SNOWLINE + (h - SNOWLINE) * 0.15 * (1 + Math.sin(a * 40)) : h;
+    const summit = snowy ? SNOW : peak;
+    positions.push(x, -30, z, x, mid * height, z, x, h * height, z);
+    colors.push(bottom.r, bottom.g, bottom.b, peak.r, peak.g, peak.b, summit.r, summit.g, summit.b);
     if (i < steps) {
-      const b = i * 2;
-      index.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+      const b = i * 3;
+      index.push(b, b + 3, b + 1, b + 1, b + 3, b + 4, b + 1, b + 4, b + 2, b + 2, b + 4, b + 5);
     }
   }
   const g = new THREE.BufferGeometry();

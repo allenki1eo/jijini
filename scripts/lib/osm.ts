@@ -112,13 +112,41 @@ const fromOverpass = async (bbox: BBox): Promise<OsmElement[]> => {
 };
 
 /** OSM API v0.6 `map` call: returns everything in the box (max 0.25 deg², 50k nodes). */
-const fromOsmApi = async ({ south, west, north, east }: BBox): Promise<OsmElement[]> => {
+const osmApiMap = async ({ south, west, north, east }: BBox): Promise<OsmElement[]> => {
   const url = `https://api.openstreetmap.org/api/0.6/map.json?bbox=${west},${south},${east},${north}`;
-  console.log("  → OSM API v0.6 map (fallback)");
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": "BodaGo-bake/1.0 (game map baker)" } }, 180_000);
   if (!res.ok) throw new Error(`OSM API HTTP ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as { elements: OsmElement[] };
   return json.elements;
+};
+
+/** Dense towns go over the API's node limit: split the box into quarters (recursively) and merge, de-duplicating shared elements. */
+const fromOsmApi = async (bbox: BBox, depth = 0): Promise<OsmElement[]> => {
+  if (depth === 0) console.log("  → OSM API v0.6 map (fallback)");
+  try {
+    return await osmApiMap(bbox);
+  } catch (error) {
+    if (depth >= 2 || !/too many nodes/i.test((error as Error).message)) throw error;
+    console.log(`    … too dense, splitting into quarters (level ${depth + 1})`);
+    const midLat = (bbox.south + bbox.north) / 2, midLon = (bbox.west + bbox.east) / 2;
+    const quarters: BBox[] = [
+      { south: bbox.south, west: bbox.west, north: midLat, east: midLon },
+      { south: bbox.south, west: midLon, north: midLat, east: bbox.east },
+      { south: midLat, west: bbox.west, north: bbox.north, east: midLon },
+      { south: midLat, west: midLon, north: bbox.north, east: bbox.east },
+    ];
+    const seen = new Set<string>();
+    const out: OsmElement[] = [];
+    for (const q of quarters) {
+      for (const el of await fromOsmApi(q, depth + 1)) {
+        const key = `${el.type}/${el.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(el);
+      }
+    }
+    return out;
+  }
 };
 
 export const loadOsm = async (cityId: string, bbox: BBox, refresh: boolean): Promise<OsmDump> => {

@@ -3,7 +3,8 @@
  * config, so each city feels like home: Shinyanga's Nguzo Nane and Kambarage
  * Stadium, Arusha's Clock Tower and the Arusha Declaration torch, Mwanza's
  * Bismarck Rock and clock tower, Kariakoo market's umbrella roofs and the
- * Yanga and Simba spots, plus the kijiwe (boda stand) where every ride
+ * Yanga and Simba spots, Dodoma's Nyerere statue, the clock towers of
+ * Moshi and Tanga, the regional stadiums, plus the kijiwe (boda stand) where every ride
  * starts. Each also returns wall segments for collisions.
  *
  * Curb-placed models face the road along local −z.
@@ -118,7 +119,54 @@ const clubFront = (a: string, b: string, title: string, sub: string) => {
   return { object: group, walls: [-3.5, 1.4, 3.5, 1.4] };
 };
 
+/** A football ground: pitch, two long stands, a roof over the main stand, floodlights and the name board. */
+const stadium = (title: string, sub: string, seat: string, accent: string): LandmarkBuild => {
+  const parts: THREE.BufferGeometry[] = [part(block(78, 0.08, 112, 0, 0.04, 0), "#3E8E3A")];
+  for (let i = -5; i <= 5; i++) parts.push(part(block(68, 0.09, 4.5, 0, 0.05, i * 9.5), i % 2 ? "#3E8E3A" : "#47A043"));
+  parts.push(part(block(66, 0.1, 0.25, 0, 0.1, 0), "#FFFFFF"), part(new THREE.TorusGeometry(9, 0.15, 4, 40).rotateX(Math.PI / 2).translate(0, 0.1, 0), "#FFFFFF"));
+  for (const z of [-50, 50]) parts.push(part(block(7.3, 2.4, 0.15, 0, 1.2, z), "#FFFFFF"));
+  for (const side of [-1, 1]) {
+    for (let tier = 0; tier < 6; tier++) {
+      const x = side * (37 + tier * 1.4);
+      parts.push(part(block(1.4, 0.5 + tier * 0.75, 100, x, (0.5 + tier * 0.75) / 2, 0), tier % 2 ? seat : "#F4F1EA"));
+    }
+    parts.push(part(block(1, 6, 100, side * 45.4, 3, 0), "#C9C2B2"));
+  }
+  parts.push(part(block(10, 0.3, 70, -42, 9, 0), "#B7BCC4"));
+  for (const z of [-25, 25]) parts.push(part(block(0.4, 9, 0.4, -46.5, 4.5, z), "#8A8F99"));
+  for (const [x, z] of [[-48, -54], [48, -54], [-48, 54], [48, 54]] as const) {
+    parts.push(part(new THREE.CylinderGeometry(0.35, 0.5, 26, 6).translate(x, 13, z), "#8A8F99"));
+    parts.push(part(block(4, 2.4, 0.5, x, 26.5, z), "#FFF6D8", { glow: true }));
+  }
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(merge(parts), createInstancedMaterial({ glowStrength: 1.6 })));
+  const sign = textSign(14, 2.4, title, sub, seat, "#FFFFFF", accent);
+  sign.position.set(46, 7.4, 0);
+  sign.rotation.y = Math.PI / 2;
+  group.add(sign);
+  return { object: group, walls: [-46, -50, -46, 50, 46, -50, 46, 50] };
+};
+
+/** A big roadside welcome board on two legs with a planted bed in front; faces the road (local −z). */
+const welcomeBoard = (title: string, sub: string, bg: string, fg: string, stripe: string): LandmarkBuild => {
+  const group = new THREE.Group();
+  const parts = [
+    ...[-3.6, 3.6].map((x) => part(block(0.35, 5.2, 0.35, x, 2.6, 0.4), "#4B5563")),
+    part(block(8.2, 3, 0.2, 0, 3.9, 0.5), "#2A2F3A"),
+    part(block(8.6, 0.5, 2, 0, 0.25, -0.2), "#C9C2B2"),
+    ...[-3, -1.5, 0, 1.5, 3].map((x, i) => part(new THREE.SphereGeometry(0.45, 8, 6).scale(1, 0.7, 1).translate(x, 0.75, -0.4), i % 2 ? "#E0457B" : "#4E9A3A")),
+  ];
+  group.add(new THREE.Mesh(merge(parts), createInstancedMaterial()));
+  const sign = textSign(8, 2.8, title, sub, bg, fg, stripe);
+  sign.position.set(0, 3.9, 0.38);
+  sign.rotation.y = Math.PI;
+  group.add(sign);
+  return { object: group, walls: [-4.3, 0.4, 4.3, 0.4] };
+};
+
 const BUILDERS: Record<string, () => LandmarkBuild> = {
+  "karibu-moshi": () => welcomeBoard("KARIBU MOSHI", "Mji safi kuliko yote · Chini ya Kilimanjaro", "#2E9E5B", "#FFFFFF", "#F4F7FB"),
+  "karibu-mbeya": () => welcomeBoard("KARIBU MBEYA", "Mji wa kijani · Nyanda za Juu Kusini", "#7C3AED", "#FFFFFF", "#FCD116"),
   "clock-tower": () => clockTower("#F7F3EA", "#0B6E4F", "#0B6E4F"),
   "mwanza-clock": () => clockTower("#F4F1EA", "#1E5AA8", "#C9C2B2"),
   "uhuru-torch": () => {
@@ -136,32 +184,35 @@ const BUILDERS: Record<string, () => LandmarkBuild> = {
     ["#1EB53A", "#00A3DD", "#FCD116", "#111111"].forEach((c, i) => parts.push(part(block(1.2, 0.35, 0.1, 0, 1.75, 2.66).rotateY((i * Math.PI) / 2), c)));
     return { object: new THREE.Mesh(merge(parts), createInstancedMaterial({ glowStrength: 2 })), walls: circle(3) };
   },
-  "kambarage-stadium": () => {
-    // Pitch with two long stands, a roof over the main stand, floodlights and the gate.
-    const parts: THREE.BufferGeometry[] = [part(block(78, 0.08, 112, 0, 0.04, 0), "#3E8E3A")];
-    for (let i = -5; i <= 5; i++) parts.push(part(block(68, 0.09, 4.5, 0, 0.05, i * 9.5), i % 2 ? "#3E8E3A" : "#47A043"));
-    parts.push(part(block(66, 0.1, 0.25, 0, 0.1, 0), "#FFFFFF"), part(new THREE.TorusGeometry(9, 0.15, 4, 40).rotateX(Math.PI / 2).translate(0, 0.1, 0), "#FFFFFF"));
-    for (const z of [-50, 50]) parts.push(part(block(7.3, 2.4, 0.15, 0, 1.2, z), "#FFFFFF"));
-    for (const side of [-1, 1]) {
-      for (let tier = 0; tier < 6; tier++) {
-        const x = side * (37 + tier * 1.4);
-        parts.push(part(block(1.4, 0.5 + tier * 0.75, 100, x, (0.5 + tier * 0.75) / 2, 0), tier % 2 ? "#1E5AA8" : "#F4F1EA"));
-      }
-      parts.push(part(block(1, 6, 100, side * 45.4, 3, 0), "#C9C2B2"));
+  "kambarage-stadium": () => stadium("UWANJA WA KAMBARAGE", "SHINYANGA", "#1E5AA8", "#FCD116"),
+  "jamhuri-stadium": () => stadium("UWANJA WA JAMHURI", "DODOMA", "#0B6E4F", "#FCD116"),
+  "mkwakwani-stadium": () => stadium("UWANJA WA MKWAKWANI", "TANGA", "#00A3DD", "#FFFFFF"),
+  "sokoine-stadium": () => stadium("UWANJA WA SOKOINE", "MBEYA", "#7C3AED", "#FCD116"),
+  "moshi-clock": () => clockTower("#FFFFFF", "#2E9E5B", "#9AA3AD"),
+  "tanga-clock": () => clockTower("#F4EBD9", "#00A3DD", "#00A3DD"),
+  "nyerere-statue": () => {
+    // Mwalimu Nyerere on his plinth in Nyerere Square, walking stick in hand, ringed by flags.
+    const parts: THREE.BufferGeometry[] = [
+      part(new THREE.CylinderGeometry(9, 9.4, 0.4, 36).translate(0, 0.2, 0), "#C9C2B2"),
+      part(new THREE.CylinderGeometry(8.2, 8.2, 0.42, 36).translate(0, 0.22, 0), "#4E9A3A"),
+      part(block(3.4, 0.6, 3.4, 0, 0.7, 0), "#E9E1CF"),
+      part(block(2.4, 3.2, 2.4, 0, 2.6, 0), "#F2EDE3"),
+      part(block(2.8, 0.3, 2.8, 0, 4.35, 0), "#D8D0BE"),
+      // The figure, in bronze.
+      ...[-0.28, 0.28].map((x) => part(block(0.36, 1.5, 0.42, x, 5.25, 0), "#6E5634")),
+      part(block(1.15, 1.6, 0.7, 0, 6.8, 0), "#7A603B"),
+      part(block(0.3, 1.25, 0.3, -0.72, 6.75, 0), "#6E5634"),
+      part(block(0.3, 1.0, 0.3, 0.7, 6.95, -0.28).rotateX(0.3), "#6E5634"),
+      part(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 6).translate(0.75, 5.4, -0.55), "#4A3A22"),
+      part(new THREE.SphereGeometry(0.4, 12, 10).translate(0, 7.95, 0), "#6E5634"),
+    ];
+    // A bronze plaque in the national colours on each face of the plinth.
+    ["#1EB53A", "#FCD116", "#00A3DD", "#111111"].forEach((c, i) => parts.push(part(block(1.4, 0.5, 0.06, 0, 2.9, 1.23).rotateY((i * Math.PI) / 2), c)));
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + 0.3;
+      parts.push(...flag(Math.cos(a) * 7.4, Math.sin(a) * 7.4, i % 2 ? "#1EB53A" : "#00A3DD", i % 2 ? "#FCD116" : "#111111", 8));
     }
-    parts.push(part(block(10, 0.3, 70, -42, 9, 0), "#B7BCC4"));
-    for (const z of [-25, 25]) parts.push(part(block(0.4, 9, 0.4, -46.5, 4.5, z), "#8A8F99"));
-    for (const [x, z] of [[-48, -54], [48, -54], [-48, 54], [48, 54]] as const) {
-      parts.push(part(new THREE.CylinderGeometry(0.35, 0.5, 26, 6).translate(x, 13, z), "#8A8F99"));
-      parts.push(part(block(4, 2.4, 0.5, x, 26.5, z), "#FFF6D8", { glow: true }));
-    }
-    const group = new THREE.Group();
-    group.add(new THREE.Mesh(merge(parts), createInstancedMaterial({ glowStrength: 1.6 })));
-    const sign = textSign(14, 2.4, "UWANJA WA KAMBARAGE", "SHINYANGA", "#1E5AA8", "#FFFFFF", "#FCD116");
-    sign.position.set(46, 7.4, 0);
-    sign.rotation.y = Math.PI / 2;
-    group.add(sign);
-    return { object: group, walls: [-46, -50, -46, 50, 46, -50, 46, 50] };
+    return { object: new THREE.Mesh(merge(parts), createInstancedMaterial({ glowStrength: 1 })), walls: square(1.8) };
   },
   "yanga-tawi": () => clubFront("#0B7A3B", "#FCD116", "TAWI LA YANGA", "Wananchi · Mtaa wa Uhuru"),
   "simba-duka": () => clubFront("#C8102E", "#FFFFFF", "SIMBA SPORTS CLUB", "Duka la Wanasimba · Msimbazi"),

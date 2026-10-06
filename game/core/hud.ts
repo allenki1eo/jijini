@@ -23,3 +23,19 @@ export const hud = {
   lightDistance: 0,
   headlight: false,
 };
+
+export type NavTurn = "straight" | "left" | "right" | "uturn" | "arrive";
+
+/** Turn-by-turn guidance for the arrow at the top of the screen, refreshed a few times a second. */
+export const navHud = {
+  /** "job": following the route to the current stop; "fuel": tank nearly empty, heading for the nearest sheli. */
+  mode: null as "job" | "fuel" | null,
+  /** Where to steer, relative to the rider's heading (rad, + = right; unwrapped, so it can exceed ±π). */
+  angle: 0,
+  turn: "straight" as NavTurn,
+  /** Metres to the next turn. */
+  turnIn: 0,
+  /** Metres left to the destination. */
+  distance: 0,
+  label: "",
+};

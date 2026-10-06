@@ -32,6 +32,7 @@ import { fetchJson } from "@/lib/fetchJson";
 import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
 import { Particles } from "@/game/world/Particles";
 import { buildLandmark } from "@/game/world/landmarks";
+import { FuelStations } from "@/game/world/FuelStations";
 import { makeProjector } from "@/game/world/projection";
 import { MissionGenerator } from "@/game/missions/generator";
 import { MissionRunner, missionHud, type TalkOption } from "@/game/missions/MissionRunner";
@@ -52,7 +53,7 @@ import { currentDictionary, fmt, formatTzs } from "@/i18n";
 import type { Quality } from "@/stores/settings";
 import { attachInputs, clearPressed, controls, pollControls } from "./controls";
 import { events } from "./events";
-import { hud } from "./hud";
+import { hud, navHud } from "./hud";
 
 const SAVE_RIDE_EVERY = 3;
 const DENSITY: Record<Quality, { traffic: number; peds: number; rain: number }> = {
@@ -61,6 +62,9 @@ const DENSITY: Record<Quality, { traffic: number; peds: number; rain: number }> 
   high: { traffic: 34, peds: 48, rain: 1500 },
 };
 const MAX_DT = 1 / 20;
+
+/** How many junctions get traffic lights in each city. */
+const LIGHTS: Record<CityId, number> = { kariakoo: 14, dodoma: 8, arusha: 8, mwanza: 8, mbeya: 6, tanga: 5, moshi: 5, shinyanga: 3 };
 
 export class Game {
   readonly index = new WorldIndex();
@@ -87,6 +91,7 @@ export class Game {
   places: PlaceSigns | null = null;
   private banners: RoadBanners | null = null;
   private markets: Markets | null = null;
+  private fuelStations: FuelStations | null = null;
   private radio: Radio | null = null;
   private disposeAds: (() => void) | null = null;
   private landmarkObjects: THREE.Object3D[] = [];
@@ -200,7 +205,7 @@ export class Game {
     this.checkpoints = new Checkpoints(nav, this.manifest.spawn, this.cityId.length * 7919);
     this.applyDensity();
     // Dar has lights everywhere; Shinyanga only at a couple of big junctions.
-    this.lights = new TrafficLights(nav, { kariakoo: 14, arusha: 8, mwanza: 8, shinyanga: 3 }[this.cityId]);
+    this.lights = new TrafficLights(nav, LIGHTS[this.cityId]);
     this.traffic.lights = this.lights;
     this.root.add(this.lights.group);
     this.police = new Police(nav, this.index, this.manifest.spawn, this.checkpoints.points, this.cityId.length * 104729);
@@ -210,6 +215,11 @@ export class Game {
     this.services = pois
       .filter((poi) => poi.k === fuel || poi.k === garage)
       .map((poi) => ({ x: (poi.r?.[0] ?? poi.x) / 10, z: (poi.r?.[1] ?? poi.z) / 10, fuel: poi.k === fuel, name: poi.n ?? poi.b ?? "" }));
+    // Forecourts at the petrol stations; you refuel stopped under the canopy.
+    this.fuelStations = new FuelStations(nav, this.services.filter((p) => p.fuel), FUEL_PRICE[this.cityId], `TSh ${currentDictionary().station.perLitre}`);
+    this.root.add(this.fuelStations.group);
+    if (this.fuelStations.walls.length) this.index.addChunk("fuel-stations", new Float32Array(this.fuelStations.walls), new Float32Array());
+    this.services = [...this.services.filter((p) => !p.fuel), ...this.fuelStations.stations.map((st) => ({ x: st.bayX, z: st.bayZ, fuel: true, name: st.name }))];
     // Licences are renewed with the police: stations, checkpoints and traffic officers.
     const policeKind = POI_KINDS.indexOf("police");
     for (const poi of pois.filter((p) => p.k === policeKind)) this.services.push({ x: (poi.r?.[0] ?? poi.x) / 10, z: (poi.r?.[1] ?? poi.z) / 10, fuel: false, police: true, name: poi.n ?? "" });
@@ -383,6 +393,95 @@ export class Game {
     return best;
   }
 
+  private navTimer = 0;
+
+  /** Refresh the top-of-screen arrow: along the job route, or to the nearest sheli when the tank runs low. */
+  private updateNav(dt: number) {
+    this.navTimer -= dt;
+    if (this.navTimer > 0) return;
+    this.navTimer = 0.12;
+    const s = this.bike.state;
+    const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
+    // Unwrapped against the last value so the arrow turns the short way.
+    const relative = (vx: number, vz: number) => {
+      const a = Math.atan2(vx * -fz + vz * fx, vx * fx + vz * fz);
+      const tau = Math.PI * 2;
+      return navHud.angle + ((((a - navHud.angle) % tau) + tau * 1.5) % tau) - Math.PI;
+    };
+    const route = missionHud.active ? missionHud.route : null;
+    if (route && route.length >= 4) {
+      // Resample the route from the point nearest the rider.
+      let start = 0, best = Infinity;
+      for (let i = 0; i < route.length; i += 2) {
+        const d = (route[i]! - s.x) ** 2 + (route[i + 1]! - s.z) ** 2;
+        if (d < best) {
+          best = d;
+          start = i;
+        }
+      }
+      const cum: number[] = [0];
+      for (let i = start + 2; i < route.length; i += 2) cum.push(cum[cum.length - 1]! + Math.hypot(route[i]! - route[i - 2]!, route[i + 1]! - route[i - 1]!));
+      const total = cum[cum.length - 1]!;
+      const at = (d: number): [number, number] => {
+        const t = Math.min(Math.max(d, 0), total);
+        let k = 1;
+        while (k < cum.length - 1 && cum[k]! < t) k++;
+        const a = start + (k - 1) * 2, b = start + k * 2;
+        if (b >= route.length) return [route[route.length - 2]!, route[route.length - 1]!];
+        const f = (t - cum[k - 1]!) / Math.max(cum[k]! - cum[k - 1]!, 1e-3);
+        return [route[a]! + (route[b]! - route[a]!) * f, route[a + 1]! + (route[b + 1]! - route[a + 1]!) * f];
+      };
+      const dir = (d: number) => {
+        const [ax, az] = at(d), [bx, bz] = at(d + 10);
+        const l = Math.hypot(bx - ax, bz - az) || 1;
+        return [(bx - ax) / l, (bz - az) / l] as const;
+      };
+      const [lx, lz] = at(Math.min(22, total));
+      navHud.mode = "job";
+      navHud.angle = relative(lx - s.x, lz - s.z);
+      navHud.distance = missionHud.distance;
+      navHud.label = missionHud.stopName;
+      navHud.turn = "straight";
+      navHud.turnIn = 0;
+      if (total < 30) navHud.turn = "arrive";
+      else {
+        const [rx, rz] = dir(4);
+        for (let d = 10; d < Math.min(total - 10, 220); d += 5) {
+          const [dx, dz] = dir(d);
+          const turn = Math.atan2(dx * -rz + dz * rx, dx * rx + dz * rz);
+          if (Math.abs(turn) > 0.6) {
+            navHud.turn = Math.abs(turn) > 2.4 ? "uturn" : turn > 0 ? "right" : "left";
+            navHud.turnIn = d;
+            break;
+          }
+        }
+      }
+      return;
+    }
+    // Low tank and no job: point at the nearest petrol station.
+    if (s.fuel / this.stats.tank < 0.2) {
+      let target: (typeof this.services)[number] | null = null, bestD = Infinity;
+      for (const p of this.services) {
+        if (!p.fuel) continue;
+        const d = Math.hypot(p.x - s.x, p.z - s.z);
+        if (d < bestD) {
+          bestD = d;
+          target = p;
+        }
+      }
+      if (target) {
+        navHud.mode = "fuel";
+        navHud.angle = relative(target.x - s.x, target.z - s.z);
+        navHud.distance = bestD;
+        navHud.label = target.name;
+        navHud.turn = bestD < 25 ? "arrive" : "straight";
+        navHud.turnIn = 0;
+        return;
+      }
+    }
+    navHud.mode = null;
+  }
+
   /** Pump price here, TZS per litre. */
   get fuelPrice() {
     return FUEL_PRICE[this.cityId];
@@ -436,7 +535,13 @@ export class Game {
         audio.resume();
       }
     };
-    void loadLiveStations();
+    void loadLiveStations().then((list) => {
+      const s = useSettings.getState();
+      if (!s.radio.startsWith("live:")) return;
+      // A saved station that's no longer listed: back to the house station. Otherwise tune in now the list is here.
+      if (!list.some((st) => st.id === s.radio)) s.set("radio", "kijiweni");
+      else if (audio.ready && s.musicVolume > 0) this.applyRadio();
+    });
     // A live stream that won't play (offline, down, blocked): back to the house station.
     livePlayer.onError = (station) => {
       events.emit("toast", { text: fmt(currentDictionary().radio.liveDown, { name: station.name }), tone: "coral" });
@@ -625,6 +730,7 @@ export class Game {
     hud.headlight = this.headlight.intensity > 1;
     hud.x = s.x;
     hud.z = s.z;
+    this.updateNav(dt);
 
     this.sinceSave += dt;
     if (this.sinceSave > SAVE_RIDE_EVERY) {
@@ -753,6 +859,7 @@ export class Game {
     this.places?.dispose();
     this.banners?.dispose();
     this.markets?.dispose();
+    this.fuelStations?.dispose();
     this.disposeAds?.();
     for (const o of this.landmarkObjects) {
       o.traverse((child) => {

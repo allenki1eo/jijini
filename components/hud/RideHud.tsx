@@ -5,7 +5,7 @@ import { BarChart3, Crosshair, CloudFog, CloudRain, Fuel, Grid3x3, Map as MapIco
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Chip, IconButton, Segmented } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
-import { hud } from "@/game/core/hud";
+import { hud, navHud } from "@/game/core/hud";
 import { setHour, setWeather } from "@/game/systems/environment";
 import type { CityManifest } from "@/game/world/format";
 import { useT } from "@/i18n";
@@ -16,6 +16,7 @@ import { CheckpointPrompt, ClockChip, useSkillToasts } from "./LifeHud";
 import { PoliceBanner } from "./PoliceHud";
 import { RadioChip } from "./RadioHud";
 import { SpeedLines, useHaptics } from "./Juice";
+import { NavArrow } from "./NavArrow";
 import { PauseMenu } from "./PauseMenu";
 import { Speedometer } from "./Speedometer";
 import { StatsPanel } from "./StatsPanel";
@@ -31,6 +32,23 @@ const subscribeCoarse = (cb: () => void) => {
   return () => mq.removeEventListener("change", cb);
 };
 export const useTouchDevice = () => useSyncExternalStore(subscribeCoarse, () => window.matchMedia(coarseQuery).matches, () => false);
+
+/** The dash sits bottom-centre; on phones it moves up top, and drops below the direction arrow while one is showing. */
+function SpeedoSlot({ touch }: { touch: boolean }) {
+  useHudTick(4);
+  const nav = navHud.mode !== null;
+  return (
+    <div
+      className={cn(
+        "absolute bottom-3 left-1/2 -translate-x-1/2 transition-[top] duration-300",
+        touch && "bottom-auto top-[calc(env(safe-area-inset-top)+4.5rem)] scale-75 short:top-14",
+        touch && nav && "top-[calc(env(safe-area-inset-top)+8.5rem)] short:top-[7.5rem]",
+      )}
+    >
+      <Speedometer />
+    </div>
+  );
+}
 
 function FuelWarning() {
   useHudTick(4);
@@ -50,6 +68,8 @@ interface RideHudProps {
   children?: ReactNode;
   topCenter?: ReactNode;
   topRight?: ReactNode;
+  /** Above the notification feed at the left edge (incoming calls). */
+  topLeft?: ReactNode;
   pauseExtra?: ReactNode;
   onRestart?: () => void;
   /** Hide the keyboard hint (e.g. while the tutorial talks). */
@@ -57,7 +77,7 @@ interface RideHudProps {
 }
 
 /** In-game overlay: speedometer, touch controls, pause, toasts and the debug tools. */
-export function RideHud({ game, manifest, children, topCenter, topRight, pauseExtra, onRestart, quiet }: RideHudProps) {
+export function RideHud({ game, manifest, children, topCenter, topRight, topLeft, pauseExtra, onRestart, quiet }: RideHudProps) {
   const t = useT();
   const w = useWorld();
   const touch = useTouchDevice();
@@ -108,17 +128,26 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
               active={cameraView === "fpv"}
               onClick={() => setSetting("cameraView", cameraView === "chase" ? "fpv" : "chase")}
             />
-            <IconButton label={t.world.debug} icon={<BarChart3 />} active={w.showStats} onClick={() => w.set({ showStats: !w.showStats })} />
+            {/* Developer tools stay out of the players' way. */}
+            {process.env.NODE_ENV === "development" && (
+              <IconButton label={t.world.debug} icon={<BarChart3 />} active={w.showStats} onClick={() => w.set({ showStats: !w.showStats })} />
+            )}
           </div>
           {topRight}
         </div>
       </div>
 
-      <div className="absolute inset-x-0 top-20 flex flex-col items-center gap-2">
+      <div className="absolute inset-x-0 top-[5.75rem] flex flex-col items-center gap-2 short:top-[4.75rem]">
+        {riding && <NavArrow />}
         <CheckpointPrompt />
         <PoliceBanner />
-        <ToastStack />
         <FuelWarning />
+      </div>
+
+      {/* Notifications live at the left edge, out of the rider's line of sight. */}
+      <div className="safe-x pointer-events-none absolute top-20 left-0 flex flex-col items-start gap-2 short:top-16">
+        {topLeft}
+        <ToastStack />
       </div>
 
       {w.showStats && (
@@ -154,9 +183,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
 
       {riding && (
         <>
-          <div className={cn("absolute bottom-3 left-1/2 -translate-x-1/2", touch && "bottom-auto top-[calc(env(safe-area-inset-top)+4.5rem)] scale-75 short:top-14")}>
-            <Speedometer />
-          </div>
+          <SpeedoSlot touch={touch} />
           {touch && <TouchControls />}
           <AnimatePresence>
             {!touch && showKeys && !quiet && (

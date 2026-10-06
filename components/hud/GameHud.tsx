@@ -56,6 +56,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       manifest={manifest}
       quiet={tutorial}
       topCenter={<MissionTracker onAbandon={() => setConfirmAbandon(true)} />}
+      topLeft={<IncomingCall game={game} />}
       topRight={
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
@@ -80,9 +81,6 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       </div>
       <SpeechBubbles />
       <ChatBar game={game} touch={touch} />
-      <div className="safe-x pointer-events-none absolute top-20 left-0 short:top-14">
-        <IncomingCall game={game} />
-      </div>
       <ShopCounter game={game} />
       <AgeGate enabled={hydrated && tutorialDone} />
       <PhonePanel game={game} />

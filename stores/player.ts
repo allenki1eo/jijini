@@ -84,6 +84,8 @@ export interface Profile {
   licenceHours: number;
   /** Hesabu not yet paid to the owner of the Mkopo Ride. */
   hesabuOwed: number;
+  /** Days in a row the rider has opened the game, and the daily reward. */
+  streak: { count: number; lastDay: string; claimedDay: string };
 }
 
 const EMPTY_STATS: PlayerStats = {
@@ -143,6 +145,7 @@ export const NEW_PROFILE: Profile = {
   regulars: {},
   licenceHours: 72,
   hesabuOwed: 0,
+  streak: { count: 0, lastDay: "", claimedDay: "" },
 };
 
 /** XP needed to go from `level` to `level + 1`. */

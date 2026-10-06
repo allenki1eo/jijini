@@ -5,8 +5,11 @@
  * their own poster image when they provide one.
  */
 import * as THREE from "three";
+import { __iconData as citrus } from "lucide-react/dist/esm/icons/citrus.mjs";
+import { __iconData as coffee } from "lucide-react/dist/esm/icons/coffee.mjs";
 import { __iconData as droplet } from "lucide-react/dist/esm/icons/droplet.mjs";
 import { __iconData as fish } from "lucide-react/dist/esm/icons/fish.mjs";
+import { __iconData as grape } from "lucide-react/dist/esm/icons/grape.mjs";
 import { __iconData as hammer } from "lucide-react/dist/esm/icons/hammer.mjs";
 import { __iconData as pill } from "lucide-react/dist/esm/icons/pill.mjs";
 import { __iconData as radio } from "lucide-react/dist/esm/icons/radio.mjs";
@@ -36,6 +39,9 @@ const ICONS: Record<AdIcon, [string, Record<string, string>][]> = {
   radio: radio.node,
   wheat: wheat.node,
   droplet: droplet.node,
+  coffee: coffee.node,
+  citrus: citrus.node,
+  grape: grape.node,
 };
 
 /** Atlas grid shared by the billboard shader patch. Posters are 3:1, the usual roadside shape. */

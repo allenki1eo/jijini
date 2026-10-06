@@ -130,6 +130,35 @@ export const claimChallenge = (which: "daily" | "weekly", index: number): boolea
   return true;
 };
 
+// ── Daily streak ───────────────────────────────────────────────────────────
+
+/** Reward for each day of a streak; the seventh and every day after pays the most. */
+export const STREAK_REWARDS = [1000, 1500, 2000, 2500, 3000, 4000, 6000];
+
+export const streakReward = (count: number) => STREAK_REWARDS[Math.min(Math.max(count, 1), STREAK_REWARDS.length) - 1]!;
+
+/** Count today's visit: a day after the last one extends the streak, a missed day starts it over. */
+export const touchStreak = () => {
+  const p = usePlayer.getState();
+  const today = dayKey();
+  if (p.streak.lastDay === today) return;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const count = p.streak.lastDay === dayKey(yesterday) ? p.streak.count + 1 : 1;
+  p.patch({ streak: { ...p.streak, count, lastDay: today } });
+};
+
+/** Collect today's streak reward, once a day. */
+export const claimStreak = (): number => {
+  const p = usePlayer.getState();
+  const today = dayKey();
+  if (p.streak.lastDay !== today || p.streak.claimedDay === today) return 0;
+  const reward = streakReward(p.streak.count);
+  p.patch({ streak: { ...p.streak, claimedDay: today } });
+  p.earn(reward, 10 + p.streak.count * 5);
+  return reward;
+};
+
 // ── Achievements ───────────────────────────────────────────────────────────
 
 export interface AchievementDef {
@@ -156,6 +185,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "wind", icon: "wind", tone: "sky", check: (s) => s.topSpeedKmh >= 80 },
   { id: "legend", icon: "trophy", tone: "sun", check: (_, e) => e.owned.includes("legend") },
   { id: "traveller", icon: "map", tone: "forest", check: (_, e) => e.cities >= 4 },
+  { id: "explorer", icon: "compass", tone: "sky", check: (_, e) => e.cities >= 8 },
   { id: "goldenHelmets", icon: "hard-hat", tone: "sun", check: (_, e) => e.collectibles >= 12 },
   { id: "photographer", icon: "camera", tone: "sky", check: (s) => s.photos >= 10 },
   { id: "goodCitizen", icon: "shield-check", tone: "forest", check: (s) => s.politeCheckpoints >= 5 },

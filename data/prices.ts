@@ -86,6 +86,10 @@ const CITY_PRICES: Record<CityId, { all: number; items?: Partial<Record<GoodId, 
   shinyanga: { all: 0.95, items: { rice: 0.8, dagaa: 0.75, sato: 0.75, charcoal: 0.7, cement: 1.12, gas: 1.08 } },
   mwanza: { all: 0.97, items: { rice: 0.85, dagaa: 0.6, sato: 0.65, cement: 1.1, gas: 1.07 } },
   arusha: { all: 1.05, items: { tomatoes: 0.85, onions: 0.8, bananas: 0.75, milk: 0.85, dagaa: 1.1 } },
+  dodoma: { all: 0.97, items: { onions: 0.8, beans: 0.9, unga: 0.9, dagaa: 0.95, cement: 1.06 } },
+  moshi: { all: 1.03, items: { bananas: 0.65, milk: 0.8, tomatoes: 0.85, beans: 0.9, dagaa: 1.12 } },
+  tanga: { all: 0.98, items: { dagaa: 0.75, sato: 1.1, cement: 0.88, sugar: 0.95, charcoal: 0.85 } },
+  mbeya: { all: 0.96, items: { rice: 0.72, bananas: 0.7, beans: 0.85, unga: 0.85, gas: 1.1, dagaa: 1.05 } },
 };
 
 /** Petrol, TZS per litre (approximate EWURA cap levels). */
@@ -94,6 +98,10 @@ export const FUEL_PRICE: Record<CityId, number> = {
   arusha: 2940,
   mwanza: 2980,
   shinyanga: 2990,
+  dodoma: 2930,
+  moshi: 2950,
+  tanga: 2870,
+  mbeya: 3010,
 };
 
 /** A fundi's rate per damage point (labour + small parts). */
@@ -102,6 +110,10 @@ export const REPAIR_RATE: Record<CityId, number> = {
   arusha: 160,
   mwanza: 150,
   shinyanga: 130,
+  dodoma: 140,
+  moshi: 150,
+  tanga: 140,
+  mbeya: 140,
 };
 
 const dayNumber = () => Math.floor(Date.now() / 86_400_000);
@@ -153,6 +165,10 @@ export const HESABU: Record<CityId, number> = {
   arusha: 10_000,
   mwanza: 10_000,
   shinyanga: 8_000,
+  dodoma: 9_000,
+  moshi: 9_000,
+  tanga: 9_000,
+  mbeya: 10_000,
 };
 
 /** The owner who lends you the Mkopo Ride. */

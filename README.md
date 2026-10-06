@@ -20,8 +20,8 @@ npm run build && npm start   # production build with the PWA service worker
 
 | Command | What it does |
 |---|---|
-| `npm run bake -- <city>` | Rebuild `public/cities/<city>/` from cached OSM data (`shinyanga`, `arusha`, `mwanza`, `kariakoo`) |
-| `npm run bake -- <city> --refresh` | Re-download from Overpass first (falls back to the OSM API for small boxes) |
+| `npm run bake -- <city>` | Rebuild `public/cities/<city>/` from cached OSM data (`shinyanga`, `dodoma`, `moshi`, `arusha`, `tanga`, `mwanza`, `mbeya`, `kariakoo`) |
+| `npm run bake -- <city> --refresh` | Re-download from Overpass first (falls back to the OSM API, split into tiles for dense towns) |
 | `npm run icons` | Regenerate favicon and PWA icons |
 | `npm run typecheck` / `npm run lint` | Strict TypeScript / ESLint |
 

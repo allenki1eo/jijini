@@ -99,7 +99,8 @@ export function RadioChip({ compact = false }: { compact?: boolean }) {
         aria-haspopup="listbox"
         aria-label={info ? `${info.name} ${info.freq} · ${t.radio.pick}` : `${t.radio.off} · ${t.radio.pick}`}
         className={cn(
-          "flex min-h-12 items-center gap-2 rounded-2xl bg-night-600/95 px-3 font-display text-sm font-bold text-cream ring-1 backdrop-blur transition-colors",
+          "flex min-h-12 items-center gap-2 rounded-2xl bg-night-600/95 font-display text-sm font-bold text-cream ring-1 backdrop-blur transition-colors",
+          compact ? "min-w-12 justify-center px-2" : "px-3",
           open ? "ring-sun/60" : "ring-white/10",
         )}
       >
@@ -111,15 +112,15 @@ export function RadioChip({ compact = false }: { compact?: boolean }) {
           <VolumeX className="size-5 text-cream/50" />
         )}
         {info ? (
-          <span className="flex items-baseline gap-1.5 tabular">
+          <span className={cn("flex items-baseline gap-1.5 tabular", compact && !liveOn && "hidden")}>
             {liveOn && <span className="animate-pulse rounded bg-coral px-1 text-[10px] leading-4 font-extrabold text-cream">LIVE</span>}
             {!compact && <span className="max-w-24 truncate">{info.freq}</span>}
             <span className="hidden max-w-36 truncate text-cream/60 xl:inline">{info.name}</span>
           </span>
         ) : (
-          <span className="hidden text-cream/60 sm:inline">{t.radio.off}</span>
+          <span className={cn("hidden text-cream/60", !compact && "sm:inline")}>{t.radio.off}</span>
         )}
-        <ChevronDown className={cn("size-4 text-cream/50 transition-transform", open && "rotate-180")} />
+        {!compact && <ChevronDown className={cn("size-4 text-cream/50 transition-transform", open && "rotate-180")} />}
       </button>
 
       <AnimatePresence>

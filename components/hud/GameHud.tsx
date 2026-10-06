@@ -1,7 +1,8 @@
 "use client";
 
 import { Briefcase, Coins, Fuel } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { CityMap } from "@/components/missions/CityMap";
 import { MissionBoard } from "@/components/missions/MissionBoard";
 import { MissionTracker } from "@/components/missions/MissionTracker";
 import { Minimap } from "@/components/missions/Minimap";
@@ -20,15 +21,20 @@ import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
 import { AgeGate } from "./AgeGate";
 import { RideHud, useTouchDevice } from "./RideHud";
+import { hud } from "@/game/core/hud";
 import { useHudTick } from "./useHudTick";
 import { cn } from "@/lib/cn";
 import { Tutorial } from "./Tutorial";
 
-/** "Tafuta sheli": turn-by-turn directions to the nearest petrol station, on the arrow and the minimap. */
+/**
+ * "Tafuta sheli": turn-by-turn directions to the nearest petrol station, on the arrow and the minimap.
+ * Only on screen once the tank is getting low (or while it's guiding); otherwise it's a quick pick on the city map.
+ */
 function FuelFinder({ game }: { game: Game }) {
   useHudTick(4);
   const t = useT();
   const on = game.fuelNavOn;
+  if (!on && hud.fuel > 0.35) return null;
   return (
     <button
       type="button"
@@ -58,6 +64,8 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
   const active = useMissions((s) => s.active);
   const set = useMissions((s) => s.set);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const closeMap = useCallback(() => setMapOpen(false), []);
 
   const openBoard = () => {
     if (!useMissions.getState().offers.length) game.refreshOffers();
@@ -84,7 +92,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       quiet={tutorial}
       topCenter={<MissionTracker onAbandon={() => setConfirmAbandon(true)} />}
       topRight={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Chip icon={<Coins className="text-sun" />} className="tabular">
             <span className="sm:hidden">{shortTzs(wallet)}</span>
             <span className="max-sm:hidden">{formatTzs(wallet)}</span>
@@ -94,9 +102,9 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       }
       rail={
         <>
-          <Minimap game={game} />
+          <Minimap game={game} onOpen={() => setMapOpen(true)} />
           {!active && !tutorial && (
-            <Button variant="sun" icon={<Briefcase />} onClick={openBoard} className="animate-pulse-ring max-sm:px-3.5" aria-label={t.missions.open}>
+            <Button variant="sun" icon={<Briefcase />} onClick={openBoard} className="max-sm:px-3.5" aria-label={t.missions.open}>
               {t.missions.open}
             </Button>
           )}
@@ -120,6 +128,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       <ShopCounter game={game} />
       <AgeGate enabled={hydrated && tutorialDone} />
       <PhonePanel game={game} />
+      {mapOpen && <CityMap game={game} cityName={manifest.name} onClose={closeMap} />}
       <MissionBoard
         onAccept={(def) => game.acceptMission(def)}
         onRefresh={() => game.refreshOffers()}

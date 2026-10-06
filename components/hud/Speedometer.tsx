@@ -1,6 +1,6 @@
 "use client";
 
-import { Fuel, Lightbulb, Wrench, Zap } from "lucide-react";
+import { Fuel, Wrench, Zap } from "lucide-react";
 import { hud } from "@/game/core/hud";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/cn";
@@ -39,7 +39,11 @@ function Gauge({ value, icon, tone, label, warn, text }: { value: number; icon: 
   );
 }
 
-/** The boda's instrument cluster: dial with needle and gear, the road's limit, the signal ahead, and fuel/boost/damage. */
+/**
+ * The boda's instrument cluster: dial with needle and gear, the road's limit,
+ * the signal ahead, and the fuel gauge. Boost and damage only show up when
+ * they matter (boost being used or recharging, the bike knocked about).
+ */
 export function Speedometer() {
   useHudTick(15);
   const t = useT();
@@ -123,9 +127,8 @@ export function Speedometer() {
 
       <div className="-mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-2xl bg-night/80 px-3 py-1.5 ring-1 ring-white/10 backdrop-blur">
         <Gauge value={hud.fuel} icon={<Fuel />} tone="bg-forest-400" label={t.ride.fuel} warn={hud.fuel < 0.15} text={`${hud.fuelLiters.toFixed(1)}L`} />
-        <Gauge value={hud.boost} icon={<Zap />} tone="bg-sky" label={t.ride.boost} />
-        <Gauge value={1 - hud.damage / 100} icon={<Wrench />} tone="bg-sun" label={t.ride.damage} warn={hud.damage > 70} />
-        <Lightbulb className={cn("size-4", hud.headlight ? "text-sky-300 drop-shadow-[0_0_4px_rgb(0_163_221)]" : "text-cream/25")} aria-label={hud.headlight ? "headlight on" : "headlight off"} />
+        {(hud.boosting || hud.boost < 0.98) && <Gauge value={hud.boost} icon={<Zap />} tone="bg-sky" label={t.ride.boost} />}
+        {hud.damage > 25 && <Gauge value={1 - hud.damage / 100} icon={<Wrench />} tone="bg-sun" label={t.ride.damage} warn={hud.damage > 70} />}
       </div>
     </div>
   );

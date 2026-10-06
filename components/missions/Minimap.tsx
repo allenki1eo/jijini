@@ -1,5 +1,6 @@
 "use client";
 
+import { Expand } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { Game } from "@/game/core/Game";
 import { navHud } from "@/game/core/hud";
@@ -7,6 +8,7 @@ import { missionHud } from "@/game/missions/MissionRunner";
 import { PLACE_STYLE, atlasCell, placeAtlas } from "@/game/world/places";
 import { POI_KINDS } from "@/game/world/format";
 import { policeHud } from "@/game/traffic/Police";
+import { useT } from "@/i18n";
 import { useSettings } from "@/stores/settings";
 
 const SIZE = 168;
@@ -15,10 +17,11 @@ const ROAD_COLORS = ["#F2D184", "#E8D9B0", "#D8CBB0", "#B9AE9C", "#9A9285", "#8A
 const STOP_COLORS = { pickup: "#FFC72C", dropoff: "#2ED47A", checkpoint: "#FF5A4F", photo: "#00A3DD", buy: "#F59E0B" } as const;
 const vehicles: number[] = [];
 
-/** Rotating minimap (heading up) drawn on a canvas at ~12 Hz. */
-export function Minimap({ game }: { game: Game }) {
+/** Rotating minimap (heading up) drawn on a canvas at ~12 Hz. Tap it to open the city map and pick where to go. */
+export function Minimap({ game, onOpen }: { game: Game; onOpen?: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const scale = useSettings((s) => s.hudScale);
+  const t = useT();
 
   useEffect(() => {
     const el = canvas.current;
@@ -92,6 +95,21 @@ export function Minimap({ game }: { game: Game }) {
         ctx.setLineDash([]);
       }
 
+      // The drive to the rider's own destination.
+      const pinRoute = navHud.pinRoute;
+      if (pinRoute && pinRoute.length >= 4) {
+        ctx.strokeStyle = "#38BDF8";
+        ctx.lineWidth = 4;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        for (let i = 0; i < pinRoute.length; i += 2) {
+          const [x, y] = tx(pinRoute[i]!, pinRoute[i + 1]!);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
       // Route.
       const route = missionHud.route;
       if (route && route.length >= 4) {
@@ -107,12 +125,12 @@ export function Minimap({ game }: { game: Game }) {
         ctx.stroke();
       }
 
-      // Real places: important ones across the map, everything else close by.
+      // Real places, kept sparse: the big ones (hospitals, markets, sheli, stands) across the map, schools and banks close by.
       const atlas = placeAtlas();
       for (const s of game.places?.signs ?? []) {
         const d = Math.hypot(s.x - b.x, s.z - b.z);
         const rank = PLACE_STYLE[s.kind].rank;
-        if (d > RANGE * 1.05 || (rank < 2 && d > RANGE * 0.45) || (rank < 1 && d > RANGE * 0.25)) continue;
+        if (d > RANGE * 1.05 || rank < 2 || (rank < 3 && d > RANGE * 0.5)) continue;
         const [x, y] = tx(s.x, s.z);
         const size = rank >= 3 ? 15 : 11;
         const [sx, sy, cell] = atlasCell(s.poi.k);
@@ -193,6 +211,18 @@ export function Minimap({ game }: { game: Game }) {
         ctx.fill();
         ctx.drawImage(atlas, fx, fy, fc, fc, x - 9, y - 9, 18, 18);
       }
+      // The destination pin, held on the rim when it's off the map.
+      if (navHud.pin) {
+        let [x, y] = tx(navHud.pin.x, navHud.pin.z);
+        const dx = x - SIZE / 2, dy = y - SIZE / 2;
+        const d = Math.hypot(dx, dy);
+        const max = SIZE / 2 - 11;
+        if (d > max) {
+          x = SIZE / 2 + (dx / d) * max;
+          y = SIZE / 2 + (dy / d) * max;
+        }
+        drawPin(ctx, x, y, 1);
+      }
       ctx.restore();
 
       // Compass: true north (map −z) on the rim, so the map's turn with the rider stays readable.
@@ -239,12 +269,45 @@ export function Minimap({ game }: { game: Game }) {
   }, [game]);
 
   return (
-    <canvas
-      ref={canvas}
-      aria-hidden="true"
-      // Smaller on portrait phones, where it shares the width with the rider's stack.
-      className="pointer-events-none size-(--mm) rounded-full shadow-xl max-sm:size-28 short:size-28"
-      style={{ "--mm": `${SIZE * Math.min(scale, 1.1)}px` } as React.CSSProperties}
-    />
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={t.nav.map}
+      className="group relative rounded-full shadow-xl outline-offset-2 transition-transform active:scale-95"
+    >
+      <canvas
+        ref={canvas}
+        aria-hidden="true"
+        // Smaller on portrait phones, where it shares the width with the rider's stack.
+        className="block size-(--mm) rounded-full max-sm:size-28 short:size-28"
+        style={{ "--mm": `${SIZE * Math.min(scale, 1.1)}px` } as React.CSSProperties}
+      />
+      <span className="absolute right-0.5 bottom-0.5 grid size-7 place-items-center rounded-full bg-night/85 text-cream ring-2 ring-white/15 transition-colors group-hover:bg-sun group-hover:text-night" aria-hidden="true">
+        <Expand className="size-3.5" strokeWidth={2.6} />
+      </span>
+    </button>
   );
 }
+
+/** A map pin: a sky-blue drop with a white dot, its tip at (x, y). */
+export const drawPin = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = "#0EA5E9";
+  ctx.strokeStyle = "#10131A";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-3, -6, -9, -9, -9, -15);
+  ctx.arc(0, -15, 9, Math.PI, 0);
+  ctx.bezierCurveTo(9, -9, 3, -6, 0, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.arc(0, -15, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+};

@@ -70,6 +70,7 @@ export function Tutorial({ game }: { game: Game }) {
           open={Boolean(dialogue)}
           speaker="juma"
           text={dialogue ?? ""}
+          voiceKey={dialogue ? `tutorial.${step}` : undefined}
           cta={t.tutorial.next}
           onNext={() => (step === "juma1" ? setStep("juma2") : step === "juma2" ? setStep("throttle") : finish())}
           secondary={step === "juma1" ? { label: t.tutorial.skip, onClick: finish } : undefined}

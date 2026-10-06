@@ -7,6 +7,9 @@ import { MissionTracker } from "@/components/missions/MissionTracker";
 import { Minimap } from "@/components/missions/Minimap";
 import { ResultsScreen } from "@/components/missions/ResultsScreen";
 import { StationPanel } from "@/components/missions/StationPanel";
+import { IncomingCall, PhoneButton, PhonePanel } from "@/components/phone/Phone";
+import { ShopCounter } from "@/components/phone/ShopCounter";
+import { ChatBar, SpeechBubbles } from "@/components/phone/Speech";
 import { StoryDirector } from "@/components/story/StoryDirector";
 import { Button, Chip } from "@/components/ui";
 import { Modal } from "@/components/ui/Modal";
@@ -15,7 +18,7 @@ import type { CityManifest } from "@/game/world/format";
 import { formatTzs, useT } from "@/i18n";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
-import { RideHud } from "./RideHud";
+import { RideHud, useTouchDevice } from "./RideHud";
 import { Tutorial } from "./Tutorial";
 
 /** Full in-game HUD: the ride overlay plus jobs, minimap, wallet and results. */
@@ -44,6 +47,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
   }, [openBoardOnStart, set]);
 
   const tutorial = hydrated && !tutorialDone;
+  const touch = useTouchDevice();
 
   return (
     <RideHud
@@ -53,9 +57,12 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       topCenter={<MissionTracker onAbandon={() => setConfirmAbandon(true)} />}
       topRight={
         <div className="flex flex-col items-end gap-2">
-          <Chip icon={<Coins className="text-sun" />} className="tabular">
-            {formatTzs(wallet)}
-          </Chip>
+          <div className="flex items-center gap-2">
+            <Chip icon={<Coins className="text-sun" />} className="tabular">
+              {formatTzs(wallet)}
+            </Chip>
+            {!tutorial && <PhoneButton />}
+          </div>
           <Minimap game={game} />
           {!active && !tutorial && (
             <Button variant="sun" icon={<Briefcase />} onClick={openBoard} className="animate-pulse-ring">
@@ -70,6 +77,13 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       <div className="safe-x pointer-events-none absolute top-1/2 left-0 -translate-y-1/2">
         <StationPanel game={game} />
       </div>
+      <SpeechBubbles />
+      <ChatBar game={game} touch={touch} />
+      <div className="safe-x pointer-events-none absolute top-20 left-0 short:top-14">
+        <IncomingCall game={game} />
+      </div>
+      <ShopCounter game={game} />
+      <PhonePanel game={game} />
       <MissionBoard
         onAccept={(def) => game.acceptMission(def)}
         onRefresh={() => game.refreshOffers()}

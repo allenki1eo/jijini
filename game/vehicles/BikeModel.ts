@@ -9,7 +9,7 @@ import { BIKES, type BikeId } from "./bikes";
 import type { BikeState } from "./BikePhysics";
 
 export type PassengerKind = "none" | "mama" | "student" | "business" | "kid" | "tourist" | "elder";
-export type CargoKind = "none" | "parcel" | "crates" | "chai" | "food";
+export type CargoKind = "none" | "parcel" | "crates" | "chai" | "food" | "groceries";
 
 const STICKERS: Record<Customization["sticker"], [string, string] | null> = {
   none: null,
@@ -101,6 +101,8 @@ export class BikeModel {
     pExtra: this.mat("#C8913A"),
     cargo: this.mat("#D69A57"),
     cargo2: this.mat("#FF5A4F"),
+    oil: this.mat("#F2C230"),
+    greens: this.mat("#4E9A3A"),
   };
 
   constructor() {
@@ -254,6 +256,16 @@ export class BikeModel {
         return g;
       })(),
       food: add(c, box(0.46, 0.4, 0.42), m.cargo2, 0, 0.2, 0),
+      // A woven kikapu with a bottle of cooking oil and greens poking out.
+      groceries: (() => {
+        const g = new THREE.Group();
+        c.add(g);
+        add(g, new THREE.CylinderGeometry(0.24, 0.19, 0.3, 10), m.cargo, 0, 0.15, 0);
+        add(g, cyl(0.06, 0.32, 8), m.oil, -0.08, 0.36, 0.02);
+        add(g, box(0.16, 0.12, 0.14), m.greens, 0.09, 0.34, -0.04);
+        add(g, box(0.12, 0.1, 0.12), m.cargo2, 0.06, 0.33, 0.1);
+        return g;
+      })(),
     } satisfies Record<Exclude<CargoKind, "none">, THREE.Object3D>;
   }
 

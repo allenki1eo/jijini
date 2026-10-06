@@ -1,4 +1,4 @@
-import { Apple, Camera, Coffee, Flag, Moon, Package, School, Siren, User, Utensils, type LucideIcon } from "lucide-react";
+import { Apple, Bus, Camera, Coffee, Flag, Moon, Package, School, ShoppingBasket, Siren, Timer, User, Utensils, type LucideIcon } from "lucide-react";
 import type { MissionType } from "@/game/missions/types";
 
 const ICONS: Record<MissionType, LucideIcon> = {
@@ -12,6 +12,9 @@ const ICONS: Record<MissionType, LucideIcon> = {
   mbio: Flag,
   chipsi: Utensils,
   usiku: Moon,
+  ninunulie: ShoppingBasket,
+  haraka: Timer,
+  stendi: Bus,
 };
 
 export const MISSION_ACCENT: Record<MissionType, string> = {
@@ -25,6 +28,9 @@ export const MISSION_ACCENT: Record<MissionType, string> = {
   mbio: "bg-coral-700 text-cream",
   chipsi: "bg-sun-600 text-night",
   usiku: "bg-night-500 text-sun",
+  ninunulie: "bg-forest text-cream",
+  haraka: "bg-coral text-night",
+  stendi: "bg-sun-300 text-night",
 };
 
 export function MissionIcon({ type, className }: { type: MissionType; className?: string }) {

@@ -3,12 +3,13 @@
 import { useEffect, useRef } from "react";
 import type { Game } from "@/game/core/Game";
 import { missionHud } from "@/game/missions/MissionRunner";
+import { PLACE_STYLE, atlasCell, placeAtlas } from "@/game/world/places";
 import { useSettings } from "@/stores/settings";
 
 const SIZE = 168;
 const RANGE = 150;
 const ROAD_COLORS = ["#F2D184", "#E8D9B0", "#D8CBB0", "#B9AE9C", "#9A9285", "#8A6F5A", "#6E6458"];
-const STOP_COLORS = { pickup: "#FFC72C", dropoff: "#2ED47A", checkpoint: "#FF5A4F", photo: "#00A3DD" } as const;
+const STOP_COLORS = { pickup: "#FFC72C", dropoff: "#2ED47A", checkpoint: "#FF5A4F", photo: "#00A3DD", buy: "#F59E0B" } as const;
 const vehicles: number[] = [];
 
 /** Rotating minimap (heading up) drawn on a canvas at ~12 Hz. */
@@ -86,15 +87,16 @@ export function Minimap({ game }: { game: Game }) {
         ctx.stroke();
       }
 
-      // Fuel stations and checkpoints.
-      for (const [sx, sz] of game.stations) {
-        const [x, y] = tx(sx, sz);
-        ctx.fillStyle = "#00A3DD";
-        ctx.beginPath();
-        ctx.roundRect(x - 5, y - 5, 10, 10, 3);
-        ctx.fill();
-        ctx.fillStyle = "#FFF6E5";
-        ctx.fillRect(x - 2, y - 3, 4, 6);
+      // Real places: important ones across the map, everything else close by.
+      const atlas = placeAtlas();
+      for (const s of game.places?.signs ?? []) {
+        const d = Math.hypot(s.x - b.x, s.z - b.z);
+        const rank = PLACE_STYLE[s.kind].rank;
+        if (d > RANGE * 1.05 || (rank < 2 && d > RANGE * 0.45) || (rank < 1 && d > RANGE * 0.25)) continue;
+        const [x, y] = tx(s.x, s.z);
+        const size = rank >= 3 ? 15 : 11;
+        const [sx, sy, cell] = atlasCell(s.poi.k);
+        ctx.drawImage(atlas, sx, sy, cell, cell, x - size / 2, y - size / 2, size, size);
       }
       for (const c of game.checkpoints?.points ?? []) {
         const [x, y] = tx(c.x, c.z);

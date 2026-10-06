@@ -2,8 +2,12 @@
  * Runs the active mission: stop arrivals, the clock, passenger mood, chai
  * spill, combos and the final score + payout. Also keeps the route fresh.
  */
+import { canHaggle } from "@/data/prices";
 import { events } from "@/game/core/events";
-import { env } from "@/game/systems/environment";
+import { clockText, env } from "@/game/systems/environment";
+import { say } from "@/game/systems/speech";
+import { currentDictionary, fmt, formatTzs } from "@/i18n";
+import { usePhone, type ShopItem } from "@/stores/phone";
 import type { NavNetwork } from "@/game/traffic/NavNetwork";
 import type { BikeModel } from "@/game/vehicles/BikeModel";
 import { GHOST_SAMPLE_EVERY, type GhostRider } from "@/game/vehicles/GhostRider";
@@ -18,6 +22,14 @@ const CHECKPOINT_RADIUS = 13;
 const STOP_SPEED = 2.6;
 const LOAD_TIME = 1.2;
 const LATE_GRACE = 60;
+/** Haraka passengers start complaining below this speed (m/s). */
+const HURRY_SPEED = 5.5;
+/** Seconds between a passenger's remarks. */
+const CHATTER_GAP = 9;
+/** Seconds between the rider's own remarks. */
+const TALK_GAP = 6;
+
+export type TalkOption = "hello" | "sorry" | "hold" | "near";
 
 /** Per-frame mission values for the HUD and minimap. */
 export const missionHud = {
@@ -60,6 +72,14 @@ export class MissionRunner {
   private raceStarted = false;
   private recording: number[] = [];
   private sinceSample = 0;
+  /** Errands: amount paid at the counter, and whether haggling worked. */
+  private paid = 0;
+  private haggled: boolean | null = null;
+  private shopOpen = false;
+  private sinceChatter = CHATTER_GAP;
+  private sinceTalk = TALK_GAP;
+  /** "Hold on tight" softens harsh riding for a few seconds. */
+  private braced = 0;
 
   constructor(
     private readonly nav: NavNetwork,
@@ -75,13 +95,17 @@ export class MissionRunner {
         if (kind === "pedestrian") this.pedHits++;
         this.mood = Math.max(0, this.mood - 0.22);
         if (missionHud.carrying && this.def.type === "chai") this.spill += 0.28;
+        if (missionHud.carrying && this.def.passenger !== "none") this.chatter("crash");
       }),
       events.on("nearMiss", ({ combo }) => {
         if (!this.def) return;
         this.nearMisses++;
         this.maxCombo = Math.max(this.maxCombo, combo);
         // Passengers don't love near misses.
-        if (missionHud.carrying && this.def.passenger !== "none") this.mood = Math.max(0, this.mood - 0.04);
+        if (missionHud.carrying && this.def.passenger !== "none") {
+          this.mood = Math.max(0, this.mood - 0.04);
+          this.chatter("scared");
+        }
       }),
       events.on("horn", () => this.def && this.hornUses++),
     ];
@@ -106,7 +130,16 @@ export class MissionRunner {
     this.legsOnTime = 0;
     this.raceStarted = false;
     this.recording = [];
+    this.paid = 0;
+    this.haggled = null;
+    this.shopOpen = false;
+    this.sinceChatter = CHATTER_GAP;
     this.ghost.stop();
+    // Errands: the customer sends the shopping money to the boda phone first.
+    if (def.errand) {
+      usePlayer.getState().transfer(def.errand.advance);
+      this.pesa(def.client, def.errand.advance);
+    }
     missionHud.active = true;
     missionHud.type = def.type;
     missionHud.stopIndex = 0;
@@ -187,7 +220,7 @@ export class MissionRunner {
       const lat = Math.abs(bike.lateralG);
       const lon = Math.abs(bike.longitudinalG);
       if (def.passenger !== "none") {
-        const harsh = Math.max(0, lat - 0.45) * 1.2 + Math.max(0, lon - 0.55) * 0.8 + (bike.surface === "earth" ? 0.08 : 0);
+        const harsh = (Math.max(0, lat - 0.45) * 1.2 + Math.max(0, lon - 0.55) * 0.8 + (bike.surface === "earth" ? 0.08 : 0)) * (this.braced > 0 ? 0.45 : 1);
         this.mood = Math.min(1, Math.max(0, this.mood - harsh * dt * 0.6 + (harsh === 0 ? dt * 0.008 : 0)));
       }
       if (def.type === "chai") {
@@ -195,6 +228,14 @@ export class MissionRunner {
         this.spill = Math.min(1, this.spill + slosh * dt * 0.55);
         if (this.spill >= 1) return this.finish(false, "spilled");
       }
+    }
+    // Hurry customers lose patience whenever the boda dawdles.
+    this.sinceChatter += dt;
+    this.sinceTalk += dt;
+    this.braced = Math.max(0, this.braced - dt);
+    if (def.type === "haraka" && missionHud.carrying && Math.abs(bike.speed) < HURRY_SPEED) {
+      this.mood = Math.max(0, this.mood - dt * 0.035);
+      this.chatter("hurry");
     }
     missionHud.mood = this.mood;
     missionHud.spill = this.spill;
@@ -206,6 +247,12 @@ export class MissionRunner {
     }
 
     // Arrivals.
+    if (stop.kind === "buy" && this.shopOpen) {
+      // Riding off closes the counter; come back to finish shopping.
+      if (d > STOP_RADIUS + 10) this.closeShop();
+      missionHud.loading = 0;
+      return;
+    }
     if (stop.kind === "checkpoint") {
       if (d < CHECKPOINT_RADIUS) this.advance(bike);
     } else {
@@ -225,6 +272,7 @@ export class MissionRunner {
     const def = this.def!;
     const stop = def.stops[missionHud.stopIndex]!;
     this.loading = 0;
+    if (stop.kind === "buy" && !this.paid) return this.openShop(stop.name);
     if (stop.kind === "pickup" && def.type === "mbio") {
       // Green light: the race clock and the ghost of your best run start now.
       this.raceStarted = true;
@@ -235,8 +283,14 @@ export class MissionRunner {
       if (best) this.ghost.play(best.ghost);
     } else if (stop.kind === "pickup") {
       missionHud.carrying = true;
-      if (def.passenger !== "none") this.model.setPassenger(def.passenger);
-      else this.model.setCargo(def.cargo);
+      if (def.passenger !== "none") {
+        this.model.setPassenger(def.passenger);
+        say(def.type === "stendi" ? "luggage" : def.type === "haraka" ? "hurry" : "greet", def.client);
+        this.sinceChatter = 0;
+      } else this.model.setCargo(def.cargo);
+    } else if (stop.kind === "buy") {
+      missionHud.carrying = true;
+      this.model.setCargo(def.cargo);
     } else if (stop.kind === "dropoff") {
       if (def.type === "chipsi" && (def.timeLimit === null || !missionHud.late)) this.legsOnTime++;
       const more = def.stops.slice(missionHud.stopIndex + 1).some((s) => s.kind === "pickup");
@@ -251,6 +305,103 @@ export class MissionRunner {
     if (missionHud.stopIndex + 1 >= def.stops.length) return this.finish(true);
     missionHud.stopIndex++;
     this.focusStop(bike);
+  }
+
+  /** True when there's a passenger on board to talk to. */
+  get canTalk() {
+    return Boolean(this.def && missionHud.carrying && this.def.passenger !== "none" && this.sinceTalk >= TALK_GAP);
+  }
+
+  /**
+   * Talk to the passenger. Small talk and apologies lift the mood a little,
+   * "hold on" softens rough riding for a while, and "almost there" only
+   * pleases when it's true.
+   */
+  talk(option: TalkOption) {
+    const def = this.def;
+    if (!def || !this.canTalk) return;
+    this.sinceTalk = 0;
+    const lines = currentDictionary().phone.chatOptions;
+    events.emit("say", { key: `rider.${option}`, who: currentDictionary().ride.you, text: lines[option] });
+    let delta = 0;
+    if (option === "hello") delta = this.mood > 0.3 ? 0.05 : 0.01;
+    else if (option === "sorry") delta = this.mood < 0.75 ? 0.1 : 0.02;
+    else if (option === "hold") {
+      this.braced = 10;
+      delta = 0.02;
+    } else delta = missionHud.distance < 220 ? 0.07 : -0.06;
+    this.mood = Math.min(1, Math.max(0, this.mood + delta));
+    const reply = { hello: "chatHello", sorry: "chatSorry", hold: "chatHold", near: delta > 0 ? "chatNear" : "hurry" } as const;
+    window.setTimeout(() => this.def === def && say(reply[option], def.client), 900);
+    this.sinceChatter = 0;
+  }
+
+  /** A passenger remark, at most one every few seconds. */
+  private chatter(key: "hurry" | "scared" | "crash") {
+    if (this.sinceChatter < CHATTER_GAP || !this.def) return;
+    this.sinceChatter = 0;
+    say(key, this.def.client);
+  }
+
+  /** A mobile-money alert on the boda phone (+ received, − sent). */
+  private pesa(who: string, amount: number) {
+    const t = currentDictionary().phone;
+    usePhone.getState().push({
+      from: t.pesaName,
+      kind: "pesa",
+      amount,
+      at: clockText(),
+      text: fmt(amount >= 0 ? t.pesaIn : t.pesaOut, { amount: formatTzs(Math.abs(amount)), who }),
+    });
+    events.emit("sms", { from: t.pesaName });
+  }
+
+  /** Arrived at the shop: stall prices vary a little from what the customer expected. */
+  private openShop(place: string) {
+    const def = this.def!;
+    const errand = def.errand!;
+    this.shopOpen = true;
+    const seed = def.id.length * 31 + missionHud.stopIndex;
+    const items: ShopItem[] = errand.items.map((item, i) => {
+      const wobble = 0.95 + (((seed * (i + 3) * 7919) % 100) / 100) * 0.14;
+      return { id: item.id, qty: item.qty, unit: Math.max(50, Math.round((item.unit * wobble) / 50) * 50), expected: item.unit };
+    });
+    usePhone.getState().set({
+      shop: { place, seller: errand.seller, items, advance: errand.advance, haggled: this.haggled, canHaggle: canHaggle(errand.seller) },
+    });
+    say("seller", place || currentDictionary().missions.poi.market);
+  }
+
+  private closeShop() {
+    this.shopOpen = false;
+    usePhone.getState().set({ shop: null });
+  }
+
+  /** Ask for a better price, once per errand. Market stalls often agree; good reputation helps. */
+  haggle(): boolean {
+    const shop = usePhone.getState().shop;
+    if (!shop || !shop.canHaggle || shop.haggled !== null) return false;
+    say("haggleAsk", currentDictionary().ride.you);
+    const rep = usePlayer.getState().reputation;
+    const ok = Math.random() < 0.45 + rep * 0.06;
+    this.haggled = ok;
+    const items = ok ? shop.items.map((i) => ({ ...i, unit: Math.max(50, Math.round((i.unit * (0.86 + Math.random() * 0.06)) / 50) * 50) })) : shop.items;
+    usePhone.getState().set({ shop: { ...shop, items, haggled: ok } });
+    window.setTimeout(() => say(ok ? "haggleYes" : "haggleNo", shop.place || currentDictionary().missions.poi.market), 700);
+    return ok;
+  }
+
+  /** Pay at the counter and load the shopping. False when the wallet can't cover it. */
+  purchase(bike: BikeState): boolean {
+    const shop = usePhone.getState().shop;
+    if (!shop || !this.def) return false;
+    const total = shop.items.reduce((sum, i) => sum + i.qty * i.unit, 0);
+    if (!usePlayer.getState().spend(total)) return false;
+    this.paid = total;
+    this.closeShop();
+    events.emit("refuel", { liters: 0, cost: total });
+    this.advance(bike);
+    return true;
   }
 
   /** Give up the current job (no pay, a small reputation dent). */
@@ -269,6 +420,19 @@ export class MissionRunner {
       if (def.type === "chai") tip += def.fare * 0.4 * (1 - this.spill);
       if (def.type === "dharura" && def.timeLimit) tip += def.fare * 0.3 * Math.max(0, missionHud.timeLeft / def.timeLimit);
       if (def.type === "wageni") tip += this.photos * 1000;
+      // Hurry customers pay for every second saved.
+      if (def.type === "haraka" && def.timeLimit) tip += def.fare * 0.6 * Math.max(0, missionHud.timeLeft / def.timeLimit);
+    }
+    // Errands: hand back the change (or get topped up when prices were higher). Honesty earns a tip.
+    let shopping: MissionResult["shopping"];
+    if (def.errand) {
+      const expected = def.errand.items.reduce((sum, i) => sum + i.qty * i.unit, 0);
+      const change = this.paid ? def.errand.advance - this.paid : def.errand.advance;
+      shopping = { paid: this.paid, change, haggled: this.haggled === true };
+      if (success) {
+        const saved = Math.max(0, expected - this.paid);
+        tip += 300 + Math.min(2500, saved * 0.5);
+      }
     }
     const comboMul = def.type === "chipsi" ? 0.25 * Math.max(0, this.legsOnTime - 1) : 0;
     const combo = success ? Math.round(this.nearMisses * 120 + this.maxCombo * 80 + def.fare * comboMul) : 0;
@@ -296,6 +460,7 @@ export class MissionRunner {
       seconds: Math.round(this.elapsed),
       collisions: this.collisions,
       nearMisses: this.nearMisses,
+      shopping,
     };
 
     // Races: personal bests and ghosts.
@@ -313,6 +478,17 @@ export class MissionRunner {
 
     // Payout and bookkeeping.
     player.earn(result.total, result.xp);
+    if (shopping && shopping.change !== 0) {
+      player.transfer(-shopping.change);
+      this.pesa(def.client, -shopping.change);
+      if (success) say(shopping.change > 0 ? "change" : "topup", def.client);
+    }
+    if (success && def.passenger !== "none" && def.type !== "mbio") say("thanks", def.client);
+    // Happy customers save your number and call again.
+    if (success && stars >= 4 && def.type !== "mbio" && def.type !== "wageni") {
+      const regulars = usePlayer.getState().regulars;
+      player.patch({ regulars: { ...regulars, [def.client]: (regulars[def.client] ?? 0) + 1 } });
+    }
     player.adjustReputation(success ? (stars - 3) * 0.06 : reason === "abandoned" ? -0.1 : -0.15);
     if (success) {
       player.patch({ cityEarnings: { ...player.cityEarnings, [this.cityId]: (player.cityEarnings[this.cityId] ?? 0) + result.total } });
@@ -335,6 +511,7 @@ export class MissionRunner {
       });
     } else events.emit("missionFailed", { type: def.type });
 
+    this.closeShop();
     this.def = null;
     missionHud.active = false;
     missionHud.route = null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { Clock, Coins, MapPinned, RefreshCw, Route, X } from "lucide-react";
+import { Clock, Coins, MapPinned, RefreshCw, Route, Smartphone, X } from "lucide-react";
 import { KitengeStrip } from "@/components/brand/Kitenge";
 import { Button } from "@/components/ui";
 import type { MissionDef } from "@/game/missions/types";
@@ -9,6 +9,7 @@ import { fmt, formatTzs, useT } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { useMissions } from "@/stores/missions";
 import { MISSION_ACCENT, MissionIcon } from "./MissionIcon";
+import { ShoppingList } from "./ShoppingList";
 import { formatClock, formatDistance, stopLabel } from "./stopLabel";
 
 function RoutePreview({ preview, stops }: { preview: number[]; stops: number }) {
@@ -40,7 +41,16 @@ function OfferCard({ mission, onAccept }: { mission: MissionDef; onAccept: () =>
       </header>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <p className="min-h-10 text-sm leading-snug text-cream/80">{fmt(t.missions.blurbs[mission.type], { client: mission.client })}</p>
-        <RoutePreview preview={mission.preview} stops={mission.stops.length} />
+        {mission.errand ? (
+          <div className="rounded-xl bg-night-800 px-3 py-1.5">
+            <ShoppingList items={mission.errand.items} compact />
+            <p className="flex items-center gap-1.5 border-t border-cream/10 pt-1.5 pb-0.5 text-xs font-semibold text-forest-400">
+              <Smartphone className="size-3.5" /> {fmt(t.shop.sent, { amount: formatTzs(mission.errand.advance) })}
+            </p>
+          </div>
+        ) : (
+          <RoutePreview preview={mission.preview} stops={mission.stops.length} />
+        )}
         <dl className="grid gap-1 text-sm">
           <div className="flex gap-2">
             <dt className="w-14 shrink-0 text-cream/50">{t.missions.from}</dt>

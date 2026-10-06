@@ -81,5 +81,3 @@ export const statBars = (s: RideStats) => ({
   tank: s.tank / 8.8,
 });
 
-export const FUEL_PRICE_PER_L = 3200;
-export const REPAIR_PRICE_PER_POINT = 150;

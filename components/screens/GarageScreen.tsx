@@ -5,7 +5,8 @@ import { Bike, Check, Coins, Fuel, Gauge, Lock, Megaphone, Paintbrush, ShieldHal
 import dynamic from "next/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, Card, Chip, Segmented, Toggle } from "@/components/ui";
-import { BIKE_IDS, BIKES, FUEL_PRICE_PER_L, MAX_UPGRADE, REPAIR_PRICE_PER_POINT, UPGRADE_IDS, rideStats, statBars, upgradeCost, type BikeId, type UpgradeId } from "@/game/vehicles/bikes";
+import { FUEL_PRICE, REPAIR_RATE } from "@/data/prices";
+import { BIKE_IDS, BIKES, MAX_UPGRADE, UPGRADE_IDS, rideStats, statBars, upgradeCost, type BikeId, type UpgradeId } from "@/game/vehicles/bikes";
 import { fmt, formatTzs, useT } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { currentRideStats, usePlayer, type Customization } from "@/stores/player";
@@ -113,8 +114,10 @@ export function GarageScreen() {
   const viewed = tab === "bikes" ? selected : p.equipped;
   const custom: Customization = tab === "bikes" && selected !== p.equipped ? { ...p.custom, body: BIKES[selected].color } : p.custom;
   const levels = p.upgrades[p.equipped] ?? {};
-  const fuelCost = Math.ceil(((current.tank - p.fuel) * FUEL_PRICE_PER_L) / 50) * 50;
-  const repairCost = Math.ceil((p.damage * REPAIR_PRICE_PER_POINT) / 50) * 50;
+  // The garage is in the city you last rode in, at that city's pump price and fundi rate.
+  const fuelPrice = FUEL_PRICE[p.lastCity];
+  const fuelCost = Math.ceil(((current.tank - p.fuel) * fuelPrice) / 50) * 50;
+  const repairCost = Math.ceil((p.damage * REPAIR_RATE[p.lastCity]) / 50) * 50;
 
   const buyCosmetic = (key: string, apply: () => void) => {
     if (p.cosmetics.includes(key)) return apply();
@@ -312,9 +315,9 @@ export function GarageScreen() {
               icon={<Fuel />}
               disabled={fuelCost <= 0 || p.wallet <= 0}
               onClick={() => {
-                const liters = Math.min(current.tank - p.fuel, p.wallet / FUEL_PRICE_PER_L);
+                const liters = Math.min(current.tank - p.fuel, p.wallet / fuelPrice);
                 if (liters <= 0) return;
-                p.spend(Math.min(p.wallet, Math.ceil((liters * FUEL_PRICE_PER_L) / 50) * 50));
+                p.spend(Math.min(p.wallet, Math.ceil((liters * fuelPrice) / 50) * 50));
                 p.setRide(p.fuel + liters, p.damage);
               }}
             >

@@ -44,6 +44,7 @@ export function StoryDirector({ enabled }: { enabled: boolean }) {
         open
         speaker={chapter.speakers[line] ?? chapter.speakers[0]!}
         text={lines[line] ?? ""}
+        voiceKey={`story.${chapter.key}.${line}`}
         cta={line + 1 < lines.length ? t.story.continue : t.tutorial.next}
         onNext={() => (line + 1 < lines.length ? setLine(line + 1) : complete())}
       />

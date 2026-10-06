@@ -2,6 +2,8 @@
  * Mission generator: turns real OpenStreetMap places (shops, hospitals,
  * schools, markets, hotels) into jobs with believable TZS fares.
  */
+import type { CityId } from "@/data/cities/config";
+import { GOODS, priceOf, sellerOf, type GoodId, type Seller, type ShoppingItem } from "@/data/prices";
 import { POI_KINDS, type Poi, type PoiKind } from "@/game/world/format";
 import type { NavNetwork } from "@/game/traffic/NavNetwork";
 import type { CargoKind, PassengerKind } from "@/game/vehicles/BikeModel";
@@ -27,7 +29,17 @@ interface Place {
   z: number;
   name: string;
   poi?: PoiKind;
+  /** OSM subtype (shop=hardware → "hardware"). */
+  sub?: string;
 }
+
+/** How often each kind of errand comes up. */
+const ERRAND_SELLERS: [Seller, number][] = [
+  ["market", 0.5],
+  ["shop", 0.3],
+  ["pharmacy", 0.12],
+  ["hardware", 0.08],
+];
 
 const RACE_COURSES = 3;
 
@@ -48,7 +60,8 @@ export class MissionGenerator {
     landmarks: { x: number; z: number; name: string }[] = [],
     private readonly cityId = "city",
   ) {
-    this.places = pois.map((p) => ({ x: p.x / 10, z: p.z / 10, name: p.n ?? "", poi: POI_KINDS[p.k] }));
+    // Stops sit at each place's curb point when it has one.
+    this.places = pois.map((p) => ({ x: (p.r?.[0] ?? p.x) / 10, z: (p.r?.[1] ?? p.z) / 10, name: p.n ?? "", poi: POI_KINDS[p.k], sub: p.t }));
     this.landmarks = landmarks.map((l) => ({ ...l, poi: "other" as PoiKind }));
   }
 
@@ -247,6 +260,66 @@ export class MissionGenerator {
         // Beat Baraka's pace (12.5 m/s) over the course itself; the ride to the start line is free.
         return { ...def, timeLimit: Math.round(course.length / 12.5 + 10), courseId: `${this.cityId}-race-${k}` };
       }
+      case "ninunulie": {
+        // Pick the kind of shop first, then a real one of that kind nearby.
+        let roll = this.rand();
+        const wanted = ERRAND_SELLERS.find(([, w]) => (roll -= w) < 0)?.[0] ?? "market";
+        const shops = this.places.filter((p) => {
+          if (!p.poi || sellerOf(p.poi, p.sub) !== wanted) return false;
+          const d = Math.hypot(p.x - x, p.z - z);
+          return d >= 40 && d <= 650;
+        });
+        // Customers name the shop they want ("pale Duka la Mama Rose"), so prefer named ones.
+        const named = shops.filter((p) => p.name);
+        const shop = this.pick(named.length ? named : shops);
+        if (!shop) return null;
+        const goods = (Object.keys(GOODS) as GoodId[]).filter((id) => GOODS[id].sellers.includes(wanted));
+        const count = Math.min(goods.length, 1 + Math.floor(this.rand() * 3));
+        const items: ShoppingItem[] = [...goods]
+          .sort(() => this.rand() - 0.5)
+          .slice(0, count)
+          .map((id) => ({ id, qty: this.pick(GOODS[id].qty) ?? 1, unit: priceOf(id, this.cityId as CityId) }));
+        const total = items.reduce((sum, i) => sum + i.qty * i.unit, 0);
+        const home = this.rand() < 0.25 ? this.place(["office", "school", "hospital", "bank"], shop.x, shop.z, 250, 1000) : this.streetPoint(shop.x, shop.z, 250, 1000);
+        const def = this.build(type, ctx, [this.stop(shop, "buy"), this.stop(home, "dropoff")], {
+          client,
+          cargo: "groceries",
+          speed: 6.5,
+          slack: 90,
+          base: 1500 + items.length * 400,
+          perKm: 3300,
+          risks: total > 30000 ? ["vip"] : [],
+        });
+        // Customers send a round amount, usually a little over the list.
+        return { ...def, errand: { items, seller: wanted, advance: Math.ceil((total * 1.05) / 1000) * 1000 } };
+      }
+      case "haraka": {
+        const a = this.place(["office", "bank", "hotel", "hospital", "school"], x, z, 30, 350);
+        const b = this.place(["bus_station", "office", "bank", "hospital", "market"], a.x, a.z, 500, 1500);
+        return this.build(type, ctx, [this.stop(a, "pickup"), this.stop(b, "dropoff")], {
+          client,
+          passenger: this.pick(["business", "student", "mama"] as PassengerKind[]),
+          speed: 9.6,
+          slack: 14,
+          base: 2500,
+          perKm: 5200,
+          risks: ["fast", "vip"],
+        });
+      }
+      case "stendi": {
+        const stand = this.nearest(["bus_station"], x, z, 30) ?? this.nearest(["bus_stop"], x, z, 30);
+        if (!stand || Math.hypot(stand.x - x, stand.z - z) > 900) return null;
+        const home = this.rand() < 0.3 ? this.place(["hotel"], stand.x, stand.z, 300, 1300) : this.streetPoint(stand.x, stand.z, 300, 1300);
+        return this.build(type, ctx, [this.stop(stand, "pickup"), this.stop(home, "dropoff")], {
+          client,
+          passenger: this.pick(["mama", "business", "elder", "student"] as PassengerKind[]),
+          speed: 7,
+          slack: 55,
+          base: 2000,
+          perKm: 3800,
+          risks: ["crowded"],
+        });
+      }
       case "chipsi": {
         const stops: Stop[] = [];
         let cx = x, cz = z;
@@ -313,6 +386,13 @@ export class MissionGenerator {
       perKm: 3500,
     });
     return { ...def, risks: [] };
+  }
+
+  /** One job of a given type for a named caller (phone requests), or null if none fits here. */
+  single(type: MissionType, ctx: GeneratorContext, client: string): MissionDef | null {
+    this.rand = ctx.random ?? Math.random;
+    const def = this.make(type, ctx);
+    return def && { ...def, client, phoned: true };
   }
 
   /** A fresh board of offers. */

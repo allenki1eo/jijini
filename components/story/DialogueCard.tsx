@@ -4,6 +4,8 @@ import { AnimatePresence, m } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui";
 import { KitengeStrip } from "@/components/brand/Kitenge";
+import { useEffect } from "react";
+import { playVoice } from "@/game/audio/voices";
 import { Portrait, type CharacterId } from "./Portrait";
 
 export const CHARACTER_NAMES: Record<CharacterId, string> = {
@@ -20,10 +22,15 @@ interface DialogueCardProps {
   cta: string;
   onNext: () => void;
   secondary?: { label: string; onClick: () => void };
+  /** Voice-bank key for this line (e.g. "story.ch1.0"); played when a recording exists. */
+  voiceKey?: string;
 }
 
 /** Comic dialogue card used by the tutorial and story chapters. */
-export function DialogueCard({ open, speaker, text, cta, onNext, secondary }: DialogueCardProps) {
+export function DialogueCard({ open, speaker, text, cta, onNext, secondary, voiceKey }: DialogueCardProps) {
+  useEffect(() => {
+    if (open && voiceKey) void playVoice(voiceKey, CHARACTER_NAMES[speaker]);
+  }, [open, voiceKey, speaker]);
   return (
     <AnimatePresence mode="wait">
       {open && (

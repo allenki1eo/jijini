@@ -16,6 +16,7 @@ const STOP_COLORS: Record<StopKind, string> = {
   dropoff: "#2ED47A",
   checkpoint: "#FF5A4F",
   photo: "#00A3DD",
+  buy: "#F59E0B",
 };
 
 const chevronGeometry = () =>

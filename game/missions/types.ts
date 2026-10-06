@@ -1,11 +1,13 @@
 /** Mission vocabulary shared by the generator, runner and UI. */
+import type { Seller, ShoppingItem } from "@/data/prices";
 import type { CargoKind, PassengerKind } from "@/game/vehicles/BikeModel";
 import type { PoiKind } from "@/game/world/format";
 
-export const MISSION_TYPES = ["abiria", "mzigo", "dharura", "chai", "soko", "shule", "wageni", "mbio", "chipsi", "usiku"] as const;
+export const MISSION_TYPES = ["abiria", "mzigo", "dharura", "chai", "soko", "shule", "wageni", "mbio", "chipsi", "usiku", "ninunulie", "haraka", "stendi"] as const;
 export type MissionType = (typeof MISSION_TYPES)[number];
 
-export type StopKind = "pickup" | "dropoff" | "checkpoint" | "photo";
+/** "buy": stop at a shop or market stall and pay for a customer's shopping list. */
+export type StopKind = "pickup" | "dropoff" | "checkpoint" | "photo" | "buy";
 
 export interface Stop {
   x: number;
@@ -18,6 +20,14 @@ export interface Stop {
 }
 
 export type RiskTag = "fast" | "fragile" | "crowded" | "night" | "rain" | "long" | "vip";
+
+/** A shopping errand: the customer sends money ahead, you buy the list and bring it with the change. */
+export interface Errand {
+  items: ShoppingItem[];
+  seller: Seller;
+  /** Money the customer sent to the boda phone up front (TZS). */
+  advance: number;
+}
 
 export interface MissionDef {
   id: string;
@@ -38,6 +48,9 @@ export interface MissionDef {
   preview: number[];
   /** Races: fixed course id for personal bests and ghosts. */
   courseId?: string;
+  errand?: Errand;
+  /** Set when the customer phoned in the job (regulars, hurry calls). */
+  phoned?: boolean;
 }
 
 export interface MissionResult {
@@ -61,6 +74,8 @@ export interface MissionResult {
   record?: boolean;
   /** Races: best time on this course (s). */
   best?: number;
+  /** Errands: what the shopping cost, and the change handed back (negative = customer topped you up). */
+  shopping?: { paid: number; change: number; haggled: boolean };
 }
 
 /** Display config: lucide icon name, accent token, unlock rule. */
@@ -75,6 +90,9 @@ export const MISSION_META: Record<MissionType, { icon: string; accent: string; l
   mbio: { icon: "flag", accent: "coral", level: 1, chapter: 2 },
   chipsi: { icon: "utensils", accent: "sun", level: 5 },
   usiku: { icon: "moon", accent: "sky", level: 3 },
+  ninunulie: { icon: "shopping-basket", accent: "forest", level: 1 },
+  haraka: { icon: "timer", accent: "coral", level: 2 },
+  stendi: { icon: "bus", accent: "sun", level: 1 },
 };
 
 export const CLIENTS = [

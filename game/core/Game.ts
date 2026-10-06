@@ -22,19 +22,25 @@ import { Pedestrians } from "@/game/traffic/Pedestrians";
 import { TrafficSystem, type Obstacle } from "@/game/traffic/TrafficSystem";
 import { POI_KINDS, type Poi } from "@/game/world/format";
 import { RainField } from "@/game/world/RainField";
+import { PlaceSigns, synthesizeBusStops } from "@/game/world/PlaceSigns";
+import { fetchJson } from "@/lib/fetchJson";
 import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
 import { Particles } from "@/game/world/Particles";
 import { buildLandmark } from "@/game/world/landmarks";
 import { makeProjector } from "@/game/world/projection";
 import { MissionGenerator } from "@/game/missions/generator";
-import { MissionRunner, missionHud } from "@/game/missions/MissionRunner";
+import { MissionRunner, missionHud, type TalkOption } from "@/game/missions/MissionRunner";
+import { PhoneSystem } from "@/game/phone/PhoneSystem";
 import { RouteGuide } from "@/game/missions/RouteGuide";
-import { unlockedTypes, type MissionDef } from "@/game/missions/types";
+import { unlockedTypes, type MissionDef, type MissionType } from "@/game/missions/types";
 import { CITIES } from "@/data/cities/config";
-import { FUEL_PRICE_PER_L, REPAIR_PRICE_PER_POINT } from "@/game/vehicles/bikes";
+import { FUEL_PRICE, REPAIR_RATE } from "@/data/prices";
 import { useMissions } from "@/stores/missions";
 import { attachProgression } from "@/game/systems/progression";
 import { audio } from "@/game/audio/AudioEngine";
+import { attachVoices } from "@/game/audio/voices";
+import { say } from "@/game/systems/speech";
+import { currentDictionary } from "@/i18n";
 import type { Quality } from "@/stores/settings";
 import { attachInputs, clearPressed, controls, pollControls } from "./controls";
 import { events } from "./events";
@@ -61,12 +67,15 @@ export class Game {
   peds: Pedestrians | null = null;
   checkpoints: Checkpoints | null = null;
   missions: MissionRunner | null = null;
+  phone: PhoneSystem | null = null;
   private generator: MissionGenerator | null = null;
   private guide = new RouteGuide();
   private collectibles: Collectibles | null = null;
+  /** Signposts, shelters and labels for real places. */
+  places: PlaceSigns | null = null;
   private landmarkObjects: THREE.Object3D[] = [];
-  /** Fuel stations (m), for refuelling and the minimap. */
-  stations: [number, number][] = [];
+  /** Petrol stations and fundi (mechanics), for refuelling and repairs. */
+  private services: { x: number; z: number; fuel: boolean; name: string }[] = [];
   private rain: RainField;
   private headlight = new THREE.SpotLight("#FFF1D0", 0, 48, 0.55, 0.65, 1.1);
   private obstacles: Obstacle[] = [];
@@ -146,15 +155,17 @@ export class Game {
       detachProgression();
       detachAudio();
     };
-    const [nav, pois] = await Promise.all([
+    const [nav, mapped] = await Promise.all([
       loadNavNetwork(this.baseUrl),
-      fetch(`${this.baseUrl}/pois.json`)
-        .then((r) => r.json() as Promise<Poi[]>)
-        .catch(() => [] as Poi[]),
+      fetchJson<Poi[]>(`${this.baseUrl}/pois.json`).catch(() => [] as Poi[]),
     ]);
     if (this.disposed) return;
     this.nav = nav;
+    // Main roads without mapped daladala stops get them, so every city has places to wait for a ride.
+    const pois = [...mapped, ...synthesizeBusStops(nav, mapped)];
     this.pois = pois;
+    this.places = new PlaceSigns(pois);
+    this.root.add(this.places.group);
     const cap = DENSITY.high;
     this.traffic = new TrafficSystem(nav, cap.traffic);
     this.peds = new Pedestrians(nav, cap.peds);
@@ -164,7 +175,10 @@ export class Game {
     this.applyDensity();
     this.root.add(this.traffic.group, this.peds.group, this.checkpoints.group);
     const fuel = POI_KINDS.indexOf("fuel");
-    this.stations = pois.filter((poi) => poi.k === fuel).map((poi) => [poi.x / 10, poi.z / 10]);
+    const garage = POI_KINDS.indexOf("garage");
+    this.services = pois
+      .filter((poi) => poi.k === fuel || poi.k === garage)
+      .map((poi) => ({ x: (poi.r?.[0] ?? poi.x) / 10, z: (poi.r?.[1] ?? poi.z) / 10, fuel: poi.k === fuel, name: poi.n ?? poi.b ?? "" }));
     // Landmarks: placed from lat/lon, solid to ride into, and tourist photo stops.
     const { project } = makeProjector(this.manifest.origin.lat, this.manifest.origin.lon);
     const sights: { x: number; z: number; name: string }[] = [];
@@ -186,6 +200,12 @@ export class Game {
     this.root.add(this.collectibles.group);
     this.generator = new MissionGenerator(nav, pois, sights, this.cityId);
     this.missions = new MissionRunner(nav, this.model, this.guide, this.cityId, this.ghost);
+    this.phone = new PhoneSystem({
+      makeJob: (type: MissionType, client: string) => this.generator?.single(type, this.generatorContext(), client) ?? null,
+      accept: (def) => this.acceptMission(def),
+      unlocked: () => this.generatorContext().types,
+      available: () => this.riding && !this.paused && this.fuelUse > 0 && usePlayer.getState().tutorialDone,
+    });
     this.refreshOffers();
   }
 
@@ -237,6 +257,26 @@ export class Game {
     useMissions.getState().set({ offers: useMissions.getState().offers.filter((o) => o.id !== def.id) });
   }
 
+  /** A quick HUD toast. */
+  toast(text: string, tone: "sun" | "forest" | "sky" | "coral" | "cream" = "cream") {
+    events.emit("toast", { text, tone });
+  }
+
+  /** Errands: ask the stall for a better price (once). */
+  haggle() {
+    return this.missions?.haggle() ?? false;
+  }
+
+  /** Errands: pay for the shopping list at the counter. */
+  purchase() {
+    return this.missions?.purchase(this.bike.state) ?? false;
+  }
+
+  /** Say something to the passenger. */
+  talk(option: TalkOption) {
+    this.missions?.talk(option);
+  }
+
   /** Debug: drop the rider next to the current mission stop. */
   debugJumpToTarget() {
     const { targetX, targetZ, active } = missionHud;
@@ -245,18 +285,33 @@ export class Game {
     this.chase.snap();
   }
 
-  /** Fuel station within reach, if the rider has stopped at one. */
-  stationNearby(): boolean {
+  /** The petrol station or fundi the rider has stopped at, if any. Fundi only repair. */
+  serviceNearby(): { fuel: boolean; name: string } | null {
     const s = this.bike.state;
-    return Math.abs(s.speed) < 1.5 && this.stations.some(([x, z]) => Math.hypot(x - s.x, z - s.z) < 22);
+    if (Math.abs(s.speed) > 1.5) return null;
+    let best: (typeof this.services)[number] | null = null;
+    let bestD = 22;
+    for (const p of this.services) {
+      const d = Math.hypot(p.x - s.x, p.z - s.z);
+      if (d < bestD && (p.fuel || d < 14)) {
+        bestD = d;
+        best = p;
+      }
+    }
+    return best;
+  }
+
+  /** Pump price here, TZS per litre. */
+  get fuelPrice() {
+    return FUEL_PRICE[this.cityId];
   }
 
   refuelCost() {
-    return Math.ceil(((this.stats.tank - this.bike.state.fuel) * FUEL_PRICE_PER_L) / 50) * 50;
+    return Math.ceil(((this.stats.tank - this.bike.state.fuel) * this.fuelPrice) / 50) * 50;
   }
 
   repairCost() {
-    return Math.ceil((this.bike.state.damage * REPAIR_PRICE_PER_POINT) / 50) * 50;
+    return Math.ceil((this.bike.state.damage * REPAIR_RATE[this.cityId]) / 50) * 50;
   }
 
   /** Fill up as far as the wallet allows. Returns liters added. */
@@ -264,9 +319,9 @@ export class Game {
     const s = this.bike.state;
     const player = usePlayer.getState();
     const want = this.stats.tank - s.fuel;
-    const liters = Math.min(want, player.wallet / FUEL_PRICE_PER_L);
+    const liters = Math.min(want, player.wallet / this.fuelPrice);
     if (liters <= 0.01) return 0;
-    const cost = Math.ceil((liters * FUEL_PRICE_PER_L) / 50) * 50;
+    const cost = Math.ceil((liters * this.fuelPrice) / 50) * 50;
     player.spend(Math.min(cost, player.wallet));
     s.fuel += liters;
     events.emit("refuel", { liters, cost });
@@ -301,7 +356,17 @@ export class Game {
     });
     const offs = [
       events.on("horn", () => audio.horn(this.missions?.active?.type === "dharura")),
-      events.on("honked", ({ x, z }) => audio.honk(Math.hypot(x - this.bike.state.x, z - this.bike.state.z))),
+      events.on("honked", ({ x, z, kind, mood }) => {
+        const s = this.bike.state;
+        const dx = x - s.x, dz = z - s.z;
+        const d = Math.hypot(dx, dz);
+        // Pan by where the horn is relative to the rider's right hand.
+        const pan = d > 0.1 ? (dx * Math.cos(s.heading) - dz * Math.sin(s.heading)) / d : 0;
+        audio.honk(d, kind, mood, pan * 0.8);
+      }),
+      events.on("ringing", ({ on }) => audio.ring(on)),
+      events.on("sms", () => audio.chime()),
+      attachVoices(),
       events.on("collision", ({ speed }) => audio.crash(speed / 10)),
       events.on("nearMiss", () => audio.whoosh()),
       events.on("delivery", () => audio.coin()),
@@ -319,6 +384,7 @@ export class Game {
       offs.forEach((off) => off());
       audio.stopContinuous();
       audio.stopMusic();
+      audio.ring(false);
     };
   }
 
@@ -373,10 +439,13 @@ export class Game {
     );
 
     this.missions?.update(dt, s);
+    this.phone?.update(dt);
     const skid = s.drifting ? 1 : controls.brake > 0.5 && s.speed > 6 ? 0.6 : 0;
     const crowd = Math.min(1, (this.peds?.countNear(s.x, s.z, 45) ?? 0) / 10);
     audio.update(s.speed, controls.throttle, skid, env.rain, crowd, this.riding && s.fuel > 0);
     this.collectibles?.update(dt, s.x, s.z);
+    this.places?.update(dt, s.x, s.z, s.heading);
+    this.busStandLife(dt, s.x, s.z);
 
     // Juice: red-earth dust on dirt, spray on wet tarmac, exhaust when idling.
     const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
@@ -425,6 +494,19 @@ export class Game {
     clearPressed();
   }
 
+  private sinceConductor = 20;
+
+  /** Daladala conductors call out destinations when you ride past a bus stand. */
+  private busStandLife(dt: number, x: number, z: number) {
+    this.sinceConductor += dt;
+    if (this.sinceConductor < 40 || !this.places) return;
+    const station = POI_KINDS.indexOf("bus_station");
+    if (this.places.signs.some((sign) => sign.poi.k === station && Math.hypot(sign.x - x, sign.z - z) < 32)) {
+      this.sinceConductor = 0;
+      say("conductor", currentDictionary().life.conductor);
+    }
+  }
+
   saveRide() {
     const s = this.bike.state;
     const player = usePlayer.getState();
@@ -442,7 +524,9 @@ export class Game {
     this.peds?.dispose();
     this.checkpoints?.dispose();
     this.missions?.dispose();
+    this.phone?.dispose();
     this.collectibles?.dispose();
+    this.places?.dispose();
     for (const o of this.landmarkObjects) {
       const mesh = o as THREE.Mesh;
       mesh.geometry?.dispose();

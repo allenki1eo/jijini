@@ -247,7 +247,7 @@ export class TrafficSystem {
           }
           if (g < 8 && Math.abs(p.speed) < 2 && a.honkCooldown <= 0) {
             a.honkCooldown = 4 + Math.random() * 4;
-            events.emit("honked", { x: a.x, z: a.z });
+            events.emit("honked", { x: a.x, z: a.z, kind: a.kind, mood: "nudge" });
           }
         }
       }
@@ -269,7 +269,7 @@ export class TrafficSystem {
       else a.waiting = Math.max(0, a.waiting - dt * 2);
       if (a.waiting > 4 && a.honkCooldown <= 0) {
         a.honkCooldown = 5;
-        events.emit("honked", { x: a.x, z: a.z });
+        events.emit("honked", { x: a.x, z: a.z, kind: a.kind, mood: "nudge" });
       }
       a.honkCooldown -= dt;
 
@@ -360,7 +360,7 @@ export class TrafficSystem {
       a.stopTimer = Math.max(a.stopTimer, 1.5);
       if (a.honkCooldown <= 0) {
         a.honkCooldown = 3;
-        events.emit("honked", { x: a.x, z: a.z });
+        events.emit("honked", { x: a.x, z: a.z, kind: a.kind, mood: "angry" });
       }
       a.prevLong = Infinity;
       return;
@@ -373,6 +373,11 @@ export class TrafficSystem {
       this.combo++;
       this.comboTimer = COMBO_WINDOW;
       events.emit("nearMiss", { combo: this.combo });
+      // Cut someone up and they'll lean on the horn; fellow bodas just beep hello.
+      if (a.honkCooldown <= 0 && Math.random() < 0.65) {
+        a.honkCooldown = 4;
+        events.emit("honked", { x: a.x, z: a.z, kind: a.kind, mood: a.kind === "boda" ? "friendly" : "angry" });
+      }
     }
     a.prevLong = rel;
   }

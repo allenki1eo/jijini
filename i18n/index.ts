@@ -34,6 +34,13 @@ export const useT = (): Dictionary => {
   return locale === "en" && english ? english : sw;
 };
 
+/** The active dictionary outside React (3D labels, game systems). Falls back to Swahili while English loads. */
+export const currentDictionary = (): Dictionary => {
+  if (useSettings.getState().locale !== "en") return sw;
+  if (!en) void loadEnglish();
+  return en ?? sw;
+};
+
 /** Fill `{name}` placeholders. */
 export const fmt = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`));

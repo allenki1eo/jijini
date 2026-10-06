@@ -186,6 +186,9 @@ export const POI_KINDS = [
   "police",
   "office",
   "other",
+  // Appended later; keep existing indices stable.
+  "bus_stop",
+  "garage",
 ] as const;
 export type PoiKind = (typeof POI_KINDS)[number];
 
@@ -193,8 +196,14 @@ export interface Poi {
   /** Index into POI_KINDS. */
   k: number;
   n?: string;
+  /** OSM subtype, e.g. "hardware" for shop=hardware or "ngo" for office=ngo. */
+  t?: string;
+  /** Brand or operator (fuel stations, banks, supermarkets). */
+  b?: string;
   x: number;
   z: number;
+  /** Curb point (dm) on the nearest drivable road, where the place's signpost stands. */
+  r?: [number, number];
 }
 
 export const chunkKey = (cx: number, cz: number): string => `${cx}_${cz}`;

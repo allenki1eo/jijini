@@ -41,12 +41,19 @@ A left-handed layout and auto-throttle are in Settings. Gamepads work (standard 
   - At police checkpoints you meet Afande Salum.
   - Lamps, kiosks, umbrella vendors and billboards line the streets.
 - **Time and weather:** a full day cycle with stars, lit windows and lamp light pools at night, and a headlight. Rain brings wet roads, puddles and grip loss; dusty haze comes and goes.
-- **Ten mission types**, built from real OSM places:
+- **Real places on the map:** every hospital, clinic, pharmacy, school, market, petrol station, bank, office, shop, mechanic and bus stop mapped in OpenStreetMap gets a roadside signpost with its own badge. The nearest ones show their real names, and they also appear on the minimap. Bus stops and stands get shelters with people waiting; main roads without a mapped stop get daladala stops every ~300 m.
+- **Thirteen mission types**, built from real OSM places:
   - Abiria, Mzigo, Dharura
   - Chai ya Asubuhi (spill meter), Soko Run, Shule Run
   - Wageni (photo stops at landmarks)
   - Mbio (fixed race courses with ghosts of your best run)
   - Chipsi Mayai Rush (chained combo), Night shift
+  - **Ninunulie:** the customer sends money to your phone, you buy their list at a real market stall, shop or pharmacy (haggle at the market), and bring it back with the change
+  - **Haraka:** a late customer; every second you save is a tip, and they complain when you dawdle
+  - **Stendi:** travellers with luggage at the bus stand
+- **The boda phone:** customers call with jobs (answer or decline), regulars (anyone who gave you 4+ stars) call more often and pay more, and you can ring them for work. Waiting customers text when you're slow. The BodaPesa wallet logs money in and out. Talk to passengers on the way (keys 1–4): small talk, apologies and "hold on tight" change their mood.
+- **Street prices:** goods cost typical 2025 street prices with city differences (rice and fish are cheaper in the Lake Zone) and a small daily drift. Fuel follows the EWURA cap levels per city (about TSh 2,850/L in Dar, 2,990/L in Shinyanga), and mechanics (fundi) repair at local rates.
+- **Horns everywhere:** cars, daladalas (musical air horns), trucks, bajaji and bodas each sound different, panned to where they are. They honk when you block them, cut them up or hit them; fellow bodas beep hello. Conductors call out at bus stands.
 - **On the road:** passenger mood, tips, near-miss combos, clean-ride bonuses and 1–5 stars. A* routing gives glowing road arrows, a light beam over the stop and a rotating minimap.
 - **Economy and progression:**
   - Fares in believable TZS; fuel and repairs at petrol stations.
@@ -55,7 +62,8 @@ A left-handed layout and auto-throttle are in Settings. Gamepads work (standard 
   - Daily and weekly challenges, 19 achievements.
 - **Story:** seven Kijiweni chapters with Mzee Juma, Baraka, Mama Neema and Afande Salum. A guided tutorial leads to the first paid job in about two minutes, and each city hides three golden helmets.
 - **Four cities**, unlocked by level and boda-stand membership: Shinyanga, Arusha (Clock Tower), Mwanza (Lake Victoria, Bismarck Rock) and Kariakoo (the market).
-- **Audio:** engine, horns, siren, skid, rain, market chatter, distant honks, UI sounds and an original Singeli/Bongo-flava-inspired loop. All of it is synthesized with Web Audio, with no sample files.
+- **Audio:** engine, horns, siren, skid, rain, market chatter, phone ringtone, UI sounds and an original Singeli/Bongo-flava-inspired loop, all synthesized with Web Audio.
+- **Voices:** every spoken line (passengers, callers, sellers, conductors, Mzee Juma and the story cast) can play a recording. Drop files into `public/audio/voices/` and list them in its `manifest.json`; [the guide there](public/audio/voices/README.md) lists every line key. Lines without a recording stay as speech bubbles.
 - **PWA:**
   - Installable, with an install banner (Android) and iOS instructions.
   - An update toast that never interrupts a ride, plus an offline page.

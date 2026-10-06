@@ -183,7 +183,11 @@ export class AudioEngine {
 
   // ── One-shots ────────────────────────────────────────────────────────────
 
-  private tone(freq: number, dur: number, opts: { type?: OscillatorType; gain?: number; attack?: number; slideTo?: number; delay?: number; bus?: Bus } = {}) {
+  private tone(
+    freq: number,
+    dur: number,
+    opts: { type?: OscillatorType; gain?: number; attack?: number; slideTo?: number; delay?: number; bus?: Bus; pan?: number; lowpass?: number; sustain?: boolean } = {},
+  ) {
     if (!this.ctx) return;
     const ctx = this.ctx;
     const t = ctx.currentTime + (opts.delay ?? 0);
@@ -195,8 +199,22 @@ export class AudioEngine {
     const peak = opts.gain ?? 0.2;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(peak, t + (opts.attack ?? 0.008));
+    // Horns hold their level and cut off; everything else decays.
+    if (opts.sustain) g.gain.setValueAtTime(peak, t + Math.max(0.02, dur - 0.04));
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.buses[opts.bus ?? "sfx"]);
+    let node: AudioNode = o.connect(g);
+    if (opts.lowpass) {
+      const f = ctx.createBiquadFilter();
+      f.type = "lowpass";
+      f.frequency.value = opts.lowpass;
+      node = node.connect(f);
+    }
+    if (opts.pan) {
+      const p = ctx.createStereoPanner();
+      p.pan.value = Math.max(-1, Math.min(1, opts.pan));
+      node = node.connect(p);
+    }
+    node.connect(this.buses[opts.bus ?? "sfx"]);
     o.start(t);
     o.stop(t + dur + 0.05);
   }
@@ -228,13 +246,106 @@ export class AudioEngine {
     this.tone(523, 0.32, { type: "square", gain: 0.05 });
   }
 
-  /** A distant NPC honk, quieter with distance. */
-  honk(distance: number) {
-    const gain = Math.max(0, 0.06 * (1 - distance / 120));
-    if (gain < 0.004) return;
-    const f = 300 + Math.random() * 250;
-    this.tone(f, 0.25 + Math.random() * 0.2, { type: "square", gain });
-    if (Math.random() < 0.4) this.tone(f, 0.18, { type: "square", gain, delay: 0.32 });
+  /**
+   * An NPC horn, panned and quieter with distance. Each vehicle has its own
+   * voice: two-tone car horns, the daladala's musical air horn, a truck's
+   * low blare, the bajaji's nasal squeak and the boda's quick "pipi".
+   */
+  honk(distance: number, kind: "car" | "daladala" | "bajaji" | "truck" | "boda" = "car", mood: "nudge" | "angry" | "friendly" = "nudge", pan = 0) {
+    const level = Math.max(0, 1 - distance / 140);
+    if (level < 0.06) return;
+    const g = (v: number) => v * level;
+    const long = mood === "angry";
+    const hold = (base: number) => (long ? base * 2.6 : base) * (0.9 + Math.random() * 0.2);
+    switch (kind) {
+      case "car": {
+        const d = hold(0.22);
+        const pitch = 0.9 + Math.random() * 0.2;
+        const beeps = long ? 1 : 2;
+        for (let i = 0; i < beeps; i++) {
+          this.tone(392 * pitch, d, { type: "square", gain: g(0.045), delay: i * 0.28, pan, lowpass: 1800, sustain: true });
+          this.tone(494 * pitch, d, { type: "square", gain: g(0.035), delay: i * 0.28, pan, lowpass: 1800, sustain: true });
+        }
+        break;
+      }
+      case "daladala": {
+        // A musical air horn: a quick original rising run, or one long blast when angry.
+        const notes = long ? [62] : [62, 66, 69, 74, 69];
+        notes.forEach((n, i) => this.tone(midi(n), long ? 1.1 : 0.15, { type: "sawtooth", gain: g(0.04), delay: i * 0.13, pan, lowpass: 2400, sustain: true }));
+        break;
+      }
+      case "truck":
+        this.tone(165, hold(0.55), { type: "sawtooth", gain: g(0.06), pan, lowpass: 900, sustain: true });
+        this.tone(208, hold(0.55), { type: "sawtooth", gain: g(0.045), pan, lowpass: 900, sustain: true });
+        break;
+      case "bajaji":
+        for (let i = 0; i < (long ? 3 : 2); i++) this.tone(720, 0.11, { type: "square", gain: g(0.035), delay: i * 0.16, pan, lowpass: 3200, slideTo: 690 });
+        break;
+      case "boda":
+        for (let i = 0; i < 2; i++) {
+          this.tone(1040, mood === "friendly" ? 0.09 : hold(0.12), { type: "square", gain: g(0.035), delay: i * 0.14, pan, lowpass: 3600, sustain: true });
+          this.tone(1310, mood === "friendly" ? 0.09 : hold(0.12), { type: "square", gain: g(0.025), delay: i * 0.14, pan, lowpass: 3600, sustain: true });
+        }
+        break;
+    }
+  }
+
+  // ── The boda phone ───────────────────────────────────────────────────────
+
+  private ringTimer = 0;
+
+  /** A cheerful original ringtone, repeating until answered. */
+  ring(on: boolean) {
+    window.clearInterval(this.ringTimer);
+    if (!on || !this.ctx) return;
+    const phrase = () => [76, 79, 83, 79, 81, 76].forEach((n, i) => this.tone(midi(n), 0.13, { type: "triangle", gain: 0.07, delay: i * 0.12 }));
+    phrase();
+    this.ringTimer = window.setInterval(phrase, 1700);
+  }
+
+  /** A short two-note chime for a text or mobile-money alert. */
+  chime() {
+    this.tone(midi(84), 0.12, { type: "sine", gain: 0.07 });
+    this.tone(midi(91), 0.22, { type: "sine", gain: 0.06, delay: 0.1 });
+  }
+
+  // ── Recorded voices ──────────────────────────────────────────────────────
+
+  private voiceCache = new Map<string, Promise<AudioBuffer | null>>();
+  private voiceUntil = 0;
+
+  /** Fetch and decode a recording once; null if it's missing or unreadable. */
+  private loadVoice(url: string): Promise<AudioBuffer | null> {
+    let p = this.voiceCache.get(url);
+    if (!p) {
+      p = fetch(url)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`HTTP ${r.status}`))))
+        .then((data) => this.ctx!.decodeAudioData(data))
+        .catch(() => null);
+      this.voiceCache.set(url, p);
+    }
+    return p;
+  }
+
+  /** Play a recorded line over the mix, ducking the music while it speaks. Skips if someone is already talking. */
+  async voice(url: string, gain = 1): Promise<boolean> {
+    if (!this.ctx) return false;
+    const ctx = this.ctx;
+    if (ctx.currentTime < this.voiceUntil) return false;
+    const buffer = await this.loadVoice(url);
+    if (!buffer || ctx.currentTime < this.voiceUntil) return false;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.connect(g).connect(this.buses.sfx);
+    const t = ctx.currentTime;
+    this.voiceUntil = t + buffer.duration;
+    const music = this.buses.music.gain;
+    music.setTargetAtTime(this.volumes.music * 0.12, t, 0.08);
+    music.setTargetAtTime(this.volumes.music * 0.35, t + buffer.duration, 0.3);
+    src.start(t);
+    return true;
   }
 
   crash(strength: number) {

@@ -2,7 +2,7 @@
   "format": 1,
   "id": "kariakoo",
   "name": "Kariakoo",
-  "generatedAt": "2026-10-06T05:39:20.397Z",
+  "generatedAt": "2026-10-06T08:09:06.834Z",
   "source": "osm-api",
   "origin": {
     "lat": -6.8166,
@@ -409,11 +409,11 @@
   "stats": {
     "buildings": 4535,
     "roads": 444,
-    "pois": 3885,
+    "pois": 3911,
     "navNodes": 596,
     "navEdges": 840,
     "trees": 2096
   },
-  "totalBytes": 919174,
+  "totalBytes": 1048688,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

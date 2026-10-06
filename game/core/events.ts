@@ -10,7 +10,8 @@ export interface GameEvents {
   wheelie: { meters: number };
   drift: { seconds: number };
   horn: Record<string, never>;
-  honked: { x: number; z: number };
+  /** An NPC sounded its horn. `mood`: nudge (move along), angry (you hit or cut them up), friendly (a passing boda's hello). */
+  honked: { x: number; z: number; kind: "car" | "daladala" | "bajaji" | "truck" | "boda"; mood: "nudge" | "angry" | "friendly" };
   delivery: {
     type: string;
     stars: number;
@@ -29,6 +30,12 @@ export interface GameEvents {
   photo: { id: string };
   refuel: { liters: number; cost: number };
   topSpeed: { kmh: number };
+  /** Someone speaks: shown as a speech bubble, and voiced when a recording exists for `key`. */
+  say: { key: string; who: string; text: string };
+  /** The boda phone rings (true) or stops ringing (false). */
+  ringing: { on: boolean };
+  /** A message or mobile-money alert arrived on the boda phone. */
+  sms: { from: string };
 }
 
 type Handler<K extends keyof GameEvents> = (payload: GameEvents[K]) => void;

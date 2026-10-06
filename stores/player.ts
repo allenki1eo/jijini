@@ -78,6 +78,8 @@ export interface Profile {
   cosmetics: string[];
   /** Lifetime earnings per city (TZS), shown on the city cards. */
   cityEarnings: Record<string, number>;
+  /** Regular customers (name → rides together). They phone you for work. */
+  regulars: Record<string, number>;
 }
 
 const EMPTY_STATS: PlayerStats = {
@@ -134,6 +136,7 @@ export const NEW_PROFILE: Profile = {
   lastCity: "shinyanga",
   cosmetics: [],
   cityEarnings: {},
+  regulars: {},
 };
 
 /** XP needed to go from `level` to `level + 1`. */
@@ -145,6 +148,8 @@ interface PlayerActions {
   earn: (amount: number, xp: number) => void;
   /** Spend money if affordable. Returns false when broke. */
   spend: (amount: number) => boolean;
+  /** Money that isn't income: customers' shopping money in, change back out. Never below zero. */
+  transfer: (amount: number) => void;
   buyBike: (id: BikeId) => boolean;
   equipBike: (id: BikeId) => void;
   buyUpgrade: (id: UpgradeId) => boolean;
@@ -183,6 +188,7 @@ export const usePlayer = create<PlayerState>()(
         set((s) => ({ wallet: s.wallet - amount }));
         return true;
       },
+      transfer: (amount) => set((s) => ({ wallet: Math.max(0, s.wallet + amount) })),
       buyBike: (id) => {
         const s = get();
         if (s.owned.includes(id) || !s.spend(BIKES[id].price)) return false;

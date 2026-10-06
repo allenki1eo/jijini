@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { BarChart3, Crosshair, CloudFog, CloudRain, Fuel, Grid3x3, Map as MapIcon, MapPin, Moon, Pause, Plane, Route, Sun, Video } from "lucide-react";
+import { BarChart3, Crosshair, CloudFog, CloudRain, Fuel, Grid3x3, Map as MapIcon, MapPin, Moon, Pause, PhoneCall, Plane, Route, Sun, Video } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Chip, IconButton, Segmented } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
@@ -141,6 +141,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, pauseEx
             <IconButton label={t.life.weather.rain} icon={<CloudRain />} onClick={() => setWeather("rain")} />
             <IconButton label={t.life.weather.haze} icon={<CloudFog />} onClick={() => setWeather("haze")} />
             <IconButton label={t.world.teleport} icon={<Crosshair />} onClick={() => game.debugJumpToTarget()} />
+            <IconButton label={t.world.ringPhone} icon={<PhoneCall />} onClick={() => game.phone?.ring()} />
           </div>
         </div>
       )}

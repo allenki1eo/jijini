@@ -63,6 +63,14 @@ export const overpassQuery = ({ south, west, north, east }: BBox): string => {
   node["amenity"](${b});
   node["shop"](${b});
   node["tourism"](${b});
+  way["tourism"](${b});
+  way["shop"](${b});
+  nwr["office"](${b});
+  nwr["healthcare"](${b});
+  nwr["craft"](${b});
+  node["highway"="bus_stop"](${b});
+  nwr["public_transport"](${b});
+  node["name"]["building"](${b});
   way["barrier"](${b});
   node["natural"="tree"](${b});
 );

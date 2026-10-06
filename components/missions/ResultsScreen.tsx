@@ -89,6 +89,17 @@ function Body({ result, onNext, onClose }: { result: MissionResult; onNext: () =
           </dl>
         )}
 
+        {result.shopping && result.shopping.paid > 0 && (
+          <p className="flex flex-wrap justify-center gap-x-3 gap-y-1 rounded-2xl bg-forest/15 px-4 py-2 text-center text-sm text-cream/80">
+            <span>
+              {t.results.shoppingPaid} <b className="tabular">{formatTzs(result.shopping.paid)}</b>
+            </span>
+            <span>
+              {result.shopping.change >= 0 ? t.results.changeBack : t.results.toppedUp} <b className="tabular">{formatTzs(Math.abs(result.shopping.change))}</b>
+            </span>
+          </p>
+        )}
+
         <div>
           <div className="mb-1 flex justify-between font-display text-sm font-bold text-cream/70">
             <span>

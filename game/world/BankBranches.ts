@@ -9,7 +9,9 @@ import * as THREE from "three";
 import { BANKS, bankOf, type BankId } from "@/data/banks";
 import { POI_KINDS, type Poi } from "./format";
 import { block, createInstancedMaterial, merge, part, setInstanceHex } from "./meshKit";
+import type { NavNetwork } from "@/game/traffic/NavNetwork";
 import { PERSON_GEOMETRY } from "./people";
+import { roadClearance } from "./roadClearance";
 
 const MAX_BRANCHES = 24;
 
@@ -73,8 +75,9 @@ export class BankBranches {
   private readonly material = createInstancedMaterial({ glowStrength: 1.6 });
   private readonly owned: { dispose(): void }[] = [];
 
-  constructor(pois: Poi[]) {
+  constructor(pois: Poi[], nav: NavNetwork) {
     this.group.name = "banks";
+    const clear = roadClearance(nav);
     const bankKind = POI_KINDS.indexOf("bank");
     const sites = pois
       .filter((p) => p.k === bankKind && p.r)
@@ -97,6 +100,10 @@ export class BankBranches {
       const x = cx + dx * Math.min(2, d), z = cz + dz * Math.min(2, d);
       if (this.branches.some((b) => Math.hypot(b.x - x, b.z - z) < 12)) continue;
       const yaw = Math.atan2(dx, dz);
+      // The canopy and the walls must stay off every road (a side street, a bend), not just the one in front.
+      const c0 = Math.cos(yaw), s0 = Math.sin(yaw);
+      const corners: [number, number][] = [[-2.1, -1.4], [2.1, -1.4], [-1.7, 2.2], [1.7, 2.2]];
+      if (corners.some(([lx, lz]) => clear(x + lx * c0 + lz * s0, z - lx * s0 + lz * c0) < 0.6)) continue;
       let model = models.get(bank);
       if (!model) {
         const sign = new THREE.MeshBasicMaterial({ map: signTexture(bank), toneMapped: false });

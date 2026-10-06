@@ -9,7 +9,7 @@ import * as THREE from "three";
 import type { NavNetwork } from "@/game/traffic/NavNetwork";
 import { POI_KINDS, type Poi } from "./format";
 import { block, createInstancedMaterial, merge, part, setInstanceHex } from "./meshKit";
-import { CLOTHES, PERSON_GEOMETRY, PERSON_KINDS, personKindFor, type PersonKind } from "./people";
+import { CLOTHES, CrowdUmbrellas, PERSON_GEOMETRY, PERSON_KINDS, personKindFor, type PersonKind } from "./people";
 
 const STALL_KINDS = ["produce", "mitumba", "ntilie", "baskets"] as const;
 type StallKind = (typeof STALL_KINDS)[number];
@@ -90,6 +90,7 @@ export class Markets {
   readonly centres: [number, number][] = [];
   private readonly material = createInstancedMaterial({ glowStrength: 2 });
   private readonly geometries: THREE.BufferGeometry[] = [];
+  private readonly umbrellas: CrowdUmbrellas;
 
   constructor(nav: NavNetwork, pois: Poi[]) {
     this.group.name = "markets";
@@ -145,6 +146,8 @@ export class Markets {
 
     // A seller behind each stall, and shoppers browsing in front of some.
     const people: Record<PersonKind, { x: number; z: number; yaw: number; color: string }[]> = { man: [], mama: [], kid: [], mzee: [] };
+    // Sellers keep dry under the stall awnings; shoppers out front put up umbrellas when it rains.
+    const shoppers: { x: number; z: number; yaw: number; kind: PersonKind }[] = [];
     stalls.forEach((s, i) => {
       const fx = -Math.sin(s.yaw), fz = -Math.cos(s.yaw);
       const seller = i % 3 === 0 ? "man" : "mama";
@@ -152,7 +155,9 @@ export class Markets {
       if (i % 2 === 0) {
         const kind = personKindFor(i + 3);
         const side = ((i % 4) - 1.5) * 0.4;
-        people[kind].push({ x: s.x + fx * 1.25 + Math.cos(s.yaw) * side, z: s.z + fz * 1.25 - Math.sin(s.yaw) * side, yaw: s.yaw + Math.PI, color: CLOTHES[kind][(i * 3) % CLOTHES[kind].length]! });
+        const shopper = { x: s.x + fx * 1.25 + Math.cos(s.yaw) * side, z: s.z + fz * 1.25 - Math.sin(s.yaw) * side, yaw: s.yaw + Math.PI };
+        people[kind].push({ ...shopper, color: CLOTHES[kind][(i * 3) % CLOTHES[kind].length]! });
+        shoppers.push({ ...shopper, kind });
       }
       // The stall front is solid.
       const hx = Math.cos(s.yaw) * 1.15, hz = -Math.sin(s.yaw) * 1.15;
@@ -175,9 +180,16 @@ export class Markets {
       this.group.add(mesh);
       this.geometries.push(geometry);
     }
+    this.umbrellas = new CrowdUmbrellas(shoppers, this.material, 1);
+    if (this.umbrellas.mesh) this.group.add(this.umbrellas.mesh);
+  }
+
+  update(rain: number) {
+    this.umbrellas.update(rain);
   }
 
   dispose() {
+    this.umbrellas.dispose();
     this.geometries.forEach((g) => g.dispose());
     this.material.dispose();
   }

@@ -4,7 +4,7 @@
  * and shoppers, and the people waiting at bus stops.
  */
 import * as THREE from "three";
-import { block, merge, part } from "./meshKit";
+import { block, merge, part, setInstanceHex } from "./meshKit";
 
 export const PERSON_KINDS = ["man", "mama", "kid", "mzee"] as const;
 export type PersonKind = (typeof PERSON_KINDS)[number];
@@ -76,3 +76,93 @@ export const personKindFor = (i: number): PersonKind => {
   const r = ((i * 2654435761) >>> 0) % 10;
   return r < 4 ? "man" : r < 7 ? "mama" : r < 9 ? "kid" : "mzee";
 };
+
+// ── Umbrellas ───────────────────────────────────────────────────────────────
+
+/**
+ * An umbrella held in the right hand, in the person's local frame with the
+ * shaft on the origin: a tinted eight-panel dome over a man's head (with
+ * its underside, seen from the kerb), a dark rim, a finial on top and a
+ * curved handle at hand height. Each instance is offset to the hand and
+ * scaled for the person (see `umbrellaMatrix`); scaling x/z opens and
+ * closes it.
+ */
+export const umbrellaGeometry = () => {
+  // A shallow cap of a sphere: rim radius ≈ 0.6 m, about 0.3 m deep, rim at y = 2.
+  const R = 0.72, cap = 0.98;
+  const rim = R * Math.sin(cap), lift = 2 - R * Math.cos(cap);
+  return merge([
+    part(new THREE.SphereGeometry(R, 8, 3, 0, Math.PI * 2, 0, cap).translate(0, lift, 0), "#FFFFFF", { tint: true }),
+    part(new THREE.CircleGeometry(rim, 8).rotateX(Math.PI / 2).translate(0, 2.0, 0), "#FFFFFF", { tint: true }),
+    part(new THREE.CylinderGeometry(rim + 0.005, rim + 0.005, 0.035, 8, 1, true).translate(0, 2.0, 0), "#1B1D22"),
+    part(new THREE.CylinderGeometry(0.012, 0.012, 1.15, 5).translate(0, 1.5, 0), "#2A2E3A"),
+    part(new THREE.CylinderGeometry(0.018, 0.01, 0.12, 5).translate(0, lift + R + 0.04, 0), "#C9D0DC"),
+    part(new THREE.TorusGeometry(0.05, 0.016, 5, 8, Math.PI).rotateZ(Math.PI).translate(0.05, 0.93, 0), "#3A2A20"),
+  ]);
+};
+
+/** Height and canopy scale for each kind (the mama's umbrella clears her basket; a kid's is smaller). */
+const UMBRELLA_FIT: Record<PersonKind, { y: number; r: number; hand: number }> = {
+  man: { y: 1, r: 1, hand: 0.22 },
+  mama: { y: 1.1, r: 1.05, hand: 0.24 },
+  kid: { y: 0.72, r: 0.75, hand: 0.17 },
+  mzee: { y: 1.02, r: 1, hand: 0.2 },
+};
+
+/** Canopy colours: plenty of black, then the bright ones you see in a downpour. */
+export const UMBRELLA_COLORS = ["#16181D", "#1F3A63", "#C62828", "#16181D", "#0B6E4F", "#F2C94C", "#7C3AED", "#E0457B", "#2F80ED", "#16181D", "#F37021"];
+
+/** Who has an umbrella: about four in five, picked steadily per index. */
+export const hasUmbrella = (i: number) => ((i * 2246822519) >>> 0) % 5 !== 0;
+
+/** How open umbrellas are for the rain level: closed in the dry, fully open in a proper shower. */
+export const umbrellaOpen = (rain: number) => Math.max(0, Math.min(1, (rain - 0.12) / 0.3));
+
+const umbrellaDummy = new THREE.Object3D();
+/** The umbrella's matrix for a person standing at (x, z) facing `yaw`, `open` 0–1. */
+export const umbrellaMatrix = (kind: PersonKind, x: number, y: number, z: number, yaw: number, open: number) => {
+  const fit = UMBRELLA_FIT[kind];
+  // In the right hand (local +x), leaning over the head and a little forward into the rain.
+  umbrellaDummy.position.set(x + Math.cos(yaw) * fit.hand, y, z - Math.sin(yaw) * fit.hand);
+  umbrellaDummy.rotation.set(-0.12 * open, yaw, 0.08, "YXZ");
+  const r = fit.r * (0.14 + 0.86 * open);
+  umbrellaDummy.scale.set(r, fit.y, r);
+  umbrellaDummy.updateMatrix();
+  return umbrellaDummy.matrix;
+};
+
+/**
+ * Umbrellas for a crowd that stands still (pupils at the gate, shoppers at
+ * the stalls). They open as the rain starts and fold away when it stops;
+ * matrices are only rewritten while that's happening.
+ */
+export class CrowdUmbrellas {
+  readonly mesh: THREE.InstancedMesh | null = null;
+  private readonly people: { x: number; z: number; yaw: number; kind: PersonKind }[];
+  private open = -1;
+
+  constructor(people: { x: number; z: number; yaw: number; kind: PersonKind }[], material: THREE.Material, seed = 0) {
+    this.people = people.filter((_, i) => hasUmbrella(i + seed));
+    if (!this.people.length) return;
+    this.mesh = new THREE.InstancedMesh(umbrellaGeometry(), material, this.people.length);
+    this.people.forEach((_, i) => setInstanceHex(this.mesh!, i, UMBRELLA_COLORS[(i * 7 + seed) % UMBRELLA_COLORS.length]!));
+    this.mesh.frustumCulled = false;
+    this.mesh.visible = false;
+  }
+
+  /** `shown` lets the owner hide them with the crowd (pupils go home at 6). */
+  update(rain: number, shown = true) {
+    if (!this.mesh) return;
+    const open = umbrellaOpen(rain);
+    this.mesh.visible = shown && open > 0;
+    if (!this.mesh.visible || Math.abs(open - this.open) < 0.02) return;
+    this.open = open;
+    this.people.forEach((p, i) => this.mesh!.setMatrixAt(i, umbrellaMatrix(p.kind, p.x, 0, p.z, p.yaw, open)));
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  dispose() {
+    this.mesh?.geometry.dispose();
+    this.mesh?.dispose();
+  }
+}

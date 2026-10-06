@@ -315,12 +315,12 @@ export class Game {
       keepOut.push({ x: spot.x, z: spot.z, r: 9 });
     }
     // Schools, churches and mosques, pitches and playgrounds.
-    this.civic = new Civic(pois);
+    this.civic = new Civic(pois, nav);
     this.root.add(this.civic.group);
     if (this.civic.walls.length) this.index.addChunk("civic", new Float32Array(this.civic.walls), new Float32Array());
     keepOut.push(...this.civic.keepOut);
     // Bank branches with ATMs, and mapped mobile-money agents.
-    this.banks = new BankBranches(pois);
+    this.banks = new BankBranches(pois, nav);
     this.root.add(this.banks.group);
     if (this.banks.walls.length) this.index.addChunk("banks", new Float32Array(this.banks.walls), new Float32Array());
     for (const b of this.banks.branches) {
@@ -813,6 +813,7 @@ export class Game {
     this.traffic?.update(dt, this.bike, this.stats, this.obstacles);
     this.peds?.update(dt, this.bike, this.stats, this.traffic ?? undefined);
     this.civic?.update(dt);
+    this.markets?.update(env.rain);
     this.checkVibaka(dt);
     const player = usePlayer.getState();
     const licence = { valid: this.licenceHours > 0, hesabu: HESABU[this.cityId] };

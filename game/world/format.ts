@@ -207,3 +207,28 @@ export interface Poi {
 }
 
 export const chunkKey = (cx: number, cz: number): string => `${cx}_${cz}`;
+
+// ── Street frontage (frontage.json) ─────────────────────────────────────────
+
+/**
+ * Shop kinds for the generated street frontage. Where OpenStreetMap has no
+ * buildings along a street, the bake fills the verge with rows of dukas so
+ * streets read as real Tanzanian shopping streets.
+ */
+export const SHOP_KINDS = ["duka", "phone", "salon", "pharmacy", "hardware", "clothes", "food"] as const;
+export type ShopKind = (typeof SHOP_KINDS)[number];
+
+/** Values per shop in `FrontageFile.shops`. */
+export const FRONTAGE_STRIDE = 9;
+
+export interface FrontageFile {
+  format: 1;
+  /**
+   * Flat records of FRONTAGE_STRIDE numbers: x, z (dm, front-centre at the kerb side),
+   * yaw (milliradians; the shop faces local −z), width, depth (dm), floors,
+   * kind (index into SHOP_KINDS), wall colour (palette index), sign (index into `signs`).
+   */
+  shops: number[];
+  /** Signboard texts: a real OSM shop name where one is nearby, otherwise a typical local one. */
+  signs: string[];
+}

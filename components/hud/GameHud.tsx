@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Coins } from "lucide-react";
+import { Briefcase, Coins, Fuel } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MissionBoard } from "@/components/missions/MissionBoard";
 import { MissionTracker } from "@/components/missions/MissionTracker";
@@ -20,7 +20,31 @@ import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
 import { AgeGate } from "./AgeGate";
 import { RideHud, useTouchDevice } from "./RideHud";
+import { useHudTick } from "./useHudTick";
+import { cn } from "@/lib/cn";
 import { Tutorial } from "./Tutorial";
+
+/** "Tafuta sheli": turn-by-turn directions to the nearest petrol station, on the arrow and the minimap. */
+function FuelFinder({ game }: { game: Game }) {
+  useHudTick(4);
+  const t = useT();
+  const on = game.fuelNavOn;
+  return (
+    <button
+      type="button"
+      onClick={() => game.toggleFuelNav()}
+      aria-pressed={on}
+      aria-label={t.nav.findFuel}
+      className={cn(
+        "chunky flex min-h-11 items-center gap-2 rounded-2xl px-3 font-display text-sm font-extrabold ring-1",
+        on ? "bg-coral text-cream ring-coral [--edge:var(--color-coral-700)]" : "bg-night-600/95 text-cream ring-white/10 [--edge:var(--color-night)]",
+      )}
+    >
+      <Fuel className={cn("size-5", on ? "text-cream" : "text-coral")} />
+      <span className="max-sm:hidden short:hidden">{t.nav.findFuel}</span>
+    </button>
+  );
+}
 
 /** Wallet in a few characters for narrow screens: 250k, 1.2M. */
 const shortTzs = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatTzs(n));
@@ -76,6 +100,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
               {t.missions.open}
             </Button>
           )}
+          {!tutorial && <FuelFinder game={game} />}
         </>
       }
       topLeft={

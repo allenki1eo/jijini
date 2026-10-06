@@ -12,6 +12,7 @@ export const cityFiles = (id: string, manifest: CityManifest) => [
   `/cities/${id}/manifest.json`,
   `/cities/${id}/navgraph.json`,
   `/cities/${id}/pois.json`,
+  `/cities/${id}/frontage.json`,
   `/cities/${id}/preview.json`,
   ...manifest.chunks.map((c) => `/cities/${id}/chunks/${c.key}.json`),
 ];

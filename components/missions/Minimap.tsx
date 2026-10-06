@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Game } from "@/game/core/Game";
+import { navHud } from "@/game/core/hud";
 import { missionHud } from "@/game/missions/MissionRunner";
 import { PLACE_STYLE, atlasCell, placeAtlas } from "@/game/world/places";
 import { POI_KINDS } from "@/game/world/format";
@@ -72,6 +73,23 @@ export function Minimap({ game }: { game: Game }) {
           ctx.lineTo(x2, y2);
           ctx.stroke();
         }
+      }
+
+      // The drive to a sheli, under the job route.
+      const fuelRoute = navHud.fuelRoute;
+      if (fuelRoute && fuelRoute.length >= 4) {
+        ctx.strokeStyle = "#FF5A4F";
+        ctx.lineWidth = 3.5;
+        ctx.lineJoin = "round";
+        ctx.setLineDash([7, 5]);
+        ctx.beginPath();
+        for (let i = 0; i < fuelRoute.length; i += 2) {
+          const [x, y] = tx(fuelRoute[i]!, fuelRoute[i + 1]!);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       // Route.
@@ -157,6 +175,23 @@ export function Minimap({ game }: { game: Game }) {
         ctx.arc(x, y, 7, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+      }
+      // The sheli being driven to, pinned to the rim when off the map.
+      if (fuelRoute && fuelRoute.length >= 2) {
+        let [x, y] = tx(fuelRoute[fuelRoute.length - 2]!, fuelRoute[fuelRoute.length - 1]!);
+        const dx = x - SIZE / 2, dy = y - SIZE / 2;
+        const d = Math.hypot(dx, dy);
+        const max = SIZE / 2 - 11;
+        if (d > max) {
+          x = SIZE / 2 + (dx / d) * max;
+          y = SIZE / 2 + (dy / d) * max;
+        }
+        const [fx, fy, fc] = atlasCell(POI_KINDS.indexOf("fuel"));
+        ctx.fillStyle = "#10131A";
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.drawImage(atlas, fx, fy, fc, fc, x - 9, y - 9, 18, 18);
       }
       ctx.restore();
 

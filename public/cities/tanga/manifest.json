@@ -2,7 +2,7 @@
   "format": 1,
   "id": "tanga",
   "name": "Tanga",
-  "generatedAt": "2026-10-06T10:24:29.712Z",
+  "generatedAt": "2026-10-06T16:08:02.067Z",
   "source": "overpass",
   "origin": {
     "lat": -5.0705,
@@ -44,19 +44,19 @@
       "key": "-4_0",
       "cx": -4,
       "cz": 0,
-      "bytes": 22823
+      "bytes": 22696
     },
     {
       "key": "-4_1",
       "cx": -4,
       "cz": 1,
-      "bytes": 24066
+      "bytes": 23690
     },
     {
       "key": "-4_2",
       "cx": -4,
       "cz": 2,
-      "bytes": 15869
+      "bytes": 15465
     },
     {
       "key": "-4_3",
@@ -98,7 +98,7 @@
       "key": "-3_1",
       "cx": -3,
       "cz": 1,
-      "bytes": 15464
+      "bytes": 15116
     },
     {
       "key": "-3_2",
@@ -140,7 +140,7 @@
       "key": "-2_0",
       "cx": -2,
       "cz": 0,
-      "bytes": 15872
+      "bytes": 15753
     },
     {
       "key": "-2_1",
@@ -152,7 +152,7 @@
       "key": "-2_2",
       "cx": -2,
       "cz": 2,
-      "bytes": 10007
+      "bytes": 9880
     },
     {
       "key": "-2_3",
@@ -182,7 +182,7 @@
       "key": "-1_-1",
       "cx": -1,
       "cz": -1,
-      "bytes": 5689
+      "bytes": 5587
     },
     {
       "key": "-1_0",
@@ -194,7 +194,7 @@
       "key": "-1_1",
       "cx": -1,
       "cz": 1,
-      "bytes": 15439
+      "bytes": 15334
     },
     {
       "key": "-1_2",
@@ -230,7 +230,7 @@
       "key": "0_-1",
       "cx": 0,
       "cz": -1,
-      "bytes": 4909
+      "bytes": 4798
     },
     {
       "key": "0_0",
@@ -248,13 +248,13 @@
       "key": "0_2",
       "cx": 0,
       "cz": 2,
-      "bytes": 12743
+      "bytes": 12670
     },
     {
       "key": "0_3",
       "cx": 0,
       "cz": 3,
-      "bytes": 13945
+      "bytes": 13858
     },
     {
       "key": "1_-4",
@@ -296,7 +296,7 @@
       "key": "1_2",
       "cx": 1,
       "cz": 2,
-      "bytes": 13695
+      "bytes": 13536
     },
     {
       "key": "1_3",
@@ -326,25 +326,25 @@
       "key": "2_-1",
       "cx": 2,
       "cz": -1,
-      "bytes": 5766
+      "bytes": 5651
     },
     {
       "key": "2_0",
       "cx": 2,
       "cz": 0,
-      "bytes": 12643
+      "bytes": 12095
     },
     {
       "key": "2_1",
       "cx": 2,
       "cz": 1,
-      "bytes": 17507
+      "bytes": 16599
     },
     {
       "key": "2_2",
       "cx": 2,
       "cz": 2,
-      "bytes": 19262
+      "bytes": 18956
     },
     {
       "key": "2_3",
@@ -374,19 +374,19 @@
       "key": "3_-1",
       "cx": 3,
       "cz": -1,
-      "bytes": 7744
+      "bytes": 7625
     },
     {
       "key": "3_0",
       "cx": 3,
       "cz": 0,
-      "bytes": 21685
+      "bytes": 21129
     },
     {
       "key": "3_1",
       "cx": 3,
       "cz": 1,
-      "bytes": 14731
+      "bytes": 14030
     },
     {
       "key": "3_2",
@@ -398,7 +398,7 @@
       "key": "3_3",
       "cx": 3,
       "cz": 3,
-      "bytes": 31274
+      "bytes": 31036
     }
   ],
   "spawn": {
@@ -407,13 +407,13 @@
     "heading": 1.338
   },
   "stats": {
-    "buildings": 4309,
+    "buildings": 4266,
     "roads": 215,
     "pois": 805,
     "navNodes": 388,
     "navEdges": 561,
-    "trees": 2348
+    "trees": 2355
   },
-  "totalBytes": 737342,
+  "totalBytes": 756734,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

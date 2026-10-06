@@ -12,8 +12,8 @@ const TURN_ICON: Record<NavTurn, typeof ArrowUp> = { straight: ArrowUp, left: Co
 /**
  * The direction arrow at the top of the screen: a big arrow that swings to
  * where the road goes next, the next turn and how far it is, and the distance
- * left. Follows the job route, or points at the nearest sheli when the tank
- * is nearly dry.
+ * left. Follows the job route, or the drive to the nearest sheli when the
+ * rider asks for one or the tank is nearly dry.
  */
 export function NavArrow() {
   useHudTick(12);
@@ -23,13 +23,11 @@ export function NavArrow() {
   const angle = (navHud.angle * 180) / Math.PI;
 
   const fuel = navHud.mode === "fuel";
-  const TurnIcon = fuel ? Fuel : TURN_ICON[navHud.turn];
-  const instruction = fuel ? t.nav.fuel : t.nav[navHud.turn];
-  const sub = fuel
-    ? `${navHud.label || t.nav.fuelShort} · ${formatDistance(navHud.distance)}`
-    : navHud.turn === "straight" || navHud.turn === "arrive"
-      ? fmt(t.nav.toGo, { d: formatDistance(navHud.distance) })
-      : `${fmt(t.nav.in, { d: formatDistance(navHud.turnIn) })} · ${fmt(t.nav.toGo, { d: formatDistance(navHud.distance) })}`;
+  const TurnIcon = TURN_ICON[navHud.turn];
+  const instruction = t.nav[navHud.turn];
+  const togo = navHud.turn === "straight" || navHud.turn === "arrive" ? fmt(t.nav.toGo, { d: formatDistance(navHud.distance) }) : `${fmt(t.nav.in, { d: formatDistance(navHud.turnIn) })} · ${fmt(t.nav.toGo, { d: formatDistance(navHud.distance) })}`;
+  // To a sheli the card names the station; when the tank ran low on its own it says why first.
+  const sub = fuel ? `${navHud.asked ? navHud.label || t.nav.fuelShort : t.nav.fuel} · ${togo}` : togo;
 
   return (
     <div
@@ -54,6 +52,7 @@ export function NavArrow() {
       </div>
       <div className="min-w-0">
         <p className="flex items-center gap-1.5 font-display text-lg leading-tight font-extrabold text-cream short:text-base">
+          {fuel && <Fuel className="size-5 shrink-0 text-coral" strokeWidth={2.6} />}
           <TurnIcon className={cn("size-5 shrink-0", fuel ? "text-coral" : "text-sun")} strokeWidth={2.6} />
           <span className="truncate">{instruction}</span>
         </p>

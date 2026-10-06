@@ -2,7 +2,7 @@
   "format": 1,
   "id": "dodoma",
   "name": "Dodoma",
-  "generatedAt": "2026-10-06T10:24:12.358Z",
+  "generatedAt": "2026-10-06T16:07:59.535Z",
   "source": "osm-api",
   "origin": {
     "lat": -6.1731,
@@ -26,13 +26,13 @@
       "key": "-4_-3",
       "cx": -4,
       "cz": -3,
-      "bytes": 9428
+      "bytes": 9299
     },
     {
       "key": "-4_-2",
       "cx": -4,
       "cz": -2,
-      "bytes": 9167
+      "bytes": 9086
     },
     {
       "key": "-4_-1",
@@ -62,19 +62,19 @@
       "key": "-4_3",
       "cx": -4,
       "cz": 3,
-      "bytes": 8041
+      "bytes": 7958
     },
     {
       "key": "-3_-4",
       "cx": -3,
       "cz": -4,
-      "bytes": 16986
+      "bytes": 16786
     },
     {
       "key": "-3_-3",
       "cx": -3,
       "cz": -3,
-      "bytes": 11079
+      "bytes": 10503
     },
     {
       "key": "-3_-2",
@@ -92,19 +92,19 @@
       "key": "-3_0",
       "cx": -3,
       "cz": 0,
-      "bytes": 17471
+      "bytes": 16484
     },
     {
       "key": "-3_1",
       "cx": -3,
       "cz": 1,
-      "bytes": 5677
+      "bytes": 5617
     },
     {
       "key": "-3_2",
       "cx": -3,
       "cz": 2,
-      "bytes": 4227
+      "bytes": 4167
     },
     {
       "key": "-3_3",
@@ -116,7 +116,7 @@
       "key": "-2_-4",
       "cx": -2,
       "cz": -4,
-      "bytes": 20620
+      "bytes": 20485
     },
     {
       "key": "-2_-3",
@@ -134,13 +134,13 @@
       "key": "-2_-1",
       "cx": -2,
       "cz": -1,
-      "bytes": 19348
+      "bytes": 18596
     },
     {
       "key": "-2_0",
       "cx": -2,
       "cz": 0,
-      "bytes": 10249
+      "bytes": 10022
     },
     {
       "key": "-2_1",
@@ -158,13 +158,13 @@
       "key": "-2_3",
       "cx": -2,
       "cz": 3,
-      "bytes": 9389
+      "bytes": 9240
     },
     {
       "key": "-1_-4",
       "cx": -1,
       "cz": -4,
-      "bytes": 13658
+      "bytes": 13392
     },
     {
       "key": "-1_-3",
@@ -182,7 +182,7 @@
       "key": "-1_-1",
       "cx": -1,
       "cz": -1,
-      "bytes": 5980
+      "bytes": 5779
     },
     {
       "key": "-1_0",
@@ -194,19 +194,19 @@
       "key": "-1_1",
       "cx": -1,
       "cz": 1,
-      "bytes": 9170
+      "bytes": 8786
     },
     {
       "key": "-1_2",
       "cx": -1,
       "cz": 2,
-      "bytes": 8909
+      "bytes": 8760
     },
     {
       "key": "-1_3",
       "cx": -1,
       "cz": 3,
-      "bytes": 5904
+      "bytes": 5776
     },
     {
       "key": "0_-4",
@@ -242,13 +242,13 @@
       "key": "0_1",
       "cx": 0,
       "cz": 1,
-      "bytes": 8582
+      "bytes": 8471
     },
     {
       "key": "0_2",
       "cx": 0,
       "cz": 2,
-      "bytes": 6314
+      "bytes": 6177
     },
     {
       "key": "0_3",
@@ -290,31 +290,31 @@
       "key": "1_1",
       "cx": 1,
       "cz": 1,
-      "bytes": 11982
+      "bytes": 11466
     },
     {
       "key": "1_2",
       "cx": 1,
       "cz": 2,
-      "bytes": 10434
+      "bytes": 9676
     },
     {
       "key": "1_3",
       "cx": 1,
       "cz": 3,
-      "bytes": 11220
+      "bytes": 10077
     },
     {
       "key": "2_-4",
       "cx": 2,
       "cz": -4,
-      "bytes": 17345
+      "bytes": 17097
     },
     {
       "key": "2_-3",
       "cx": 2,
       "cz": -3,
-      "bytes": 9883
+      "bytes": 9750
     },
     {
       "key": "2_-2",
@@ -326,7 +326,7 @@
       "key": "2_-1",
       "cx": 2,
       "cz": -1,
-      "bytes": 10026
+      "bytes": 9898
     },
     {
       "key": "2_0",
@@ -344,19 +344,19 @@
       "key": "2_2",
       "cx": 2,
       "cz": 2,
-      "bytes": 7934
+      "bytes": 7644
     },
     {
       "key": "2_3",
       "cx": 2,
       "cz": 3,
-      "bytes": 7720
+      "bytes": 7651
     },
     {
       "key": "3_-4",
       "cx": 3,
       "cz": -4,
-      "bytes": 18907
+      "bytes": 18609
     },
     {
       "key": "3_-3",
@@ -374,13 +374,13 @@
       "key": "3_-1",
       "cx": 3,
       "cz": -1,
-      "bytes": 10761
+      "bytes": 10516
     },
     {
       "key": "3_0",
       "cx": 3,
       "cz": 0,
-      "bytes": 6196
+      "bytes": 5859
     },
     {
       "key": "3_1",
@@ -392,13 +392,13 @@
       "key": "3_2",
       "cx": 3,
       "cz": 2,
-      "bytes": 9960
+      "bytes": 9655
     },
     {
       "key": "3_3",
       "cx": 3,
       "cz": 3,
-      "bytes": 3487
+      "bytes": 3600
     }
   ],
   "spawn": {
@@ -407,13 +407,13 @@
     "heading": 2.549
   },
   "stats": {
-    "buildings": 3278,
-    "roads": 369,
+    "buildings": 3201,
+    "roads": 366,
     "pois": 327,
     "navNodes": 559,
-    "navEdges": 793,
-    "trees": 3115
+    "navEdges": 790,
+    "trees": 3151
   },
-  "totalBytes": 628386,
+  "totalBytes": 642451,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

@@ -20,7 +20,7 @@ export function AgeGate({ enabled }: { enabled: boolean }) {
         <m.div
           role="dialog"
           aria-label={t.settings.ageTitle}
-          className="pointer-events-auto absolute top-[22%] left-1/2 z-30 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.6rem] bg-night-800/95 p-4 shadow-2xl ring-1 ring-white/12 backdrop-blur max-sm:top-auto max-sm:bottom-[19rem] short:top-14"
+          className="pointer-events-auto absolute top-[34%] left-1/2 z-30 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.6rem] bg-night-800/95 p-4 shadow-2xl ring-1 ring-white/12 backdrop-blur max-sm:top-auto max-sm:bottom-[19rem] short:top-14"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}

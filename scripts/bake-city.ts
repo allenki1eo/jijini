@@ -15,17 +15,22 @@ import {
   AREA_KINDS,
   BAKE_VERSION,
   chunkKey,
+  FRONTAGE_STRIDE,
+  POI_KINDS,
   ROAD_SPEED,
+  SHOP_KINDS,
   type BakedArea,
   type BakedBuilding,
   type BakedRoad,
   type ChunkData,
   type ChunkRef,
   type CityManifest,
+  type FrontageFile,
   type NavEdge,
   type NavGraph,
   type Poi,
   type RoadClass,
+  type ShopKind,
 } from "../game/world/format";
 import { FLAT_ROOFS, IRON_ROOFS, WALL_WEIGHTS } from "../game/world/palette";
 import {
@@ -250,7 +255,7 @@ const main = async () => {
   const driveIncidence = incidence((r) => isDrivable(r.cls));
 
   // Simplify each road between junctions so junction vertices survive exactly.
-  for (const r of roads) {
+  const computePoints = (r: RoadFeature) => {
     const pts: Vec2[] = [];
     let start = 0;
     for (let i = 1; i < r.nodeIds.length; i++) {
@@ -265,7 +270,8 @@ const main = async () => {
       }
     }
     r.points = pts;
-  }
+  };
+  roads.forEach(computePoints);
 
   // ── 3. Buildings ─────────────────────────────────────────────────────────
   const buildings: BuildingFeature[] = [];
@@ -277,6 +283,85 @@ const main = async () => {
   for (const rel of relations) {
     if (!rel.tags?.building) continue;
     for (const poly of relationPolygons(rel)) buildings.push({ id: rel.id, tags: rel.tags, ...poly });
+  }
+
+  // ── 3b. Roads and buildings that disagree ───────────────────────────────
+  // OSM footprints and road centrelines come from different mappers and often overlap.
+  // A street must never run through a house: a building sitting on a real road goes
+  // (the road is what riders use), and driveways, tracks and footpaths are cut where
+  // they run inside a building, so no road appears to come out of a wall.
+  {
+    const MAJOR = new Set<RoadFeature["cls"]>(["primary", "secondary", "tertiary", "residential"]);
+    const hash = new SpatialHash<number>(20);
+    buildings.forEach((b, i) => hash.insert(ringBounds(b.outer), i));
+    const removed = new Set<number>();
+    const hit = (p: Vec2) => {
+      for (const i of hash.query(p)) {
+        if (removed.has(i)) continue;
+        const b = buildings[i]!;
+        if (pointInRing(p, b.outer) && !b.holes.some((h) => pointInRing(p, h))) return i;
+      }
+      return -1;
+    };
+    /** Points along a segment every ~1.5 m, optionally pushed sideways by `side` metres. */
+    const samples = (a: Vec2, b: Vec2, side: number): Vec2[] => {
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const n = Math.max(1, Math.ceil(len / 1.5));
+      const nx = len ? -(b[1] - a[1]) / len : 0, nz = len ? (b[0] - a[0]) / len : 0;
+      const out: Vec2[] = [];
+      for (let k = 0; k <= n; k++) {
+        const t = k / n;
+        const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t;
+        out.push([x, z]);
+        if (side) out.push([x + nx * side, z + nz * side], [x - nx * side, z - nz * side]);
+      }
+      return out;
+    };
+
+    // Buildings on the carriageway of a real street.
+    for (const r of roads) {
+      if (!MAJOR.has(r.cls)) continue;
+      const side = Math.max(0, r.width / 2 - 0.6);
+      for (let k = 1; k < r.points.length; k++) {
+        for (const p of samples(r.points[k - 1]!, r.points[k]!, side)) {
+          const i = hit(p);
+          if (i >= 0) removed.add(i);
+        }
+      }
+    }
+
+    // Minor ways: keep only the runs of segments that stay outside buildings.
+    const split: RoadFeature[] = [];
+    let clipped = 0;
+    for (const r of roads) {
+      if (MAJOR.has(r.cls)) {
+        split.push(r);
+        continue;
+      }
+      const blocked = r.nodeIds.slice(1).map((id, k) => samples(pos.get(r.nodeIds[k]!)!, pos.get(id)!, 0).some((p) => hit(p) >= 0));
+      if (!blocked.some(Boolean)) {
+        split.push(r);
+        continue;
+      }
+      clipped++;
+      let run: number[] = [r.nodeIds[0]!];
+      const flush = () => {
+        const pts = run.map((id) => pos.get(id)!);
+        if (run.length >= 2 && polylineLength(pts) >= 4) split.push({ ...r, nodeIds: run, points: [] });
+      };
+      blocked.forEach((b, k) => {
+        if (b) {
+          flush();
+          run = [r.nodeIds[k + 1]!];
+        } else run.push(r.nodeIds[k + 1]!);
+      });
+      flush();
+    }
+    for (const r of split) if (!r.points.length) computePoints(r);
+    roads.splice(0, roads.length, ...split);
+    const kept = buildings.filter((_, i) => !removed.has(i));
+    log(`  ✓ Cleared ${removed.size} buildings off streets, trimmed ${clipped} paths that ran into buildings`);
+    buildings.splice(0, buildings.length, ...kept);
   }
 
   // ── 4. Areas & water ─────────────────────────────────────────────────────
@@ -370,6 +455,146 @@ const main = async () => {
     const ring = closedRing(way);
     if (ring && (t.amenity || t.shop || t.tourism || t.office || t.healthcare || t.craft || t.public_transport)) addPoi(t, centroid(ring));
   }
+
+  // ── 5b. Street frontage ─────────────────────────────────────────────────
+  // Rows of dukas along streets wherever the map has no buildings, so a street
+  // is lined with shops instead of opening onto bare ground. Real shop names
+  // from OSM go on the signboards nearest to where those shops are mapped.
+  const frontage = (() => {
+    const rand = seededRandom(hashId(city.center.lat * 1e6 + city.center.lon * 1e3, 9));
+    const shops: number[] = [];
+    const signs: string[] = [];
+    const signIndex = new Map<string, number>();
+    const sign = (text: string) => {
+      let i = signIndex.get(text);
+      if (i === undefined) {
+        i = signs.length;
+        signs.push(text);
+        signIndex.set(text, i);
+      }
+      return i;
+    };
+    const GENERIC: Record<ShopKind, string[]> = {
+      duka: ["Duka la Mangi", "Duka la Rejareja", "Baraka General Store", "Neema Mini Supermarket", "Mama Zuhura Shop", "Juma & Sons", "Upendo Shop", "Faraja Store"],
+      phone: ["Wakala wa Pesa", "Simu & Vocha", "Pesa Point · Wakala", "Smart Phones"],
+      salon: ["Saluni ya Kisasa", "Barber Shop", "Mama Rose Saluni", "Classic Cuts"],
+      pharmacy: ["Duka la Dawa Baridi", "Afya Pharmacy", "Uzima Dawa"],
+      hardware: ["Vifaa vya Ujenzi", "Mabati Hardware", "Fundi Hardware"],
+      clothes: ["Mitumba Bora", "Fashion Wear", "Viatu na Nguo", "Kitenge Corner"],
+      food: ["Mama Ntilie", "Chipsi Mayai", "Hoteli ya Kisasa", "Mgahawa wa Pwani"],
+    };
+    const kindOfPoi = (p: Poi): ShopKind | null => {
+      const k = POI_KINDS[p.k];
+      const t = p.t ?? "";
+      if (k === "pharmacy") return "pharmacy";
+      if (k === "restaurant" || k === "bar" || t === "fast_food" || t === "cafe") return "food";
+      if (k === "bank") return "phone";
+      if (k !== "shop") return null;
+      if (/hardware|doityourself|building|paint/.test(t)) return "hardware";
+      if (/clothes|shoes|fashion|tailor|fabric|boutique/.test(t)) return "clothes";
+      if (/hairdresser|beauty|cosmetics/.test(t)) return "salon";
+      if (/mobile|electronics|phone|computer/.test(t)) return "phone";
+      return "duka";
+    };
+    const named = pois
+      .map((p) => ({ p, kind: kindOfPoi(p), x: p.x / 10, z: p.z / 10 }))
+      .filter((e): e is { p: Poi; kind: ShopKind; x: number; z: number } => e.kind !== null && Boolean(e.p.n));
+    const usedNames = new Set<Poi>();
+
+    // Everything a shop must stay clear of: buildings, every road (and its cross streets), water, other shops.
+    const segHash = new SpatialHash<{ a: Vec2; b: Vec2; half: number }>(20);
+    for (const r of roads) {
+      for (let i = 1; i < r.points.length; i++) {
+        const a = r.points[i - 1]!, b = r.points[i]!;
+        segHash.insert({ minX: Math.min(a[0], b[0]) - 12, minZ: Math.min(a[1], b[1]) - 12, maxX: Math.max(a[0], b[0]) + 12, maxZ: Math.max(a[1], b[1]) + 12 }, { a, b, half: r.width / 2 });
+      }
+    }
+    const bHash = new SpatialHash<number>(20);
+    buildings.forEach((b, i) => bHash.insert(ringBounds(b.outer), i));
+    const placed = new SpatialHash<Vec2[]>(20);
+    const clearOfRoads = (p: Vec2) => segHash.query(p).every(({ a, b, half }) => distToSegment(p, a, b) > half + 1.2);
+    const inBuilding = (p: Vec2) => bHash.query(p).some((i) => pointInRing(p, buildings[i]!.outer));
+    const inWater = (p: Vec2) => waterAreas.some((w) => pointInRing(p, w.outer));
+    const fits = (rect: Vec2[]) => {
+      const c: Vec2 = [(rect[0]![0] + rect[2]![0]) / 2, (rect[0]![1] + rect[2]![1]) / 2];
+      const probes: Vec2[] = [...rect, c, ...rect.map((p, i): Vec2 => [(p[0] + rect[(i + 1) % 4]![0]) / 2, (p[1] + rect[(i + 1) % 4]![1]) / 2])];
+      if (!probes.every(inBounds)) return false;
+      if (probes.some(inBuilding) || !probes.every(clearOfRoads) || inWater(c)) return false;
+      // A building corner poking into the shop, or another shop overlapping it.
+      for (const i of bHash.query(c)) if (buildings[i]!.outer.some((v) => pointInRing(v, rect))) return false;
+      for (const other of placed.query(c)) if (other.some((v) => pointInRing(v, rect)) || rect.some((v) => pointInRing(v, other))) return false;
+      return true;
+    };
+
+    // Main roads are lined almost end to end; residential streets get the odd run of dukas between houses.
+    const FILL: Partial<Record<RoadFeature["cls"], number>> = { primary: 0.9, secondary: 0.85, tertiary: 0.75, residential: 0.22 };
+    const dense = city.difficulty >= 3;
+    const MAX = dense ? 1100 : 750;
+    const SIDEWALK = 2.8;
+    // Main roads first, and within a class the ones nearest the town centre, so the busy core fills before the outskirts.
+    const mid = (r: RoadFeature) => r.points[Math.floor(r.points.length / 2)]!;
+    const ordered = [...roads].sort((a, b) => roadClassIndex(a.cls) - roadClassIndex(b.cls) || Math.hypot(...mid(a)) - Math.hypot(...mid(b)));
+    for (const r of ordered) {
+      const fill = FILL[r.cls];
+      if (!fill) continue;
+      for (const side of [1, -1]) {
+        // Walk this side of the road, laying shops shoulder to shoulder in runs.
+        let run = rand() < fill;
+        for (let i = 1; i < r.points.length; i++) {
+          const a = r.points[i - 1]!, b = r.points[i]!;
+          const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          if (len < 6) continue;
+          const tx = (b[0] - a[0]) / len, tz = (b[1] - a[1]) / len;
+          // Left normal of the direction of travel, flipped for the other side.
+          const nx = tz * side, nz = -tx * side;
+          let s = 3;
+          while (s < len - 3 && shops.length / FRONTAGE_STRIDE < MAX) {
+            if (rand() < 0.08) run = rand() < fill;
+            const w = 4 + Math.round(rand() * 6) / 2;
+            if (!run || s + w > len - 2) {
+              s += 3;
+              continue;
+            }
+            const d = 6 + rand() * 3;
+            const off = r.width / 2 + SIDEWALK;
+            const cx = a[0] + tx * (s + w / 2) + nx * off, cz = a[1] + tz * (s + w / 2) + nz * off;
+            const hx = (tx * w) / 2, hz = (tz * w) / 2;
+            const rect: Vec2[] = [
+              [cx - hx, cz - hz],
+              [cx + hx, cz + hz],
+              [cx + hx + nx * d, cz + hz + nz * d],
+              [cx - hx + nx * d, cz - hz + nz * d],
+            ];
+            if (!fits(rect)) {
+              s += 1.5;
+              continue;
+            }
+            placed.insert(ringBounds(rect), rect);
+            // A real shop mapped near here lends its name and trade.
+            const near = named.find((e) => !usedNames.has(e.p) && Math.hypot(e.x - (cx + nx * d * 0.5), e.z - (cz + nz * d * 0.5)) < 28);
+            let kind: ShopKind;
+            let text: string;
+            if (near) {
+              usedNames.add(near.p);
+              kind = near.kind;
+              text = near.p.n!;
+            } else {
+              kind = SHOP_KINDS[weightedPick([10, 4, 3, 2, 3, 4, 3], rand())]!;
+              const list = GENERIC[kind];
+              text = list[Math.floor(rand() * list.length)]!;
+            }
+            const floors = dense ? (rand() < 0.55 ? 2 : rand() < 0.3 ? 3 : 1) : rand() < 0.22 ? 2 : 1;
+            // The shop faces the road: local −z points back across the verge.
+            const yaw = Math.atan2(-nx, -nz) + Math.PI;
+            shops.push(Math.round(cx * 10), Math.round(cz * 10), Math.round(yaw * 1000), Math.round(w * 10), Math.round(d * 10), floors, SHOP_KINDS.indexOf(kind), Math.floor(rand() * 12), sign(text));
+            s += w + (rand() < 0.15 ? 1.5 : 0.05);
+          }
+        }
+      }
+    }
+    return { format: 1, shops, signs } satisfies FrontageFile;
+  })();
+  log(`  ✓ ${frontage.shops.length / FRONTAGE_STRIDE} shopfronts along the streets (${frontage.signs.length} signboards)`);
 
   // ── 6. Navigation graph ──────────────────────────────────────────────────
   const navGraph = (() => {
@@ -687,6 +912,9 @@ const main = async () => {
   const poiJson = JSON.stringify(pois);
   await fs.writeFile(path.join(outDir, "navgraph.json"), navJson);
   await fs.writeFile(path.join(outDir, "pois.json"), poiJson);
+  const frontageJson = JSON.stringify(frontage);
+  await fs.writeFile(path.join(outDir, "frontage.json"), frontageJson);
+  totalBytes += Buffer.byteLength(frontageJson);
   totalBytes += Buffer.byteLength(navJson) + Buffer.byteLength(poiJson);
 
   const manifest: CityManifest = {

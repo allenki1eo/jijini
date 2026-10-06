@@ -268,6 +268,8 @@ export const en: Dictionary = {
     time: "Time {s}s",
   },
   nav: {
+    findFuel: "Find petrol",
+    atFuel: "You're at the petrol station — stop under the canopy to fill up.",
     straight: "Keep straight",
     left: "Turn left",
     right: "Turn right",

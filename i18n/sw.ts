@@ -267,6 +267,8 @@ export const sw = {
     time: "Muda {s}s",
   },
   nav: {
+    findFuel: "Tafuta sheli",
+    atFuel: "Umefika sheli — simama chini ya paa ujaze mafuta.",
     straight: "Nyoosha",
     left: "Kata kushoto",
     right: "Kata kulia",

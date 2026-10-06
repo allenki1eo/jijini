@@ -2,7 +2,7 @@
   "format": 1,
   "id": "mwanza",
   "name": "Mwanza",
-  "generatedAt": "2026-10-06T08:09:05.890Z",
+  "generatedAt": "2026-10-06T16:08:24.553Z",
   "source": "overpass",
   "origin": {
     "lat": -2.5164,
@@ -110,7 +110,7 @@
       "key": "-3_3",
       "cx": -3,
       "cz": 3,
-      "bytes": 7034
+      "bytes": 6891
     },
     {
       "key": "-2_-4",
@@ -146,7 +146,7 @@
       "key": "-2_1",
       "cx": -2,
       "cz": 1,
-      "bytes": 7113
+      "bytes": 7030
     },
     {
       "key": "-2_2",
@@ -164,7 +164,7 @@
       "key": "-1_-4",
       "cx": -1,
       "cz": -4,
-      "bytes": 5256
+      "bytes": 4951
     },
     {
       "key": "-1_-3",
@@ -176,7 +176,7 @@
       "key": "-1_-2",
       "cx": -1,
       "cz": -2,
-      "bytes": 8211
+      "bytes": 8125
     },
     {
       "key": "-1_-1",
@@ -188,37 +188,37 @@
       "key": "-1_0",
       "cx": -1,
       "cz": 0,
-      "bytes": 11206
+      "bytes": 11004
     },
     {
       "key": "-1_1",
       "cx": -1,
       "cz": 1,
-      "bytes": 8072
+      "bytes": 7996
     },
     {
       "key": "-1_2",
       "cx": -1,
       "cz": 2,
-      "bytes": 6922
+      "bytes": 6528
     },
     {
       "key": "-1_3",
       "cx": -1,
       "cz": 3,
-      "bytes": 7764
+      "bytes": 7369
     },
     {
       "key": "0_-4",
       "cx": 0,
       "cz": -4,
-      "bytes": 15106
+      "bytes": 14927
     },
     {
       "key": "0_-3",
       "cx": 0,
       "cz": -3,
-      "bytes": 5818
+      "bytes": 5813
     },
     {
       "key": "0_-2",
@@ -230,31 +230,31 @@
       "key": "0_-1",
       "cx": 0,
       "cz": -1,
-      "bytes": 10701
+      "bytes": 10612
     },
     {
       "key": "0_0",
       "cx": 0,
       "cz": 0,
-      "bytes": 10761
+      "bytes": 10453
     },
     {
       "key": "0_1",
       "cx": 0,
       "cz": 1,
-      "bytes": 8928
+      "bytes": 8601
     },
     {
       "key": "0_2",
       "cx": 0,
       "cz": 2,
-      "bytes": 6448
+      "bytes": 6274
     },
     {
       "key": "0_3",
       "cx": 0,
       "cz": 3,
-      "bytes": 9631
+      "bytes": 9134
     },
     {
       "key": "1_-4",
@@ -284,25 +284,25 @@
       "key": "1_0",
       "cx": 1,
       "cz": 0,
-      "bytes": 11857
+      "bytes": 11691
     },
     {
       "key": "1_1",
       "cx": 1,
       "cz": 1,
-      "bytes": 7408
+      "bytes": 7090
     },
     {
       "key": "1_2",
       "cx": 1,
       "cz": 2,
-      "bytes": 5393
+      "bytes": 4569
     },
     {
       "key": "1_3",
       "cx": 1,
       "cz": 3,
-      "bytes": 6460
+      "bytes": 5909
     },
     {
       "key": "2_-4",
@@ -326,31 +326,31 @@
       "key": "2_-1",
       "cx": 2,
       "cz": -1,
-      "bytes": 7631
+      "bytes": 7539
     },
     {
       "key": "2_0",
       "cx": 2,
       "cz": 0,
-      "bytes": 13802
+      "bytes": 13820
     },
     {
       "key": "2_1",
       "cx": 2,
       "cz": 1,
-      "bytes": 13593
+      "bytes": 13201
     },
     {
       "key": "2_2",
       "cx": 2,
       "cz": 2,
-      "bytes": 6287
+      "bytes": 6226
     },
     {
       "key": "2_3",
       "cx": 2,
       "cz": 3,
-      "bytes": 7141
+      "bytes": 6809
     },
     {
       "key": "3_-4",
@@ -380,19 +380,19 @@
       "key": "3_0",
       "cx": 3,
       "cz": 0,
-      "bytes": 7901
+      "bytes": 7790
     },
     {
       "key": "3_1",
       "cx": 3,
       "cz": 1,
-      "bytes": 13265
+      "bytes": 13067
     },
     {
       "key": "3_2",
       "cx": 3,
       "cz": 2,
-      "bytes": 7049
+      "bytes": 6999
     },
     {
       "key": "3_3",
@@ -407,13 +407,13 @@
     "heading": 2.843
   },
   "stats": {
-    "buildings": 2568,
-    "roads": 376,
+    "buildings": 2516,
+    "roads": 368,
     "pois": 2755,
-    "navNodes": 486,
-    "navEdges": 614,
-    "trees": 2435
+    "navNodes": 487,
+    "navEdges": 609,
+    "trees": 2461
   },
-  "totalBytes": 616516,
+  "totalBytes": 646570,
   "attribution": "Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright"
 }

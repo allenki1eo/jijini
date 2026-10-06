@@ -11,7 +11,7 @@ import { Chip, IconButton, Segmented } from "@/components/ui";
 import { formatTzs, useT } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { enterFullscreen } from "@/lib/device";
-import { usePlayer } from "@/stores/player";
+import { usePlayer, xpForLevel } from "@/stores/player";
 import { useSettings } from "@/stores/settings";
 
 interface TileProps {
@@ -65,7 +65,7 @@ export function MainMenu() {
   const t = useT();
   const wallet = usePlayer((s) => s.wallet);
   const level = usePlayer((s) => s.level);
-  const xp = usePlayer((s) => s.xp / s.xpToNext);
+  const xp = usePlayer((s) => s.xp / xpForLevel(s.level));
   const locale = useSettings((s) => s.locale);
   const setSetting = useSettings((s) => s.set);
 

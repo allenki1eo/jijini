@@ -3,6 +3,7 @@
 import { domAnimation, LazyMotion, MotionConfig } from "motion/react";
 import { useEffect, type ReactNode } from "react";
 import { PwaProvider } from "@/components/pwa/PwaProvider";
+import { usePlayer } from "@/stores/player";
 import { useSettings } from "@/stores/settings";
 
 function SettingsSync() {
@@ -11,6 +12,7 @@ function SettingsSync() {
   useEffect(() => {
     // Settings are persisted with skipHydration so SSR and first paint agree.
     void useSettings.persist.rehydrate();
+    void usePlayer.persist.rehydrate();
   }, []);
   useEffect(() => {
     document.documentElement.lang = locale;

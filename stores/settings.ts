@@ -13,6 +13,13 @@ export interface SettingsState {
   haptics: boolean;
   leftHanded: boolean;
   reducedMotion: boolean;
+  /** Throttle held automatically (beginner assist). */
+  autoThrottle: boolean;
+  /** Steer by tilting the phone. */
+  tiltSteer: boolean;
+  cameraView: "chase" | "fpv";
+  /** HUD size multiplier (accessibility). */
+  hudScale: number;
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 
@@ -28,11 +35,17 @@ export const useSettings = create<SettingsState>()(
       haptics: true,
       leftHanded: false,
       reducedMotion: false,
+      autoThrottle: false,
+      tiltSteer: false,
+      cameraView: "chase",
+      hudScale: 1,
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
     }),
     {
       name: "bodago:settings",
-      version: 1,
+      version: 2,
+      // v2 added ride assists and HUD scale; persisted fields merge over the defaults.
+      migrate: (persisted) => persisted as SettingsState,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: ({ set, ...rest }) => rest,

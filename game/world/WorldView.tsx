@@ -4,11 +4,12 @@ import { Canvas } from "@react-three/fiber";
 import { AnimatePresence, m } from "motion/react";
 import { RotateCcw } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
-import { ExploreHud } from "@/components/hud/ExploreHud";
+import { useEffect, useState } from "react";
+import { RideHud } from "@/components/hud/RideHud";
 import { LoadingScreen } from "@/components/screens/LoadingScreen";
 import { Button, Card } from "@/components/ui";
 import { CITIES, type CityId } from "@/data/cities/config";
+import { Game } from "@/game/core/Game";
 import { QUALITY_PRESETS } from "@/game/core/quality";
 import { fmt, useT } from "@/i18n";
 import { requestWakeLock } from "@/lib/device";
@@ -18,9 +19,10 @@ import { streamFocus } from "./focus";
 import type { CityManifest } from "./format";
 import { WorldScene } from "./WorldScene";
 
-/** World explorer: loads a baked city manifest, streams chunks and renders the scene + HUD. */
+/** The play screen: loads a baked city, creates the Game, renders the scene and HUD. */
 export default function WorldView({ cityId }: { cityId: CityId }) {
   const t = useT();
+  const [game, setGame] = useState<Game | null>(null);
   const preset = QUALITY_PRESETS[useSettings((s) => s.quality)];
   const { manifest, status, error, progress, set, reset } = useWorld();
   const baseUrl = `/cities/${cityId}`;
@@ -38,13 +40,23 @@ export default function WorldView({ cityId }: { cityId: CityId }) {
         streamFocus.x = m.spawn.x;
         streamFocus.z = m.spawn.z;
         set({ manifest: m });
+        const g = new Game(cityId, m);
+        g.start();
+        setGame((old) => {
+          old?.dispose();
+          return g;
+        });
       })
       .catch((e: Error) => !cancelled && set({ status: "error", error: e.message }));
     return () => {
       cancelled = true;
       reset();
+      setGame((old) => {
+        old?.dispose();
+        return null;
+      });
     };
-  }, [baseUrl, set, reset]);
+  }, [baseUrl, cityId, set, reset]);
 
   // The loading screen lifts once the first ring of chunks is in; later streaming is silent.
   useEffect(() => {
@@ -62,19 +74,19 @@ export default function WorldView({ cityId }: { cityId: CityId }) {
 
   return (
     <div className="fixed inset-0 touch-none bg-night select-none">
-      {manifest && (
+      {manifest && game && (
         <Canvas
           className="!absolute inset-0"
           dpr={preset.dpr}
           flat
           gl={{ antialias: preset.antialias, powerPreference: "high-performance", stencil: false }}
-          camera={{ fov: 55, near: 0.5, far: 2100, position: [manifest.spawn.x, 110, manifest.spawn.z + 120] }}
+          camera={{ fov: 60, near: 0.3, far: 2100, position: [manifest.spawn.x, 3, manifest.spawn.z + 6] }}
         >
-          <WorldScene cityId={cityId} manifest={manifest} baseUrl={baseUrl} preset={preset} />
+          <WorldScene cityId={cityId} manifest={manifest} baseUrl={baseUrl} preset={preset} game={game} />
         </Canvas>
       )}
 
-      {status === "ready" && manifest && <ExploreHud manifest={manifest} />}
+      {status === "ready" && manifest && game && <RideHud game={game} manifest={manifest} />}
 
       <AnimatePresence>
         {status === "loading" && (

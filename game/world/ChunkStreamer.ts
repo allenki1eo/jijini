@@ -9,6 +9,7 @@ import type { ChunkRequest, ChunkResponse } from "./chunk.worker";
 import type { ChunkRef, CityManifest } from "./format";
 import type { WorldMaterials } from "./materials";
 import { TreeField } from "./trees";
+import type { WorldIndex } from "./WorldIndex";
 
 export interface StreamProgress {
   /** Desired chunks that are loaded. */
@@ -69,6 +70,7 @@ export class ChunkStreamer {
     private radius: number,
     private readonly onProgress: (p: StreamProgress) => void,
     private readonly onError: (message: string) => void,
+    private readonly index?: WorldIndex,
   ) {
     this.root.name = `city-${manifest.id}`;
     this.trees = new TreeField(materials.trees, TREE_CAPACITY);
@@ -153,6 +155,7 @@ export class ChunkStreamer {
     add(built.water, this.materials.water, "water");
     add(built.buildings, this.materials.buildings, "buildings");
     this.loaded.set(ref.key, { ref, meshes, trees: built.trees, triangles });
+    this.index?.addChunk(ref.key, built.walls, built.roads);
     this.trees.rebuild(this.treeSources());
   }
 
@@ -164,6 +167,7 @@ export class ChunkStreamer {
       mesh.geometry.dispose();
     }
     this.loaded.delete(key);
+    this.index?.removeChunk(key);
   }
 
   private *treeSources() {

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { CityManifest } from "@/game/world/format";
 
-export type CameraMode = "map" | "fly";
+export type CameraMode = "ride" | "map" | "fly";
 export type WorldStatus = "loading" | "ready" | "error";
 
 interface WorldState {
@@ -24,7 +24,7 @@ const initial = {
   error: null,
   progress: { loaded: 0, total: 0 },
   loadedKeys: [],
-  cameraMode: "map" as CameraMode,
+  cameraMode: "ride" as CameraMode,
   showStats: false,
   showNavGraph: false,
   showChunkGrid: false,

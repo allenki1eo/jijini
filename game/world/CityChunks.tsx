@@ -9,6 +9,7 @@ import { streamFocus } from "./focus";
 import type { CityManifest } from "./format";
 import { createWorldMaterials } from "./materials";
 import { EARTH_COLOR } from "./palette";
+import type { WorldIndex } from "./WorldIndex";
 
 const FOCUS_INTERVAL = 0.25;
 
@@ -26,9 +27,10 @@ interface CityChunksProps {
   manifest: CityManifest;
   baseUrl: string;
   radius: number;
+  index?: WorldIndex;
 }
 
-export function CityChunks({ manifest, baseUrl, radius }: CityChunksProps) {
+export function CityChunks({ manifest, baseUrl, radius, index }: CityChunksProps) {
   const scene = useThree((s) => s.scene);
   const materials = useMemo(() => createWorldMaterials(), []);
   const ground = useMemo(() => baseGround(), []);
@@ -52,6 +54,7 @@ export function CityChunks({ manifest, baseUrl, radius }: CityChunksProps) {
       radius,
       (p) => setWorld({ progress: { loaded: p.loaded, total: p.total }, loadedKeys: p.keys }),
       (message) => setWorld({ status: "error", error: message }),
+      index,
     );
     scene.add(s.root);
     streamer.current = s;
@@ -63,7 +66,7 @@ export function CityChunks({ manifest, baseUrl, radius }: CityChunksProps) {
     };
     // The radius is applied live below; recreating the streamer for it would reload every chunk.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manifest, baseUrl, materials, scene, setWorld]);
+  }, [manifest, baseUrl, materials, scene, setWorld, index]);
 
   useEffect(() => streamer.current?.setRadius(radius), [radius]);
 

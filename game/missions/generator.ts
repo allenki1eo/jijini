@@ -37,8 +37,16 @@ export class MissionGenerator {
   private places: Place[];
   private counter = 0;
 
-  constructor(private readonly ctxNav: NavNetwork, pois: Poi[]) {
+  /** Landmarks double as tourist photo stops. */
+  private landmarks: Place[];
+
+  constructor(
+    private readonly ctxNav: NavNetwork,
+    pois: Poi[],
+    landmarks: { x: number; z: number; name: string }[] = [],
+  ) {
     this.places = pois.map((p) => ({ x: p.x / 10, z: p.z / 10, name: p.n ?? "", poi: POI_KINDS[p.k] }));
+    this.landmarks = landmarks.map((l) => ({ ...l, poi: "other" as PoiKind }));
   }
 
   private rand: () => number = Math.random;
@@ -212,8 +220,10 @@ export class MissionGenerator {
       }
       case "wageni": {
         const hotel = this.nearest(["hotel"], x, z, 0) ?? this.place(any, x, z, 30, 400);
-        const sights = this.places.filter((p) => p.name && ["place_of_worship", "market", "hospital", "school", "bus_station"].includes(p.poi ?? "") && Math.hypot(p.x - hotel.x, p.z - hotel.z) > 200 && Math.hypot(p.x - hotel.x, p.z - hotel.z) < 900);
-        const s1 = this.pick(sights);
+        const near = (p: Place) => Math.hypot(p.x - hotel.x, p.z - hotel.z) > 200 && Math.hypot(p.x - hotel.x, p.z - hotel.z) < 1100;
+        const sights = this.places.filter((p) => p.name && ["place_of_worship", "market", "hospital", "school", "bus_station"].includes(p.poi ?? "") && near(p));
+        // A landmark, when the city has one in range, is always the first photo stop.
+        const s1 = this.pick(this.landmarks.filter(near)) ?? this.pick(sights);
         const s2 = this.pick(sights.filter((s) => s !== s1 && s1 && Math.hypot(s.x - s1.x, s.z - s1.z) > 150));
         if (!s1 || !s2) return null;
         return this.build(type, ctx, [this.stop(hotel, "pickup"), this.stop(s1, "photo"), this.stop(s2, "photo"), this.stop(hotel, "dropoff")], {

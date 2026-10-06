@@ -32,7 +32,7 @@ export function WorldScene({ cityId, manifest, baseUrl, preset, game }: WorldSce
       <EnvironmentRig preset={preset} />
 
       <SkyDome skyline={CITIES[cityId].skyline} />
-      <CityChunks manifest={manifest} baseUrl={baseUrl} radius={preset.loadRadius} index={game.index} />
+      <CityChunks manifest={manifest} baseUrl={baseUrl} radius={preset.loadRadius} index={game.index} skyline={CITIES[cityId].skyline} />
       {showNavGraph && <NavGraphOverlay baseUrl={baseUrl} />}
       {showChunkGrid && <ChunkGridOverlay manifest={manifest} loadedKeys={loadedKeys} />}
 

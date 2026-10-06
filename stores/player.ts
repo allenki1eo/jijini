@@ -76,6 +76,8 @@ export interface Profile {
   lastCity: CityId;
   /** Purchased accessories (stickers, LED, mud flaps). */
   cosmetics: string[];
+  /** Lifetime earnings per city (TZS), shown on the city cards. */
+  cityEarnings: Record<string, number>;
 }
 
 const EMPTY_STATS: PlayerStats = {
@@ -131,6 +133,7 @@ export const NEW_PROFILE: Profile = {
   bests: {},
   lastCity: "shinyanga",
   cosmetics: [],
+  cityEarnings: {},
 };
 
 /** XP needed to go from `level` to `level + 1`. */

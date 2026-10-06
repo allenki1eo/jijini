@@ -277,6 +277,7 @@ export class MissionRunner {
     player.earn(result.total, result.xp);
     player.adjustReputation(success ? (stars - 3) * 0.06 : reason === "abandoned" ? -0.1 : -0.15);
     if (success) {
+      player.patch({ cityEarnings: { ...player.cityEarnings, [this.cityId]: (player.cityEarnings[this.cityId] ?? 0) + result.total } });
       player.bumpStat("deliveries", 1);
       if (this.collisions === 0) player.bumpStat("cleanDeliveries", 1);
       if (stars === 5) player.bumpStat("fiveStars", 1);

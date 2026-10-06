@@ -37,6 +37,8 @@ export interface CityConfig {
   accent: string;
   /** Relative weights of [mango, acacia, palm] trees. */
   treeMix: [number, number, number];
+  /** Boda-stand membership needed to ride here. */
+  unlock: { level: number; price: number };
   landmarks: Landmark[];
 }
 
@@ -52,7 +54,8 @@ export const CITIES: Record<CityId, CityConfig> = {
     skyline: "savanna",
     accent: "#0B6E4F",
     treeMix: [5, 4, 1],
-    landmarks: [],
+    unlock: { level: 1, price: 0 },
+    landmarks: [{ id: "nguzo-nane", name: "Nguzo Nane", lat: -3.66807, lon: 33.41694 }],
   },
   arusha: {
     id: "arusha",
@@ -65,6 +68,7 @@ export const CITIES: Record<CityId, CityConfig> = {
     skyline: "meru",
     accent: "#00A3DD",
     treeMix: [4, 3, 1],
+    unlock: { level: 3, price: 20_000 },
     landmarks: [{ id: "clock-tower", name: "Clock Tower", lat: -3.36996, lon: 36.69443 }],
   },
   mwanza: {
@@ -78,6 +82,7 @@ export const CITIES: Record<CityId, CityConfig> = {
     skyline: "lake",
     accent: "#FFC72C",
     treeMix: [5, 2, 2],
+    unlock: { level: 5, price: 40_000 },
     landmarks: [{ id: "bismarck-rock", name: "Bismarck Rock", lat: -2.5195, lon: 32.8975 }],
   },
   kariakoo: {
@@ -91,6 +96,7 @@ export const CITIES: Record<CityId, CityConfig> = {
     skyline: "ocean",
     accent: "#FF5A4F",
     treeMix: [4, 1, 4],
+    unlock: { level: 8, price: 75_000 },
     landmarks: [{ id: "kariakoo-market", name: "Soko la Kariakoo", lat: -6.81606, lon: 39.2739 }],
   },
 };

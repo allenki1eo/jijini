@@ -8,7 +8,6 @@ export const en: Dictionary = {
   common: {
     back: "Back",
     close: "Close",
-    soon: "Soon",
     loading: "Loading…",
     retry: "Try again",
     on: "On",
@@ -38,7 +37,6 @@ export const en: Dictionary = {
   },
   menu: {
     play: "Play",
-    playHint: "Explore Shinyanga",
     garage: "Garage",
     missions: "Jobs",
     daily: "Daily",
@@ -54,7 +52,6 @@ export const en: Dictionary = {
     updateCta: "Refresh",
     offline: "You're offline — playing from cache",
     city: "City",
-    explore: "Explore mode",
   },
   settings: {
     title: "Settings",
@@ -344,6 +341,57 @@ export const en: Dictionary = {
     pickup: "Stop inside the circle until the passenger hops on.",
     deliver: "Ride them gently — happy passengers tip.",
     done: "Hongera! Your first money. You're ready now, young one!",
+  },
+  story: {
+    title: "Kijiweni story",
+    continue: "Continue",
+    rewardMoney: "Reward: TZS {amount}",
+    rewardCity: "New city unlocked: {city}!",
+    ch1: [
+      "Three jobs already! People at the stand are starting to talk about you.",
+      "Take this five thousand. Buy fuel, and remember: haste brings no blessing.",
+    ],
+    ch2: [
+      "Heyyy, kid! You think you're the fastest boda on this street?",
+      "Baraka is my old apprentice. Fast, but his mouth is bigger than his engine.",
+      "See you on the road. A race! Beat me and I'll buy your chai all week.",
+    ],
+    ch3: [
+      "You're the gentle rider? Every morning I need chai and mandazi taken to my customers.",
+      "But don't spill a single drop! Mama Neema's chai is famous in this town.",
+    ],
+    ch4: [
+      "Good day, young one. I'm Afande Salum. We've noticed you ride with manners.",
+      "When you see a checkpoint, slow down and show your licence. Simple! Keep it up.",
+    ],
+    ch5: [
+      "You've mastered Shinyanga, young one. Time to see the world.",
+      "My sister is in Arusha, under Mount Meru. She'll look after you!",
+      "The Arusha boda stand accepted your membership. Travel safe!",
+    ],
+    ch6: [
+      "You handled Arusha? Then come to Mwanza, Rock City on Lake Victoria.",
+      "The roads climb and dip there. We'll see who's boss!",
+    ],
+    ch7: [
+      "You're a real rider now. There's only one place left…",
+      "Kariakoo! Dar's great market. People, cars, daladalas — total chaos. Be careful.",
+      "And I'll be there making sure you follow the rules.",
+      "Go and become the King of Kariakoo, my child!",
+    ],
+  },
+  cities: {
+    title: "Cities",
+    pick: "Choose a city",
+    difficulty: ["Calm", "Busy", "Tough", "Chaos"],
+    play: "Ride here",
+    unlock: "Join the boda stand · TZS {price}",
+    needLevel: "Reach level {level}",
+    best: "Earned TZS {amount} here",
+    buildings: "{n} real buildings",
+    current: "You are here",
+    soon: "Coming soon",
+    regions: { shinyanga: "Calm starter town", arusha: "Clock Tower, under Mount Meru", mwanza: "Rock City on Lake Victoria", kariakoo: "Dar es Salaam's great market" },
   },
   life: {
     weather: { sunny: "Sunny", rain: "Rain", haze: "Dusty haze" },

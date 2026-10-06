@@ -10,6 +10,21 @@ import { BACKDROP } from "./environment";
 const SKY_RADIUS = 1900;
 const HILLS_RADIUS = 1450;
 
+/** Angular sectors (radians, 0 = east, +π/2 = south) where the horizon is open water. */
+const WATER_SECTORS: Partial<Record<SkylineKind, [number, number]>> = {
+  lake: [Math.PI * 0.8, Math.PI * 1.75],
+  ocean: [-Math.PI * 0.5, Math.PI * 0.2],
+};
+
+export const inWaterSector = (kind: SkylineKind, a: number) => {
+  const sector = WATER_SECTORS[kind];
+  if (!sector) return false;
+  const norm = (v: number) => ((v % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const [from, to] = sector;
+  const x = norm(a - from);
+  return x <= norm(to - from);
+};
+
 const skyMaterial = () =>
   new THREE.ShaderMaterial({
     side: THREE.BackSide,
@@ -74,9 +89,11 @@ const hillsGeometry = (kind: SkylineKind) => {
     let h = 0.45 + 0.25 * Math.sin(a * 3 + 1.3) + 0.18 * Math.sin(a * 7 + 0.4) + 0.12 * Math.sin(a * 17 + 2.1);
     h += Math.max(0, Math.sin(a * 11 + 0.7)) ** 6 * 0.5;
     if (kind === "meru") h += Math.exp(-(((a - 4.5) * 3) ** 2)) * 2.2;
+    // Open water: just the far shore (lake) or a flat sea horizon (ocean).
+    if (inWaterSector(kind, a)) h = kind === "lake" ? 0.1 + 0.06 * Math.sin(a * 9) : 0.015;
     const x = Math.cos(a) * HILLS_RADIUS;
     const z = Math.sin(a) * HILLS_RADIUS;
-    const peak = top.clone().lerp(farTop, (Math.sin(a * 2) + 1) / 4);
+    const peak = inWaterSector(kind, a) && kind === "ocean" ? new THREE.Color("#6E9FB8") : top.clone().lerp(farTop, (Math.sin(a * 2) + 1) / 4);
     positions.push(x, -30, z, x, Math.max(h, 0.1) * height, z);
     colors.push(bottom.r, bottom.g, bottom.b, peak.r, peak.g, peak.b);
     if (i < steps) {
@@ -91,6 +108,21 @@ const hillsGeometry = (kind: SkylineKind) => {
   g.setIndex(index);
   return g;
 };
+
+/** World-fixed water between the city's edge and the horizon, in the open-water sector. */
+export function HorizonWater({ skyline, material }: { skyline: SkylineKind; material: THREE.Material }) {
+  const geometry = useMemo(() => {
+    const sector = WATER_SECTORS[skyline];
+    if (!sector) return null;
+    const [from, to] = sector;
+    const span = (((to - from) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    // RingGeometry measures angles counter-clockwise in its local XY; after rotating onto the ground, y maps to -z.
+    return new THREE.RingGeometry(830, 2000, 48, 1, -from - span, span).rotateX(-Math.PI / 2).translate(0, 0.12, 0);
+  }, [skyline]);
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+  if (!geometry) return null;
+  return <mesh geometry={geometry} material={material} />;
+}
 
 /** Sky dome + horizon backdrop that follow the camera so they always read as infinitely far. */
 export function SkyDome({ skyline }: { skyline: SkylineKind }) {

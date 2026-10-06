@@ -626,6 +626,16 @@ const main = async () => {
     chunkRefs.push({ key: chunk.key, cx: chunk.cx, cz: chunk.cz, bytes });
     totalBytes += bytes;
   }
+  // Stylized map for the city-select card: major roads normalized to 0..1000.
+  const size = bounds.maxX - bounds.minX;
+  const preview = roads
+    .filter((r) => roadClassIndex(r.cls) <= 3)
+    .map((r) => ({
+      c: roadClassIndex(r.cls),
+      p: simplify(r.points, 6).flatMap(([x, z]) => [Math.round(((x - bounds.minX) / size) * 1000), Math.round(((z - bounds.minZ) / size) * 1000)]),
+    }));
+  await fs.writeFile(path.join(outDir, "preview.json"), JSON.stringify(preview));
+
   const navJson = JSON.stringify(navGraph);
   const poiJson = JSON.stringify(pois);
   await fs.writeFile(path.join(outDir, "navgraph.json"), navJson);

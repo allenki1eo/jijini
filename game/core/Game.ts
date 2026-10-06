@@ -21,6 +21,9 @@ import { Pedestrians } from "@/game/traffic/Pedestrians";
 import { TrafficSystem, type Obstacle } from "@/game/traffic/TrafficSystem";
 import { POI_KINDS, type Poi } from "@/game/world/format";
 import { RainField } from "@/game/world/RainField";
+import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
+import { buildLandmark } from "@/game/world/landmarks";
+import { makeProjector } from "@/game/world/projection";
 import { MissionGenerator } from "@/game/missions/generator";
 import { MissionRunner, missionHud } from "@/game/missions/MissionRunner";
 import { RouteGuide } from "@/game/missions/RouteGuide";
@@ -57,6 +60,8 @@ export class Game {
   missions: MissionRunner | null = null;
   private generator: MissionGenerator | null = null;
   private guide = new RouteGuide();
+  private collectibles: Collectibles | null = null;
+  private landmarkObjects: THREE.Object3D[] = [];
   /** Fuel stations (m), for refuelling and the minimap. */
   stations: [number, number][] = [];
   private rain: RainField;
@@ -152,7 +157,26 @@ export class Game {
     this.root.add(this.traffic.group, this.peds.group, this.checkpoints.group);
     const fuel = POI_KINDS.indexOf("fuel");
     this.stations = pois.filter((poi) => poi.k === fuel).map((poi) => [poi.x / 10, poi.z / 10]);
-    this.generator = new MissionGenerator(nav, pois);
+    // Landmarks: placed from lat/lon, solid to ride into, and tourist photo stops.
+    const { project } = makeProjector(this.manifest.origin.lat, this.manifest.origin.lon);
+    const sights: { x: number; z: number; name: string }[] = [];
+    for (const lm of CITIES[this.cityId].landmarks) {
+      const built = buildLandmark(lm.id);
+      if (!built) continue;
+      const [x, z] = project(lm.lat, lm.lon);
+      built.object.position.set(x, 0, z);
+      this.root.add(built.object);
+      this.landmarkObjects.push(built.object);
+      if (built.walls.length) this.index.addChunk(`landmark:${lm.id}`, new Float32Array(built.walls.map((v, i) => v + (i % 2 === 0 ? x : z))), new Float32Array());
+      sights.push({ x, z, name: lm.name });
+    }
+    this.collectibles = new Collectibles(nav, this.cityId, usePlayer.getState().collectibles, (id) => {
+      const p = usePlayer.getState();
+      p.patch({ collectibles: [...p.collectibles, id] });
+      p.earn(HELMET_REWARD, 25);
+    });
+    this.root.add(this.collectibles.group);
+    this.generator = new MissionGenerator(nav, pois, sights);
     this.missions = new MissionRunner(nav, this.model, this.guide, this.cityId);
     this.refreshOffers();
   }
@@ -300,6 +324,7 @@ export class Game {
     );
 
     this.missions?.update(dt, s);
+    this.collectibles?.update(dt, s.x, s.z);
 
     // Headlight comes on at dusk and in the rain.
     const fx = -Math.sin(s.heading), fz = -Math.cos(s.heading);
@@ -353,6 +378,12 @@ export class Game {
     this.peds?.dispose();
     this.checkpoints?.dispose();
     this.missions?.dispose();
+    this.collectibles?.dispose();
+    for (const o of this.landmarkObjects) {
+      const mesh = o as THREE.Mesh;
+      mesh.geometry?.dispose();
+      (mesh.material as THREE.Material | undefined)?.dispose();
+    }
     this.guide.dispose();
     this.rain.dispose();
     this.detach?.();

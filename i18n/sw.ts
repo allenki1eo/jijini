@@ -7,7 +7,6 @@ export const sw = {
   common: {
     back: "Rudi",
     close: "Funga",
-    soon: "Inakuja",
     loading: "Inapakia…",
     retry: "Jaribu tena",
     on: "Washa",
@@ -37,7 +36,6 @@ export const sw = {
   },
   menu: {
     play: "Cheza",
-    playHint: "Tembea Shinyanga",
     garage: "Gereji",
     missions: "Kazi",
     daily: "Changamoto",
@@ -53,7 +51,6 @@ export const sw = {
     updateCta: "Onyesha upya",
     offline: "Huna mtandao — unacheza nje ya mtandao",
     city: "Jiji",
-    explore: "Hali ya utafiti",
   },
   settings: {
     title: "Mipangilio",
@@ -343,6 +340,57 @@ export const sw = {
     pickup: "Simama ndani ya duara mpaka abiria apande.",
     deliver: "Mpeleke kwa upole — abiria akifurahi utapata bakshishi.",
     done: "Hongera! Umepata pesa yako ya kwanza. Sasa uko tayari, kijana!",
+  },
+  story: {
+    title: "Hadithi ya Kijiweni",
+    continue: "Endelea",
+    rewardMoney: "Zawadi: TSh {amount}",
+    rewardCity: "Jiji jipya limefunguliwa: {city}!",
+    ch1: [
+      "Kazi tatu tayari! Kijiweni watu wameanza kukuongelea.",
+      "Chukua hii elfu tano. Nunua mafuta, na kumbuka: haraka haraka haina baraka.",
+    ],
+    ch2: [
+      "Weee, dogo! Unadhani wewe ndiye bodaboda mkali wa mtaa huu?",
+      "Baraka ni mwanafunzi wangu wa zamani. Mwenye kasi, ila mdomo mkubwa kuliko injini.",
+      "Tukutane barabarani. Mbio! Ukinishinda, nitakununulia chai wiki nzima.",
+    ],
+    ch3: [
+      "Wewe ndiye kijana mpole? Kila asubuhi nahitaji chai na maandazi kwa wateja wangu.",
+      "Ila usimwage hata tone! Chai ya Mama Neema ni maarufu mjini.",
+    ],
+    ch4: [
+      "Habari kijana. Mimi ni Afande Salum. Tumekuona — unaendesha kwa adabu.",
+      "Ukiona kituo cha polisi, punguza mwendo, onyesha leseni. Rahisi tu! Endelea hivyo.",
+    ],
+    ch5: [
+      "Shinyanga umeimaliza, kijana. Ni wakati wa kuona dunia.",
+      "Dada yangu yuko Arusha, chini ya Mlima Meru. Atakupokea vizuri!",
+      "Kijiwe cha Arusha kimekubali uanachama wako. Nenda salama!",
+    ],
+    ch6: [
+      "Arusha uliiweza? Basi njoo Mwanza, Mji wa Mawe kando ya Ziwa Victoria.",
+      "Huko barabara zinapanda na kushuka. Tutaona nani mbabe!",
+    ],
+    ch7: [
+      "Sasa umekuwa dereva wa kweli. Kuna sehemu moja tu iliyobaki…",
+      "Kariakoo! Soko kubwa la Dar. Watu, magari, daladala — vurugu tupu. Kuwa makini.",
+      "Na mimi nitakuwa pale kuhakikisha unafuata sheria.",
+      "Nenda ukawe Mfalme wa Kariakoo, mwanangu!",
+    ],
+  },
+  cities: {
+    title: "Majiji",
+    pick: "Chagua jiji",
+    difficulty: ["Tulivu", "Wastani", "Ngumu", "Vurugu"],
+    play: "Cheza hapa",
+    unlock: "Jiunge na kijiwe · TSh {price}",
+    needLevel: "Fikia ngazi {level}",
+    best: "Umepata TSh {amount} hapa",
+    buildings: "{n} majengo halisi",
+    current: "Uko hapa",
+    soon: "Inakuja",
+    regions: { shinyanga: "Mji tulivu wa kuanzia", arusha: "Mnara wa Saa, chini ya Mlima Meru", mwanza: "Mji wa Mawe, Ziwa Victoria", kariakoo: "Soko kubwa la Dar es Salaam" },
   },
   life: {
     weather: { sunny: "Jua", rain: "Mvua", haze: "Vumbi" },

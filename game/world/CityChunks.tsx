@@ -10,6 +10,8 @@ import type { CityManifest } from "./format";
 import { createWorldMaterials } from "./materials";
 import { EARTH_COLOR } from "./palette";
 import type { WorldIndex } from "./WorldIndex";
+import { HorizonWater } from "./SkyDome";
+import type { SkylineKind } from "@/data/cities/config";
 
 const FOCUS_INTERVAL = 0.25;
 
@@ -28,9 +30,10 @@ interface CityChunksProps {
   baseUrl: string;
   radius: number;
   index?: WorldIndex;
+  skyline: SkylineKind;
 }
 
-export function CityChunks({ manifest, baseUrl, radius, index }: CityChunksProps) {
+export function CityChunks({ manifest, baseUrl, radius, index, skyline }: CityChunksProps) {
   const scene = useThree((s) => s.scene);
   const materials = useMemo(() => createWorldMaterials(), []);
   const ground = useMemo(() => baseGround(), []);
@@ -79,5 +82,10 @@ export function CityChunks({ manifest, baseUrl, radius, index }: CityChunksProps
     }
   });
 
-  return <mesh geometry={ground} material={materials.ground} position-y={-0.02} matrixAutoUpdate={false} />;
+  return (
+    <>
+      <mesh geometry={ground} material={materials.ground} position-y={-0.02} matrixAutoUpdate={false} />
+      <HorizonWater skyline={skyline} material={materials.water} />
+    </>
+  );
 }

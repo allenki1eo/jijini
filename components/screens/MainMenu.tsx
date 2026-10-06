@@ -1,9 +1,8 @@
 "use client";
 
 import { m } from "motion/react";
-import { CalendarCheck, Coins, Maximize, PackageOpen, Play, Settings, Star, Wrench, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Coins, Map as MapIcon, Maximize, PackageOpen, Play, Settings, Star, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { Skyline } from "@/components/brand/Skyline";
 import { Logo } from "@/components/brand/Logo";
 import { InstallBanner, OfflineChip, UpdateToast } from "@/components/pwa/PwaPrompts";
@@ -13,42 +12,26 @@ import { cn } from "@/lib/cn";
 import { enterFullscreen } from "@/lib/device";
 import { usePlayer, xpForLevel } from "@/stores/player";
 import { useSettings } from "@/stores/settings";
+import { CITIES } from "@/data/cities/config";
 
 interface TileProps {
   icon: LucideIcon;
   label: string;
   accent: string;
-  href?: string;
-  soon?: string;
+  href: string;
 }
 
-function MenuTile({ icon: Icon, label, accent, href, soon }: TileProps) {
-  const body: ReactNode = (
-    <>
+function MenuTile({ icon: Icon, label, accent, href }: TileProps) {
+  return (
+    <Link
+      href={href}
+      className="chunky relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-[1.25rem] bg-night-700/90 px-2 py-3 ring-1 ring-white/10 backdrop-blur [--edge:var(--color-night)] short:min-h-[4.5rem] short:gap-1.5 short:py-2"
+    >
       <span className={cn("grid size-11 place-items-center rounded-2xl short:size-9", accent)}>
         <Icon className="size-6 short:size-5" strokeWidth={2.4} />
       </span>
       <span className="font-display text-base leading-none font-bold short:text-sm">{label}</span>
-      {soon && (
-        <span className="absolute -top-2 -right-2 rotate-6 rounded-full bg-coral px-2 py-1 font-display text-[0.7rem] leading-none font-extrabold tracking-wide text-cream uppercase shadow-md">
-          {soon}
-        </span>
-      )}
-    </>
-  );
-  const cls =
-    "chunky relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-[1.25rem] bg-night-700/90 px-2 py-3 ring-1 ring-white/10 backdrop-blur [--edge:var(--color-night)] short:min-h-[4.5rem] short:gap-1.5 short:py-2";
-  if (href) {
-    return (
-      <Link href={href} className={cls}>
-        {body}
-      </Link>
-    );
-  }
-  return (
-    <button type="button" disabled aria-disabled="true" className={cn(cls, "cursor-not-allowed text-cream/55 disabled:opacity-100 [&>span:first-child]:opacity-60")}>
-      {body}
-    </button>
+    </Link>
   );
 }
 
@@ -67,6 +50,7 @@ export function MainMenu() {
   const level = usePlayer((s) => s.level);
   const xp = usePlayer((s) => s.xp / xpForLevel(s.level));
   const reputation = usePlayer((s) => s.reputation);
+  const lastCity = usePlayer((s) => s.lastCity);
   const locale = useSettings((s) => s.locale);
   const setSetting = useSettings((s) => s.set);
 
@@ -107,6 +91,13 @@ export function MainMenu() {
             ]}
           />
         </div>
+        <Link
+          href="/settings"
+          aria-label={t.menu.settings}
+          className="chunky grid size-12 shrink-0 place-items-center rounded-2xl bg-night-600/95 text-cream ring-1 ring-white/10 [--edge:var(--color-night)]"
+        >
+          <Settings className="size-5" />
+        </Link>
         <IconButton label={t.settings.fullscreen} icon={<Maximize />} onClick={() => void enterFullscreen()} />
       </header>
 
@@ -123,7 +114,7 @@ export function MainMenu() {
 
         <m.div variants={rise}>
           <Link
-            href="/play?city=shinyanga"
+            href={`/play?city=${lastCity}`}
             className="chunky animate-pulse-ring group flex w-full items-center gap-4 rounded-[1.5rem] bg-sun px-5 py-4 text-night [--edge:var(--color-sun-800)] short:py-2.5"
           >
             <span className="grid size-14 place-items-center rounded-2xl bg-night text-sun transition-transform duration-300 ease-[var(--ease-spring)] group-hover:scale-110 short:size-11">
@@ -131,9 +122,8 @@ export function MainMenu() {
             </span>
             <span className="flex flex-col">
               <span className="font-display text-4xl leading-none font-extrabold short:text-3xl">{t.menu.play}</span>
-              <span className="font-display text-base font-semibold opacity-75">{t.menu.playHint}</span>
+              <span className="font-display text-base font-semibold opacity-75">{CITIES[lastCity].name}</span>
             </span>
-            <span className="ml-auto hidden rounded-full bg-night/10 px-3 py-1 font-display text-sm font-bold whitespace-nowrap sm:inline">{t.menu.explore}</span>
           </Link>
         </m.div>
 
@@ -141,7 +131,7 @@ export function MainMenu() {
           <MenuTile icon={Wrench} label={t.menu.garage} accent="bg-coral text-cream" href="/garage" />
           <MenuTile icon={PackageOpen} label={t.menu.missions} accent="bg-sky text-night" href="/play?board=1" />
           <MenuTile icon={CalendarCheck} label={t.menu.daily} accent="bg-forest text-sun" href="/daily" />
-          <MenuTile icon={Settings} label={t.menu.settings} accent="bg-cream text-night" href="/settings" />
+          <MenuTile icon={MapIcon} label={t.cities.title} accent="bg-cream text-night" href="/cities" />
         </m.nav>
       </m.section>
 

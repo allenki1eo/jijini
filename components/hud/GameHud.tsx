@@ -7,6 +7,7 @@ import { MissionTracker } from "@/components/missions/MissionTracker";
 import { Minimap } from "@/components/missions/Minimap";
 import { ResultsScreen } from "@/components/missions/ResultsScreen";
 import { StationPanel } from "@/components/missions/StationPanel";
+import { StoryDirector } from "@/components/story/StoryDirector";
 import { Button, Chip, Modal } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
 import type { CityManifest } from "@/game/world/format";
@@ -64,6 +65,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       }
     >
       {tutorial && <Tutorial game={game} />}
+      <StoryDirector enabled={hydrated && tutorialDone} />
       <div className="safe-x pointer-events-none absolute top-1/2 left-0 -translate-y-1/2">
         <StationPanel game={game} />
       </div>

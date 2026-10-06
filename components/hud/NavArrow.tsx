@@ -34,7 +34,7 @@ export function NavArrow() {
   return (
     <div
       className={cn(
-        "pointer-events-none flex items-center gap-3 rounded-[1.4rem] bg-night/75 py-1.5 pr-4 pl-1.5 shadow-xl ring-1 backdrop-blur-md",
+        "pointer-events-none flex max-w-full items-center gap-3 rounded-[1.4rem] bg-night/75 py-1.5 pr-4 pl-1.5 shadow-xl ring-1 backdrop-blur-md",
         fuel ? "ring-coral/50" : "ring-white/10",
         navHud.turn === "arrive" && "animate-pulse",
       )}

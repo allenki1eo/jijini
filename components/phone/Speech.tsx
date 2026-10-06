@@ -42,7 +42,7 @@ export function SpeechBubbles() {
   );
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-44 flex flex-col items-center gap-2 px-4 short:bottom-28" aria-live="polite">
+    <div className="pointer-events-none absolute inset-x-0 bottom-44 flex flex-col items-center gap-2 px-4 max-sm:bottom-80 short:bottom-28" aria-live="polite">
       <AnimatePresence initial={false}>
         {bubbles.map((b) => (
           <m.div
@@ -72,6 +72,8 @@ const OPTIONS: TalkOption[] = ["hello", "sorry", "hold", "near"];
 export function ChatBar({ game, touch }: { game: Game; touch: boolean }) {
   const t = useT();
   useHudTick(4);
+  // On phones the phrases fold away behind one button so they don't cover the road and the arrow.
+  const [open, setOpen] = useState(false);
   const runner = game.missions;
   const onBoard = Boolean(runner?.active && runner.active.passenger !== "none" && missionHud.carrying);
   const ready = runner?.canTalk ?? false;
@@ -86,32 +88,54 @@ export function ChatBar({ game, touch }: { game: Game; touch: boolean }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onBoard, game]);
 
+  const say = (option: (typeof OPTIONS)[number]) => {
+    game.talk(option);
+    setOpen(false);
+  };
+
   return (
     <AnimatePresence>
       {onBoard && (
         <m.div
-          className={cn("safe-x pointer-events-auto absolute left-0 flex flex-col items-start gap-1.5", touch ? "top-20 short:top-16" : "bottom-24")}
+          className={cn("pointer-events-auto flex flex-col items-start gap-1.5", !touch && "safe-x absolute bottom-24 left-0")}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
         >
-          <p className="flex items-center gap-1.5 rounded-full bg-night/70 px-2.5 py-1 font-display text-xs font-bold text-cream/80 backdrop-blur">
-            <MessageCircle className="size-3.5" /> {t.phone.chat}
-          </p>
-          <div className={cn("flex gap-1.5", touch ? "flex-col" : "flex-wrap")}>
-            {OPTIONS.map((option, i) => (
-              <button
-                key={option}
-                type="button"
-                disabled={!ready}
-                onClick={() => game.talk(option)}
-                className="rounded-full bg-night-600/90 px-3 py-1.5 text-left text-sm font-semibold text-cream ring-1 ring-white/10 backdrop-blur transition-opacity enabled:hover:bg-night-500 disabled:opacity-45"
-              >
-                {!touch && <span className="mr-1.5 text-xs text-sun tabular">{i + 1}</span>}
-                {t.phone.chatOptions[option]}
-              </button>
-            ))}
-          </div>
+          {touch ? (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              disabled={!ready}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-sm font-bold ring-1 backdrop-blur transition-colors disabled:opacity-45",
+                open ? "bg-sun text-night ring-sun" : "bg-night/75 text-cream ring-white/10",
+              )}
+            >
+              <MessageCircle className="size-4" /> {t.phone.chat}
+            </button>
+          ) : (
+            <p className="flex items-center gap-1.5 rounded-full bg-night/70 px-2.5 py-1 font-display text-xs font-bold text-cream/80 backdrop-blur">
+              <MessageCircle className="size-3.5" /> {t.phone.chat}
+            </p>
+          )}
+          {(!touch || open) && (
+            <div className={cn("flex gap-1.5", touch ? "flex-col" : "flex-wrap")}>
+              {OPTIONS.map((option, i) => (
+                <button
+                  key={option}
+                  type="button"
+                  disabled={!ready}
+                  onClick={() => say(option)}
+                  className="rounded-full bg-night-600/90 px-3 py-1.5 text-left text-sm font-semibold text-cream ring-1 ring-white/10 backdrop-blur transition-opacity enabled:hover:bg-night-500 disabled:opacity-45"
+                >
+                  {!touch && <span className="mr-1.5 text-xs text-sun tabular">{i + 1}</span>}
+                  {t.phone.chatOptions[option]}
+                </button>
+              ))}
+            </div>
+          )}
         </m.div>
       )}
     </AnimatePresence>

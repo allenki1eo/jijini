@@ -51,7 +51,8 @@ function StationRow({ name, freq, sub, color, active, connecting, onPick }: { na
 }
 
 /** The boda's radio: tap to pick a station (house stations or live Tanzanian radio), R to flip to the next one. */
-export function RadioChip() {
+/** `compact`: icon only (portrait phones), the station shows in the picker. */
+export function RadioChip({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const station = useSettings((s) => s.radio);
   const set = useSettings((s) => s.set);
@@ -112,7 +113,7 @@ export function RadioChip() {
         {info ? (
           <span className="flex items-baseline gap-1.5 tabular">
             {liveOn && <span className="animate-pulse rounded bg-coral px-1 text-[10px] leading-4 font-extrabold text-cream">LIVE</span>}
-            <span className="max-w-24 truncate">{info.freq}</span>
+            {!compact && <span className="max-w-24 truncate">{info.freq}</span>}
             <span className="hidden max-w-36 truncate text-cream/60 xl:inline">{info.name}</span>
           </span>
         ) : (

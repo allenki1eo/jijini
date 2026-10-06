@@ -63,7 +63,7 @@ export function ToastStack() {
   }, []);
 
   return (
-    <ol className="pointer-events-none flex w-[min(17.5rem,calc(100vw-2rem))] flex-col items-start gap-1.5" aria-live="polite">
+    <ol className="pointer-events-none flex w-full max-w-[17.5rem] flex-col items-start gap-1.5" aria-live="polite">
       <AnimatePresence initial={false}>
         {notes.map((note) => (
           <m.li

@@ -22,6 +22,9 @@ import { AgeGate } from "./AgeGate";
 import { RideHud, useTouchDevice } from "./RideHud";
 import { Tutorial } from "./Tutorial";
 
+/** Wallet in a few characters for narrow screens: 250k, 1.2M. */
+const shortTzs = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatTzs(n));
+
 /** Full in-game HUD: the ride overlay plus jobs, minimap, wallet and results. */
 export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; manifest: CityManifest; openBoardOnStart?: boolean }) {
   const t = useT();
@@ -56,22 +59,30 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       manifest={manifest}
       quiet={tutorial}
       topCenter={<MissionTracker onAbandon={() => setConfirmAbandon(true)} />}
-      topLeft={<IncomingCall game={game} />}
       topRight={
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <Chip icon={<Coins className="text-sun" />} className="tabular">
-              {formatTzs(wallet)}
-            </Chip>
-            {!tutorial && <PhoneButton />}
-          </div>
+        <div className="flex items-center gap-2">
+          <Chip icon={<Coins className="text-sun" />} className="tabular">
+            <span className="sm:hidden">{shortTzs(wallet)}</span>
+            <span className="max-sm:hidden">{formatTzs(wallet)}</span>
+          </Chip>
+          {!tutorial && <PhoneButton />}
+        </div>
+      }
+      rail={
+        <>
           <Minimap game={game} />
           {!active && !tutorial && (
-            <Button variant="sun" icon={<Briefcase />} onClick={openBoard} className="animate-pulse-ring">
+            <Button variant="sun" icon={<Briefcase />} onClick={openBoard} className="animate-pulse-ring max-sm:px-3.5" aria-label={t.missions.open}>
               {t.missions.open}
             </Button>
           )}
-        </div>
+        </>
+      }
+      topLeft={
+        <>
+          <IncomingCall game={game} />
+          {touch && <ChatBar game={game} touch />}
+        </>
       }
     >
       {tutorial && <Tutorial game={game} />}
@@ -80,7 +91,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
         <StationPanel game={game} />
       </div>
       <SpeechBubbles />
-      <ChatBar game={game} touch={touch} />
+      {!touch && <ChatBar game={game} touch={false} />}
       <ShopCounter game={game} />
       <AgeGate enabled={hydrated && tutorialDone} />
       <PhonePanel game={game} />

@@ -5,7 +5,7 @@ import { BarChart3, Crosshair, CloudFog, CloudRain, Fuel, Grid3x3, Map as MapIco
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Chip, IconButton, Segmented } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
-import { hud, navHud } from "@/game/core/hud";
+import { hud } from "@/game/core/hud";
 import { setHour, setWeather } from "@/game/systems/environment";
 import type { CityManifest } from "@/game/world/format";
 import { useT } from "@/i18n";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { useSettings } from "@/stores/settings";
 import { useWorld, type CameraMode } from "@/stores/world";
 import { CheckpointPrompt, ClockChip, useSkillToasts } from "./LifeHud";
+import { CompactDash } from "./CompactDash";
 import { PoliceBanner } from "./PoliceHud";
 import { RadioChip } from "./RadioHud";
 import { SpeedLines, useHaptics } from "./Juice";
@@ -33,22 +34,14 @@ const subscribeCoarse = (cb: () => void) => {
 };
 export const useTouchDevice = () => useSyncExternalStore(subscribeCoarse, () => window.matchMedia(coarseQuery).matches, () => false);
 
-/** The dash sits bottom-centre; on phones it moves up top, and drops below the direction arrow while one is showing. */
-function SpeedoSlot({ touch }: { touch: boolean }) {
-  useHudTick(4);
-  const nav = navHud.mode !== null;
-  return (
-    <div
-      className={cn(
-        "absolute bottom-3 left-1/2 -translate-x-1/2 transition-[top] duration-300",
-        touch && "bottom-auto top-[calc(env(safe-area-inset-top)+4.5rem)] scale-75 short:top-14",
-        touch && nav && "top-[calc(env(safe-area-inset-top)+8.5rem)] short:top-[7.5rem]",
-      )}
-    >
-      <Speedometer />
-    </div>
-  );
-}
+const narrowQuery = "(max-width: 639px)";
+const subscribeNarrow = (cb: () => void) => {
+  const mq = window.matchMedia(narrowQuery);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+};
+/** Portrait phones: the HUD stacks into one column beside the minimap instead of spreading across the top. */
+export const useNarrowScreen = () => useSyncExternalStore(subscribeNarrow, () => window.matchMedia(narrowQuery).matches, () => false);
 
 function FuelWarning() {
   useHudTick(4);
@@ -68,7 +61,9 @@ interface RideHudProps {
   children?: ReactNode;
   topCenter?: ReactNode;
   topRight?: ReactNode;
-  /** Above the notification feed at the left edge (incoming calls). */
+  /** Right-hand column under the top bar (minimap, jobs button). */
+  rail?: ReactNode;
+  /** Above the notification feed at the left edge (incoming calls, passenger chat). */
   topLeft?: ReactNode;
   pauseExtra?: ReactNode;
   onRestart?: () => void;
@@ -77,10 +72,11 @@ interface RideHudProps {
 }
 
 /** In-game overlay: speedometer, touch controls, pause, toasts and the debug tools. */
-export function RideHud({ game, manifest, children, topCenter, topRight, topLeft, pauseExtra, onRestart, quiet }: RideHudProps) {
+export function RideHud({ game, manifest, children, topCenter, topRight, rail, topLeft, pauseExtra, onRestart, quiet }: RideHudProps) {
   const t = useT();
   const w = useWorld();
   const touch = useTouchDevice();
+  const narrow = useNarrowScreen();
   const scale = useSettings((s) => s.hudScale);
   const cameraView = useSettings((s) => s.cameraView);
   const setSetting = useSettings((s) => s.set);
@@ -110,44 +106,74 @@ export function RideHud({ game, manifest, children, topCenter, topRight, topLeft
   return (
     <div className="pointer-events-none fixed inset-0 z-20 select-none" style={{ fontSize: `${scale * 100}%` }}>
       <SpeedLines />
-      <div className="safe-top safe-x flex items-start justify-between gap-3">
-        <div className="pointer-events-auto flex items-center gap-2">
-          <IconButton label={t.ride.pause} icon={<Pause />} onClick={() => setPaused(true)} />
-          <Chip icon={<MapPin className="text-coral" />} className="hidden lg:inline-flex">
-            {manifest.name}
-          </Chip>
-          <ClockChip />
-          <RadioChip />
-        </div>
-        <div className="flex flex-1 justify-center">{topCenter}</div>
-        <div className="pointer-events-auto flex items-start gap-2">
-          <div className="flex flex-col gap-2">
-            <IconButton
-              label={t.ride.camera}
-              icon={<Video />}
-              active={cameraView === "fpv"}
-              onClick={() => setSetting("cameraView", cameraView === "chase" ? "fpv" : "chase")}
-            />
+      {/*
+        The top of the screen is laid out in flow, not absolutely, so nothing can sit on top of anything else:
+        the bar, then (on phones) the job card, then a row with the rider's stack on the left and the minimap rail on the right.
+      */}
+      <div className="safe-top safe-x absolute inset-x-0 top-0 flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+            <IconButton label={t.ride.pause} icon={<Pause />} onClick={() => setPaused(true)} />
+            <span className="hidden lg:inline-flex">
+              <Chip icon={<MapPin className="text-coral" />}>{manifest.name}</Chip>
+            </span>
+            <ClockChip />
+            <RadioChip compact={narrow} />
+          </div>
+          {!narrow && <div className="flex min-w-0 flex-1 justify-center">{topCenter}</div>}
+          <div className="pointer-events-auto flex shrink-0 items-start gap-2">
+            {!touch && (
+              <IconButton
+                label={t.ride.camera}
+                icon={<Video />}
+                active={cameraView === "fpv"}
+                onClick={() => setSetting("cameraView", cameraView === "chase" ? "fpv" : "chase")}
+              />
+            )}
             {/* Developer tools stay out of the players' way. */}
-            {process.env.NODE_ENV === "development" && (
+            {process.env.NODE_ENV === "development" && !narrow && (
               <IconButton label={t.world.debug} icon={<BarChart3 />} active={w.showStats} onClick={() => w.set({ showStats: !w.showStats })} />
             )}
+            {topRight}
           </div>
-          {topRight}
         </div>
-      </div>
 
-      <div className="absolute inset-x-0 top-[5.75rem] flex flex-col items-center gap-2 short:top-[4.75rem]">
-        {riding && <NavArrow />}
-        <CheckpointPrompt />
-        <PoliceBanner />
-        <FuelWarning />
-      </div>
+        {narrow && topCenter && <div className="flex justify-center [&>*]:w-full [&>*]:max-w-none">{topCenter}</div>}
 
-      {/* Notifications live at the left edge, out of the rider's line of sight. */}
-      <div className="safe-x pointer-events-none absolute top-20 left-0 flex flex-col items-start gap-2 short:top-16">
-        {topLeft}
-        <ToastStack />
+        <div className={cn("grid items-start gap-2", narrow ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]")}>
+          {/* Left: on phones the whole rider stack; elsewhere just notifications, out of the line of sight. */}
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            {narrow && riding && <NavArrow />}
+            {narrow && riding && touch && <CompactDash />}
+            {narrow && (
+              <>
+                <CheckpointPrompt />
+                <PoliceBanner />
+                <FuelWarning />
+              </>
+            )}
+            {topLeft}
+            <ToastStack />
+          </div>
+          {!narrow && (
+            <div className="flex flex-col items-center gap-2">
+              {riding && <NavArrow />}
+              {riding && touch && <CompactDash />}
+              <CheckpointPrompt />
+              <PoliceBanner />
+              <FuelWarning />
+            </div>
+          )}
+          <div className="pointer-events-auto flex flex-col items-end gap-2 justify-self-end">
+            {/* On landscape phones the jobs button sits beside the minimap, above the boost and throttle pads. */}
+            <div className="flex flex-col items-end gap-2 short:flex-row-reverse short:items-start">{rail}</div>
+            {touch && (
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="max-w-28 text-right text-[10px] leading-tight text-cream/70 [text-shadow:0_1px_2px_rgb(0_0_0/0.8)]">
+                {t.world.attribution}
+              </a>
+            )}
+          </div>
+        </div>
       </div>
 
       {w.showStats && (
@@ -183,7 +209,11 @@ export function RideHud({ game, manifest, children, topCenter, topRight, topLeft
 
       {riding && (
         <>
-          <SpeedoSlot touch={touch} />
+          {!touch && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+              <Speedometer />
+            </div>
+          )}
           {touch && <TouchControls />}
           <AnimatePresence>
             {!touch && showKeys && !quiet && (
@@ -206,17 +236,16 @@ export function RideHud({ game, manifest, children, topCenter, topRight, topLeft
         </div>
       )}
 
-      <a
-        href="https://www.openstreetmap.org/copyright"
-        target="_blank"
-        rel="noreferrer"
-        className={cn(
-          "pointer-events-auto absolute bottom-0 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))] text-[11px] text-night/80 [text-shadow:0_0_6px_rgb(255_246_229/0.9)]",
-          touch ? "left-1/2 -translate-x-1/2" : "right-0",
-        )}
-      >
-        {t.world.attribution}
-      </a>
+      {!touch && (
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noreferrer"
+          className="pointer-events-auto absolute right-0 bottom-0 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))] text-[11px] text-night/80 [text-shadow:0_0_6px_rgb(255_246_229/0.9)]"
+        >
+          {t.world.attribution}
+        </a>
+      )}
 
       <div className="pointer-events-auto">
         <PauseMenu open={paused} onResume={() => setPaused(false)} onRestart={onRestart} extra={pauseExtra} />

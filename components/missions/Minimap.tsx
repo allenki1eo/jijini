@@ -187,8 +187,9 @@ export function Minimap({ game }: { game: Game }) {
     <canvas
       ref={canvas}
       aria-hidden="true"
-      className="pointer-events-none rounded-full shadow-xl short:scale-75 short:origin-top-right"
-      style={{ width: SIZE * Math.min(scale, 1.1), height: SIZE * Math.min(scale, 1.1) }}
+      // Smaller on portrait phones, where it shares the width with the rider's stack.
+      className="pointer-events-none size-(--mm) rounded-full shadow-xl max-sm:size-28 short:size-28"
+      style={{ "--mm": `${SIZE * Math.min(scale, 1.1)}px` } as React.CSSProperties}
     />
   );
 }

@@ -51,10 +51,12 @@ const GEOMETRY: Record<PropKind, () => THREE.BufferGeometry> = {
     ]),
   billboard: () =>
     merge([
-      part(cyl(0.1, 4.4, -1.6, 2.2, 0), "#4B5563"),
-      part(cyl(0.1, 4.4, 1.6, 2.2, 0), "#4B5563"),
-      part(block(4.6, 2.3, 0.14, 0, 4.6, 0), "#FFFFFF", { tint: true }),
-      part(block(4.2, 0.5, 0.16, 0, 4.0, 0), "#FFF6E5", { glow: true }),
+      part(cyl(0.1, 4.4, -2.4, 2.2, 0), "#4B5563"),
+      part(cyl(0.1, 4.4, 2.4, 2.2, 0), "#4B5563"),
+      part(block(6.6, 2.3, 0.14, 0, 4.6, 0), "#FFFFFF", { tint: true }),
+      // Lamps on a bar along the bottom light the poster at night.
+      part(block(6.2, 0.08, 0.5, 0, 3.42, 0), "#4B5563"),
+      ...[-2, 0, 2].flatMap((x) => [-0.32, 0.32].map((z) => part(block(0.3, 0.1, 0.12, x, 3.5, z), "#FFF6E5", { glow: true }))),
     ]),
 };
 
@@ -99,7 +101,8 @@ export class PropField {
     this.pools.frustumCulled = false;
     this.pools.renderOrder = 2;
     this.group.add(this.pools);
-    const poster = mergeGeometries([new THREE.PlaneGeometry(4.36, 2.06).translate(0, 4.6, 0.08), new THREE.PlaneGeometry(4.36, 2.06).rotateY(Math.PI).translate(0, 4.6, -0.08)])!;
+    // 3:1 posters, the usual roadside shape.
+    const poster = mergeGeometries([new THREE.PlaneGeometry(6.36, 2.12).translate(0, 4.6, 0.08), new THREE.PlaneGeometry(6.36, 2.12).rotateY(Math.PI).translate(0, 4.6, -0.08)])!;
     this.posterCells = new THREE.InstancedBufferAttribute(new Float32Array(CAPACITY.billboard), 1);
     poster.setAttribute("aCell", this.posterCells);
     this.posters = new THREE.InstancedMesh(poster, createAdMaterial("boards"), CAPACITY.billboard);

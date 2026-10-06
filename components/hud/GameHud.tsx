@@ -18,6 +18,7 @@ import type { CityManifest } from "@/game/world/format";
 import { formatTzs, useT } from "@/i18n";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
+import { AgeGate } from "./AgeGate";
 import { RideHud, useTouchDevice } from "./RideHud";
 import { Tutorial } from "./Tutorial";
 
@@ -83,6 +84,7 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
         <IncomingCall game={game} />
       </div>
       <ShopCounter game={game} />
+      <AgeGate enabled={hydrated && tutorialDone} />
       <PhonePanel game={game} />
       <MissionBoard
         onAccept={(def) => game.acceptMission(def)}

@@ -21,6 +21,8 @@ export interface Business {
   icon: AdIcon;
   /** Cities it advertises in; omitted = everywhere. */
   cities?: CityId[];
+  /** Alcohol and other 18+ products: billboards only, shown to players who confirmed they're adults. */
+  ageRestricted?: boolean;
 }
 
 export const BUSINESSES: Business[] = [

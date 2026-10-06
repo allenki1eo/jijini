@@ -14,6 +14,8 @@ interface WorldState {
   showStats: boolean;
   showNavGraph: boolean;
   showChunkGrid: boolean;
+  /** This city has 18+ sponsors (the age question appears). */
+  adultAdsHere: boolean;
   set: (patch: Partial<Omit<WorldState, "set" | "reset">>) => void;
   reset: () => void;
 }
@@ -28,6 +30,7 @@ const initial = {
   showStats: false,
   showNavGraph: false,
   showChunkGrid: false,
+  adultAdsHere: false,
 };
 
 /** Session state for the world explorer (not persisted). */

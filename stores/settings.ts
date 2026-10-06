@@ -25,6 +25,8 @@ export interface SettingsState {
   /** Radio station playing while you ride (or "off"). */
   /** "kijiweni" | "bongo" | "pwani", a live station "live:<n>", or "off". */
   radio: string;
+  /** Answer to "are you 18 or over?" (null = not asked yet). Gates alcohol adverts. */
+  adult: boolean | null;
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 
@@ -46,6 +48,7 @@ export const useSettings = create<SettingsState>()(
       hudScale: 1,
       tierDetected: false,
       radio: "kijiweni",
+      adult: null,
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
     }),
     {

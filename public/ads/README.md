@@ -4,7 +4,7 @@ BodaGo shows local businesses on roadside billboards and on banners strung acros
 
 To put a **real** business in the game, add it to `manifest.json` here. Sponsors take the first ad slots in the cities you list.
 
-**The first sponsor also gets the hero billboard:** a big board on tall legs that faces the rider at the start of every ride, in every city it's listed for.
+Sponsors take every other billboard slot in their cities, local businesses fill the rest. **The first sponsor also gets the hero billboard:** a big board on tall legs that faces the rider at the start of every ride, in every city it's listed for.
 
 ```json
 {
@@ -29,8 +29,11 @@ To put a **real** business in the game, add it to `manifest.json` here. Sponsors
 | `colors` | Background, text and accent, used when there's no image and on road banners. |
 | `icon` | One of `utensils`, `wrench`, `smartphone`, `shirt`, `fish`, `pill`, `hammer`, `scissors`, `shield`, `radio`, `wheat`, `droplet`. |
 | `cities` | Any of `shinyanga`, `arusha`, `mwanza`, `kariakoo`; leave it out for every city. |
-| `image` | Optional billboard poster, **2:1** (e.g. 1024 × 512 PNG or JPG), placed in this folder. |
+| `image` | Optional billboard poster, **3:1** (e.g. 1800 × 600 JPG, ideally under 200 KB), placed in this folder. Other shapes are cropped to fit, never stretched. |
+| `ageRestricted` | `true` for alcohol and other 18+ products. They appear only on billboards (never on radio, road banners or promo rides), and only for players who answered that they're 18 or over. |
 
 A radio advert can have a recorded voice: add it to `public/audio/voices/manifest.json` under the key `radio.ad.<id>`.
+
+East African Spirits (T) Ltd is set up for Shinyanga as a working example (`eas-spirits.jpg`, `eas-beers.jpg`).
 
 **Only add a business with its written permission**, and use logos and images it owns or has licensed. Every city has 12 ad slots shared between sponsors and the fictional ads.

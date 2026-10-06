@@ -11,7 +11,7 @@ import { useSettings } from "@/stores/settings";
 const GROUPS: (StationGroup | "all")[] = ["all", "national", "dar", "regional", "religious"];
 
 const markLetters = (name: string) => {
-  const parts = name.replace(/\(.*\)/, "").trim().split(/\s+/).filter(Boolean);
+  const parts = name.split(/[^A-Za-z0-9]+/).filter((part) => /[A-Za-z]/.test(part));
   const letters = parts.length > 1 ? `${parts[0]![0]!}${parts[parts.length - 1]![0]!}` : (parts[0] ?? "?").slice(0, 2);
   return letters.toUpperCase();
 };
@@ -107,7 +107,10 @@ export function StationBrowser({ variant }: { variant: "page" | "phone" }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold tracking-wide text-cream/50 uppercase">{t.radio.now}</p>
               <p className="truncate font-display text-lg leading-tight font-extrabold">{tuned.name}</p>
-              <p className={cn("text-sm leading-snug", phase === "error" ? "text-coral" : "text-cream/60")}>{status}</p>
+              <p className="truncate text-sm text-cream/55">
+                {[tuned.city, tuned.genre ? t.radio.genres[tuned.genre] : "", freqLabel(tuned.freq, t.radio.live)].filter(Boolean).join(" · ")}
+              </p>
+              <p className={cn("text-sm leading-snug", phase === "error" ? "text-coral" : phase === "playing" ? "text-sun" : "text-cream/60")}>{status}</p>
             </div>
           </div>
           <div className="mt-3 flex gap-2">

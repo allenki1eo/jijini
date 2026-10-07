@@ -1,11 +1,12 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { Home, Play, RotateCcw, Settings2 } from "lucide-react";
+import { Home, Keyboard, Play, RotateCcw, Settings2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button, Segmented, Toggle } from "@/components/ui";
 import { KitengeStrip } from "@/components/brand/Kitenge";
+import { useTouchDevice } from "@/components/hud/RideHud";
 import { useT } from "@/i18n";
 import { useSettings, type Quality } from "@/stores/settings";
 
@@ -20,6 +21,7 @@ interface PauseMenuProps {
 export function PauseMenu({ open, onResume, onRestart, extra }: PauseMenuProps) {
   const t = useT();
   const s = useSettings();
+  const touch = useTouchDevice();
   return (
     <AnimatePresence>
       {open && (
@@ -74,6 +76,28 @@ export function PauseMenu({ open, onResume, onRestart, extra }: PauseMenuProps) 
                   <Toggle label={t.settings.autoThrottle} checked={s.autoThrottle} onChange={(v) => s.set("autoThrottle", v)} />
                 </div>
               </div>
+              {/* Laptop riders: every key in one place (the on-screen hint fades after a few seconds). */}
+              {!touch && (
+                <div className="rounded-2xl bg-night-700 p-4">
+                  <p className="mb-2.5 flex items-center gap-2 font-display font-bold">
+                    <Keyboard className="size-5 text-sun" /> {t.ride.keysTitle}
+                  </p>
+                  <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm">
+                    {t.ride.keys.map(([k = "", what]) => (
+                      <div key={k} className="contents">
+                        <dt className="flex flex-wrap gap-1">
+                          {k.split(" ").map((key) => (
+                            <kbd key={key} className="min-w-7 rounded-md bg-night-500 px-1.5 py-0.5 text-center font-display text-xs font-bold text-cream shadow-[inset_0_-2px_0_rgb(0_0_0/0.35)]">
+                              {key}
+                            </kbd>
+                          ))}
+                        </dt>
+                        <dd className="text-cream/75">{what}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <Link href="/settings" className="chunky flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-night-600 font-display font-bold ring-1 ring-white/10 [--edge:var(--color-night)]">
                   <Settings2 className="size-5" />

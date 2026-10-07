@@ -161,3 +161,12 @@ Live numbers need a small Redis database:
 2. Redeploy.
 
 The game sends anonymous events to `/api/track`: a random install id, the city, device class, jobs, km and minutes. No names or locations are sent. Riders can switch it off in Settings → "Shiriki takwimu". Without a database the routes still answer but store nothing, and `/stats` explains how to switch the numbers on.
+
+## City leagues (`/ligi`)
+
+Each city has two weekly boards. Both run on the same Redis database as `/stats`, with no extra setup.
+
+- **Weekly race:** the same course for every rider, seeded by the ISO week. The board keeps each rider's best time.
+- **Weekly earnings:** the pay from every finished job.
+
+Riders appear under a name they pick on `/ligi`. The default is "Dereva 1234". Results are tied to the anonymous install id. They are only sent when "Shiriki takwimu" is on. Boards are kept for ten weeks.

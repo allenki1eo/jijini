@@ -68,6 +68,9 @@ export class BikeModel {
   private mudflaps: THREE.Group;
   private ledStrip: THREE.Mesh;
   private vest: THREE.Mesh;
+  /** The helmet's parts, and the bare head with a kofia shown when it has cracked. */
+  private helmetParts: THREE.Mesh[] = [];
+  private bareHead: THREE.Group = new THREE.Group();
   private tank: THREE.Mesh;
   private stickerMeshes: THREE.Mesh[] = [];
   private plate: THREE.Mesh;
@@ -217,9 +220,16 @@ export class BikeModel {
     }
     add(t, cyl(0.06, 0.1, 8), m.skin, 0, 0.66, -0.08);
     // Full-face helmet: shell, chin bar and a curved visor.
-    add(t, new THREE.SphereGeometry(0.16, 16, 12), m.helmet, 0, 0.78, -0.12);
-    add(t, new THREE.SphereGeometry(0.162, 16, 8, -0.9, 1.8, 1.15, 0.55), m.visor, 0, 0.78, -0.12, 0, Math.PI, 0);
-    add(t, box(0.18, 0.06, 0.08), m.helmet, 0, 0.66, -0.24);
+    this.helmetParts = [
+      add(t, new THREE.SphereGeometry(0.16, 16, 12), m.helmet, 0, 0.78, -0.12),
+      add(t, new THREE.SphereGeometry(0.162, 16, 8, -0.9, 1.8, 1.15, 0.55), m.visor, 0, 0.78, -0.12, 0, Math.PI, 0),
+      add(t, box(0.18, 0.06, 0.08), m.helmet, 0, 0.66, -0.24),
+    ];
+    // Without a helmet: just a head and a kofia (what Afande fines you for).
+    t.add(this.bareHead);
+    add(this.bareHead, new THREE.SphereGeometry(0.12, 14, 10), m.skin, 0, 0.77, -0.12);
+    add(this.bareHead, new THREE.CylinderGeometry(0.115, 0.12, 0.08, 14), m.jacket, 0, 0.86, -0.12);
+    this.bareHead.visible = false;
 
     // Passenger (Abiria) and cargo (Mzigo, crates, chai, food).
     body.add(this.passenger);
@@ -320,6 +330,12 @@ export class BikeModel {
     for (const [name, obj] of Object.entries(kinds)) obj.visible = name === kind;
     this.cargo.visible = kind !== "none";
     if (kind !== "none") this.passenger.visible = false;
+  }
+
+  /** A whole helmet, or a bare head after it cracked. */
+  setHelmet(on: boolean) {
+    this.helmetParts.forEach((p) => (p.visible = on));
+    this.bareHead.visible = !on;
   }
 
   setBike(id: BikeId, custom: Customization) {

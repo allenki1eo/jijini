@@ -1,7 +1,9 @@
 "use client";
 
+import { FleetTab } from "@/components/garage/FleetTab";
+import { GearCard } from "@/components/garage/GearCard";
 import { AnimatePresence, m } from "motion/react";
-import { Bike, Check, Coins, Fuel, Gauge, Lock, Megaphone, Paintbrush, ShieldHalf, Sparkles, Wrench, type LucideIcon } from "lucide-react";
+import { Bike, Check, Coins, Fuel, Gauge, Lock, Megaphone, Paintbrush, ShieldHalf, Sparkles, Wrench, type LucideIcon, Building2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, Card, Chip, Segmented, Toggle } from "@/components/ui";
@@ -14,7 +16,7 @@ import { ScreenHeader } from "./ScreenHeader";
 
 const GarageStage = dynamic(() => import("@/components/garage/GarageStage"), { ssr: false });
 
-type Tab = "bikes" | "upgrades" | "style";
+type Tab = "bikes" | "upgrades" | "style" | "fleet";
 
 const SWATCHES = ["#C93A31", "#9C4A2E", "#FFC72C", "#0B6E4F", "#00A3DD", "#1F3A63", "#10131A", "#F4F1EA", "#E0457B", "#6A1B9A", "#E37A1F", "#7D8698"];
 const COSMETIC_PRICES: Record<string, number> = { led: 6000, mudflaps: 2000, "sticker:reds": 1500, "sticker:yellows": 1500, "sticker:blues": 1500, "sticker:kitenge": 2500 };
@@ -128,6 +130,7 @@ export function GarageScreen() {
   };
 
   const tabs: Record<Tab, ReactNode> = {
+    fleet: <FleetTab onToast={setToast} />,
     bikes: (
       <div className="flex flex-col gap-4">
         <ul className="grid gap-2">
@@ -245,7 +248,6 @@ export function GarageScreen() {
         </div>
         {(
           [
-            ["vest", t.garage.vest, null],
             ["mudflaps", t.garage.mudflaps, "mudflaps"],
             ["led", t.garage.led, "led"],
           ] as const
@@ -305,10 +307,12 @@ export function GarageScreen() {
                 { value: "bikes", label: t.garage.bikes, icon: <Bike /> },
                 { value: "upgrades", label: t.garage.upgrades, icon: <Wrench /> },
                 { value: "style", label: t.garage.style, icon: <Paintbrush /> },
+                { value: "fleet", label: t.fleet.tab, icon: <Building2 /> },
               ]}
             />
             <div className="mt-4">{tabs[tab]}</div>
           </Card>
+          <GearCard onToast={setToast} />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Button
               variant="sky"

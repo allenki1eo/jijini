@@ -20,8 +20,12 @@ interface Bubble {
 
 const LIFETIME = 3600;
 
-/** What people say: passengers, callers, sellers and the rider, as speech bubbles above the speedometer. */
-export function SpeechBubbles() {
+/**
+ * What people say: passengers, callers, sellers and the rider, as speech
+ * bubbles above the speedometer. `docked` (portrait phones): one small line
+ * at a time in the left-hand stack, so the rider stays in view.
+ */
+export function SpeechBubbles({ docked = false }: { docked?: boolean }) {
   const t = useT();
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const nextId = useRef(1);
@@ -41,8 +45,30 @@ export function SpeechBubbles() {
     [],
   );
 
+  if (docked)
+    return (
+      <div className="pointer-events-none min-w-0 max-w-[13.5rem] flex-1" aria-live="polite">
+        <AnimatePresence initial={false} mode="popLayout">
+          {bubbles.slice(-1).map((b) => (
+            <m.p
+              key={b.id}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
+              className={cn("rounded-xl rounded-tl-sm px-2.5 py-1.5 text-xs leading-snug font-semibold shadow-md", b.mine ? "bg-sun text-night" : "bg-cream/95 text-night")}
+            >
+              <span className="line-clamp-2">
+                {!b.mine && <b className="mr-1 font-display font-extrabold text-forest-600">{b.who.split(" ")[0]}:</b>}
+                {b.text}
+              </span>
+            </m.p>
+          ))}
+        </AnimatePresence>
+      </div>
+    );
+
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-44 flex flex-col items-center gap-2 px-4 max-sm:bottom-80 short:bottom-28" aria-live="polite">
+    <div className="pointer-events-none absolute inset-x-0 bottom-44 flex flex-col items-center gap-2 px-4 short:bottom-28" aria-live="polite">
       <AnimatePresence initial={false}>
         {bubbles.map((b) => (
           <m.div
@@ -69,7 +95,7 @@ export function SpeechBubbles() {
 const OPTIONS: TalkOption[] = ["hello", "sorry", "hold", "near"];
 
 /** Quick things to say to the passenger on board (keys 1–4). */
-export function ChatBar({ game, touch }: { game: Game; touch: boolean }) {
+export function ChatBar({ game, touch, compact = false }: { game: Game; touch: boolean; compact?: boolean }) {
   const t = useT();
   useHudTick(4);
   // On phones the phrases fold away behind one button so they don't cover the road and the arrow.
@@ -107,13 +133,15 @@ export function ChatBar({ game, touch }: { game: Game; touch: boolean }) {
               type="button"
               onClick={() => setOpen((o) => !o)}
               aria-expanded={open}
+              aria-label={t.phone.chat}
               disabled={!ready}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-sm font-bold ring-1 backdrop-blur transition-colors disabled:opacity-45",
+                "flex items-center gap-1.5 rounded-full font-display text-sm font-bold ring-1 backdrop-blur transition-colors disabled:opacity-45",
+                compact ? "size-9 justify-center" : "px-3 py-1.5",
                 open ? "bg-sun text-night ring-sun" : "bg-night/75 text-cream ring-white/10",
               )}
             >
-              <MessageCircle className="size-4" /> {t.phone.chat}
+              <MessageCircle className="size-4" /> {!compact && t.phone.chat}
             </button>
           ) : (
             <p className="flex items-center gap-1.5 rounded-full bg-night/70 px-2.5 py-1 font-display text-xs font-bold text-cream/80 backdrop-blur">

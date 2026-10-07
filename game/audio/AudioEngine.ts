@@ -27,6 +27,9 @@ export class AudioEngine {
   /** Which radio station's sound the music sequencer plays. */
   style: MusicStyle = "singeli";
   private volumes = { master: 0.8, music: 0.6, sfx: 0.9 };
+  /** Radio reception 0..1: the music fades and static hisses in as it drops. */
+  private signal = 1;
+  private hiss: { gain: GainNode } | null = null;
 
   /** Create (or resume) the context. Must be called from a user gesture. */
   unlock() {
@@ -61,8 +64,33 @@ export class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.volumes.master, t, 0.05);
-    this.buses.music.gain.setTargetAtTime(this.volumes.music * 0.35, t, 0.05);
+    this.buses.music.gain.setTargetAtTime(this.volumes.music * 0.35 * Math.max(0.08, this.signal ** 0.8), t, 0.2);
     this.buses.sfx.gain.setTargetAtTime(this.volumes.sfx, t, 0.05);
+  }
+
+  /**
+   * Radio reception (1 = clear, 0 = gone): far from town the station fades
+   * under band-limited static that crackles in and out.
+   */
+  setRadioSignal(signal: number, radioOn: boolean) {
+    this.signal = Math.max(0, Math.min(1, signal));
+    if (!this.ctx) return;
+    this.applyVolumes();
+    if (!this.hiss) {
+      const src = this.noiseSource();
+      const band = this.ctx.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.value = 2600;
+      band.Q.value = 0.7;
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+      src.connect(band).connect(gain).connect(this.master);
+      src.start();
+      this.hiss = { gain };
+    }
+    // Crackle: the static level jitters a little every update.
+    const level = radioOn ? (1 - this.signal) ** 1.3 * 0.08 * this.volumes.music * (0.75 + Math.random() * 0.5) : 0;
+    this.hiss.gain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.08);
   }
 
   suspend() {

@@ -64,7 +64,7 @@ export function BankPanel({ bank, name }: { bank: BankId; name: string }) {
   const ok = value > 0 && value <= max;
 
   return (
-    <div className="pointer-events-auto flex w-72 flex-col gap-2.5 overflow-hidden rounded-2xl bg-night-800/95 p-3 shadow-xl ring-1 backdrop-blur" style={{ boxShadow: `inset 4px 0 0 ${b.color}`, borderColor: b.color }}>
+    <div className="pointer-events-auto flex w-72 flex-col gap-2.5 overflow-hidden rounded-2xl bg-night-800/95 p-3 shadow-xl ring-1 backdrop-blur max-sm:w-full max-sm:max-w-[16rem] max-sm:gap-1.5 max-sm:p-2.5" style={{ boxShadow: `inset 4px 0 0 ${b.color}`, borderColor: b.color }}>
       <div className="flex items-center gap-2.5">
         <span className="grid h-10 min-w-12 place-items-center rounded-xl px-1.5 font-display text-xs font-extrabold tracking-tight" style={{ background: b.color, color: b.ink, boxShadow: `inset 0 -3px 0 ${b.accent}` }}>
           {b.short}
@@ -136,7 +136,7 @@ export function WakalaPanel({ name }: { name: string }) {
   const ok = value > 0;
 
   return (
-    <div className="pointer-events-auto flex w-72 flex-col gap-2.5 rounded-2xl bg-night-800/95 p-3 shadow-xl ring-1 ring-forest-400/50 backdrop-blur">
+    <div className="pointer-events-auto flex w-72 flex-col gap-2.5 rounded-2xl bg-night-800/95 p-3 shadow-xl ring-1 ring-forest-400/50 backdrop-blur max-sm:w-full max-sm:max-w-[16rem] max-sm:gap-1.5 max-sm:p-2.5">
       <div className="flex items-center gap-2.5">
         <span className="grid size-10 place-items-center rounded-xl bg-forest text-sun">
           <Smartphone className="size-5" />

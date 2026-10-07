@@ -2,11 +2,14 @@
 
 import { Briefcase, Coins, Fuel } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { BargainPanel } from "@/components/missions/BargainPanel";
 import { CityMap } from "@/components/missions/CityMap";
 import { MissionBoard } from "@/components/missions/MissionBoard";
 import { MissionTracker } from "@/components/missions/MissionTracker";
 import { Minimap } from "@/components/missions/Minimap";
 import { ResultsScreen } from "@/components/missions/ResultsScreen";
+import { PhotoPrompt } from "@/components/missions/PhotoPrompt";
+import { StagePanel } from "@/components/missions/StagePanel";
 import { StationPanel } from "@/components/missions/StationPanel";
 import { IncomingCall, PhoneButton, PhonePanel } from "@/components/phone/Phone";
 import { ShopCounter } from "@/components/phone/ShopCounter";
@@ -20,8 +23,9 @@ import { formatTzs, useT } from "@/i18n";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
 import { AgeGate } from "./AgeGate";
-import { RideHud, useTouchDevice } from "./RideHud";
+import { RideHud, useNarrowScreen, useTouchDevice } from "./RideHud";
 import { hud } from "@/game/core/hud";
+import { stageHud } from "@/game/world/KijiweStage";
 import { useHudTick } from "./useHudTick";
 import { cn } from "@/lib/cn";
 import { Tutorial } from "./Tutorial";
@@ -52,11 +56,18 @@ function FuelFinder({ game }: { game: Game }) {
   );
 }
 
+/** Is a stop panel showing (fare, queue, sheli/bank/wakala, photo spot)? Polled like the panels themselves. */
+function useContextOpen(game: Game) {
+  useHudTick(4);
+  const bargain = useMissions((s) => s.bargain);
+  return Boolean(bargain || (stageHud.inZone && hud.speedKmh < 6) || game.serviceNearby() || game.photoSpot());
+}
+
 /** Wallet in a few characters for narrow screens: 250k, 1.2M. */
 const shortTzs = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatTzs(n));
 
 /** Full in-game HUD: the ride overlay plus jobs, minimap, wallet and results. */
-export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; manifest: CityManifest; openBoardOnStart?: boolean }) {
+export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }: { game: Game; manifest: CityManifest; openBoardOnStart?: boolean; weeklyRaceOnStart?: boolean }) {
   const t = useT();
   const wallet = usePlayer((s) => s.wallet);
   const hydrated = usePlayer((s) => s.hydrated);
@@ -83,6 +94,13 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
   }, [openBoardOnStart, set]);
 
   const tutorial = hydrated && !tutorialDone;
+  const narrow = useNarrowScreen();
+  const contextOpen = useContextOpen(game);
+
+  // Arriving from the leaderboard's "race now": line up for this week's course (after the tutorial).
+  useEffect(() => {
+    if (weeklyRaceOnStart && hydrated && tutorialDone) game.startWeeklyRace();
+  }, [weeklyRaceOnStart, hydrated, tutorialDone, game]);
   const touch = useTouchDevice();
 
   return (
@@ -114,16 +132,30 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
       topLeft={
         <>
           <IncomingCall game={game} />
-          {touch && <ChatBar game={game} touch />}
+          {narrow ? (
+            // Phones: the chat button and the latest line share one row, so the stack stays short.
+            <div className="flex w-full items-start gap-1.5">
+              {touch && <ChatBar game={game} touch compact />}
+              <SpeechBubbles docked />
+            </div>
+          ) : (
+            touch && <ChatBar game={game} touch />
+          )}
+        </>
+      }
+      contextOpen={contextOpen}
+      context={
+        <>
+          <BargainPanel game={game} />
+          <StagePanel game={game} />
+          <PhotoPrompt game={game} />
+          <StationPanel game={game} />
         </>
       }
     >
       {tutorial && <Tutorial game={game} />}
       <StoryDirector enabled={hydrated && tutorialDone} />
-      <div className="safe-x pointer-events-none absolute top-1/2 left-0 -translate-y-1/2">
-        <StationPanel game={game} />
-      </div>
-      <SpeechBubbles />
+      {!narrow && <SpeechBubbles />}
       {!touch && <ChatBar game={game} touch={false} />}
       <ShopCounter game={game} />
       <AgeGate enabled={hydrated && tutorialDone} />

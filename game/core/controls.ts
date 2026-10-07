@@ -33,6 +33,8 @@ let tiltSteer = 0;
 let lastPad: boolean[] = [];
 
 const has = (...codes: string[]) => codes.some((c) => keys.has(c));
+/** Keys that ride the bike (rather than operate the page). */
+const DRIVE_KEYS = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "ShiftLeft", "ShiftRight", "KeyQ", "KeyH"]);
 
 export interface ControlOptions {
   autoThrottle: boolean;
@@ -42,7 +44,13 @@ export interface ControlOptions {
 /** Install keyboard + tilt listeners. Returns a cleanup function. */
 export const attachInputs = (): (() => void) => {
   const onKey = (e: KeyboardEvent) => {
-    if (e.target instanceof HTMLInputElement) return;
+    const target = e.target as HTMLElement | null;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable) return;
+    // After clicking a HUD button, focus stays on it and Space/Enter would press it again: hand the keys back to the bike.
+    if (e.type === "keydown" && DRIVE_KEYS.has(e.code) && target instanceof HTMLButtonElement && !target.closest("[role=dialog]")) {
+      target.blur();
+      e.preventDefault();
+    }
     if (e.type === "keydown") {
       if (!e.repeat) {
         if (e.code === "KeyH") controls.pressed.horn = true;

@@ -59,7 +59,7 @@ function SteerPad({ label }: { label: string }) {
     <div
       role="application"
       aria-label={label}
-      className="pointer-events-auto relative flex h-28 w-60 touch-none items-center justify-center rounded-full bg-night/45 ring-2 ring-white/15 backdrop-blur-sm short:h-24 short:w-52"
+      className="pointer-events-auto relative flex h-28 w-60 max-w-full touch-none items-center justify-center rounded-full bg-night/45 ring-2 ring-white/15 backdrop-blur-sm short:h-24 short:w-52"
       onPointerDown={(e) => {
         if (active.current !== null) return;
         active.current = e.pointerId;
@@ -86,14 +86,23 @@ export function TouchControls() {
   const autoThrottle = useSettings((s) => s.autoThrottle);
   const tilt = useSettings((s) => s.tiltSteer);
 
-  const steer = !tilt && <SteerPad label={t.ride.steer} />;
+  // Horn and wheelie sit small above the steering thumb, at the screen edge, so the
+  // middle of the screen (where the rider is) stays clear on narrow phones.
+  const extras = (
+    <div className={cn("flex gap-2.5", leftHanded && "flex-row-reverse")}>
+      <Hold name="horn" label={t.ride.horn} icon={<Megaphone />} className="size-12 rounded-full bg-night-600/85 text-sun ring-2 ring-white/15 [&_svg]:size-5" />
+      <Hold name="wheelie" label={t.ride.wheelie} icon={<TrendingUp />} className="size-12 rounded-full bg-night-600/85 text-cream ring-2 ring-white/15 [&_svg]:size-5" />
+    </div>
+  );
+  const steer = (
+    <div className={cn("flex min-w-0 flex-col gap-3", leftHanded ? "items-end" : "items-start")}>
+      {extras}
+      {!tilt && <SteerPad label={t.ride.steer} />}
+    </div>
+  );
   const pedals = (
     <div className={cn("flex items-end gap-3", leftHanded && "flex-row-reverse")}>
       <div className="flex flex-col gap-3">
-        <div className="flex gap-3">
-          <Hold name="horn" label={t.ride.horn} icon={<Megaphone />} className="size-14 rounded-full bg-night-600/90 text-sun ring-2 ring-white/15" />
-          <Hold name="wheelie" label={t.ride.wheelie} icon={<TrendingUp />} className="size-14 rounded-full bg-night-600/90 text-cream ring-2 ring-white/15" />
-        </div>
         <Hold name="brake" label={t.ride.brake} icon={<OctagonMinus />} className="h-20 w-32 rounded-[1.4rem] bg-coral text-cream shadow-[0_5px_0_0_var(--color-coral-700)] short:h-16" />
       </div>
       <div className="flex flex-col gap-3">
@@ -107,8 +116,8 @@ export function TouchControls() {
 
   return (
     <div className="safe-x safe-bottom pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between pb-3">
-      {leftHanded ? pedals : steer || <span />}
-      {leftHanded ? steer || <span /> : pedals}
+      {leftHanded ? pedals : steer}
+      {leftHanded ? steer : pedals}
     </div>
   );
 }

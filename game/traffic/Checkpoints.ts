@@ -1,11 +1,14 @@
 /**
  * Police checkpoints (Afande Salum and friends). Roll up slowly, show your
- * leseni, get waved on. Blast through and pay a small, comedic fine.
+ * papers, get waved on. Afande checks the leseni, the helmet, the reflector
+ * vest and the LATRA permit: each one missing is its own fine. Blast through
+ * and pay for skipping too.
  */
 import * as THREE from "three";
 import { controls } from "@/game/core/controls";
 import { events } from "@/game/core/events";
 import { block, createInstancedMaterial, merge, part } from "@/game/world/meshKit";
+import { GEAR_FINES, type GearCheck } from "@/data/prices";
 import type { BikeState } from "@/game/vehicles/BikePhysics";
 import type { NavNetwork } from "./NavNetwork";
 
@@ -20,6 +23,23 @@ export const checkpointState = {
   /** The last fine, and whether it was for an expired licence. */
   fine: 0,
   expired: false,
+  /** What Afande found missing last time. */
+  missing: [] as GearCheck[],
+};
+
+/** What the rider has with them at a roadblock. */
+export interface Papers {
+  valid: boolean;
+  hesabu: number;
+  helmet: boolean;
+  reflector: boolean;
+  permit: boolean;
+}
+
+/** Fines for the gear that's missing. */
+const gearFines = (p: Papers) => {
+  const missing = (Object.keys(GEAR_FINES) as GearCheck[]).filter((k) => !p[k]);
+  return { missing, total: missing.reduce((sum, k) => sum + GEAR_FINES[k], 0) };
 };
 
 export const CHECKPOINT_FINE = 2000;
@@ -100,7 +120,7 @@ export class Checkpoints {
    * `licence.valid` false: showing an expired leseni costs the day's hesabu
    * (what the boda earns the owner in a day).
    */
-  update(dt: number, bike: BikeState, fine: (amount: number) => void, adjustRep: (d: number) => void, licence: { valid: boolean; hesabu: number }) {
+  update(dt: number, bike: BikeState, fine: (amount: number) => void, adjustRep: (d: number) => void, licence: Papers) {
     for (const c of this.list) c.cooldown = Math.max(0, c.cooldown - dt);
     const st = checkpointState;
     if (!this.active) {
@@ -123,16 +143,18 @@ export class Checkpoints {
       st.phase = "show";
       c.waited += dt;
       if (st.showRequested || controls.pressed.action) {
-        if (licence.valid) {
+        const gear = gearFines(licence);
+        st.missing = gear.missing;
+        if (licence.valid && !gear.missing.length) {
           st.expired = false;
           this.finish(c, "passed");
           adjustRep(0.05);
           events.emit("checkpoint", { passed: true });
         } else {
-          st.fine = licence.hesabu;
-          st.expired = true;
-          fine(licence.hesabu);
-          adjustRep(-0.1);
+          st.fine = (licence.valid ? 0 : licence.hesabu) + gear.total;
+          st.expired = !licence.valid;
+          fine(st.fine);
+          adjustRep(-0.05 - gear.missing.length * 0.03 - (licence.valid ? 0 : 0.05));
           this.finish(c, "fined");
           events.emit("checkpoint", { passed: false });
         }
@@ -142,7 +164,9 @@ export class Checkpoints {
     const leaving = d > c.minDist + 4 && c.minDist < STOP_ZONE + 4;
     if ((leaving && st.phase !== "passed") || st.timeLeft < -6 || d > ZONE + 15) {
       if (c.minDist < STOP_ZONE + 4) {
-        st.fine = CHECKPOINT_FINE + (licence.valid ? 0 : licence.hesabu);
+        const gear = gearFines(licence);
+        st.missing = gear.missing;
+        st.fine = CHECKPOINT_FINE + (licence.valid ? 0 : licence.hesabu) + gear.total;
         st.expired = !licence.valid;
         fine(st.fine);
         adjustRep(-0.2);

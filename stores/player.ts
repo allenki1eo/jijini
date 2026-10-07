@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { BankId } from "@/data/banks";
+import type { FleetBike } from "@/data/fleet";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { CityId } from "@/data/cities/config";
 import { events } from "@/game/core/events";
@@ -93,6 +94,12 @@ export interface Profile {
   banks: Partial<Record<BankId, number>>;
   /** Day key interest was last paid up to. */
   interestDay: string;
+  /** Safety gear the police check: a whole helmet, a reflector vest (owned), and game hours left on the LATRA permit. */
+  gear: { helmet: boolean; reflector: boolean; permitHours: number };
+  /** Your boda company: bikes you own and hire out to other riders. */
+  fleet: FleetBike[];
+  /** Landmark photos: "city:place" → the day it was last taken (`photos` is the album). */
+  photoLog: Record<string, string>;
 }
 
 const EMPTY_STATS: PlayerStats = {
@@ -150,6 +157,9 @@ export const NEW_PROFILE: Profile = {
   cosmetics: [],
   cityEarnings: {},
   regulars: {},
+  gear: { helmet: true, reflector: false, permitHours: 72 },
+  fleet: [],
+  photoLog: {},
   licenceHours: 72,
   hesabuOwed: 0,
   streak: { count: 0, lastDay: "", claimedDay: "" },
@@ -263,7 +273,9 @@ export const usePlayer = create<PlayerState>()(
       migrate: (persisted) => ({ ...NEW_PROFILE, ...(persisted as Partial<Profile>) }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Profile>;
-        return { ...current, ...p, stats: { ...EMPTY_STATS, ...p.stats }, custom: { ...NEW_PROFILE.custom, ...p.custom }, banks: { ...p.banks } };
+        // Riders who already wore the vest keep it as their reflector.
+        const gear = { ...NEW_PROFILE.gear, reflector: Boolean(p.custom?.vest), ...p.gear };
+        return { ...current, ...p, stats: { ...EMPTY_STATS, ...p.stats }, custom: { ...NEW_PROFILE.custom, ...p.custom }, banks: { ...p.banks }, gear };
       },
       onRehydrateStorage: () => () => usePlayer.setState({ hydrated: true }),
     },
@@ -285,5 +297,5 @@ export const exportSave = (): string => {
 export const importSave = (json: string) => {
   const data = JSON.parse(json) as { app?: string; version?: number; profile?: Partial<Profile> };
   if (data.app !== "bodago" || !data.profile || typeof data.profile.wallet !== "number") throw new Error("Not a BodaGo save");
-  usePlayer.setState({ ...NEW_PROFILE, ...data.profile, stats: { ...EMPTY_STATS, ...data.profile.stats } });
+  usePlayer.setState({ ...NEW_PROFILE, ...data.profile, stats: { ...EMPTY_STATS, ...data.profile.stats }, gear: { ...NEW_PROFILE.gear, ...data.profile.gear } });
 };

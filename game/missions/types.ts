@@ -62,7 +62,7 @@ export interface MissionResult {
   type: MissionType;
   success: boolean;
   /** i18n key for failures (e.g. "timeout", "spilled"). */
-  reason?: "timeout" | "spilled" | "abandoned" | "lost" | "missedBus";
+  reason?: "timeout" | "spilled" | "abandoned" | "lost" | "missedBus" | "walked";
   fare: number;
   tip: number;
   combo: number;
@@ -80,6 +80,8 @@ export interface MissionResult {
   best?: number;
   /** Errands: what the shopping cost, and the change handed back (negative = customer topped you up). */
   shopping?: { paid: number; change: number; haggled: boolean };
+  /** The passenger noticed you knew a short cut (and tipped for it). */
+  shortcut?: boolean;
 }
 
 /** Display config: lucide icon name, accent token, unlock rule. */

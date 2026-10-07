@@ -2,7 +2,9 @@
  * Runs the active mission: stop arrivals, the clock, passenger mood, chai
  * spill, combos and the final score + payout. Also keeps the route fresh.
  */
+import { BARGAIN_TYPES, PERSONALITY, QUOTES, acceptChance, counterOffer } from "@/data/passengers";
 import { canHaggle } from "@/data/prices";
+import { hud } from "@/game/core/hud";
 import { events } from "@/game/core/events";
 import { clockText, env } from "@/game/systems/environment";
 import { say } from "@/game/systems/speech";
@@ -34,6 +36,9 @@ const CHATTER_GAP = 9;
 const TALK_GAP = 6;
 
 export type TalkOption = "hello" | "sorry" | "hold" | "near";
+
+/** A tourist on any ride asks to stop for a picture at a landmark this close (m). */
+const SIGHT_RANGE = 45;
 
 /** Per-frame mission values for the HUD and minimap. */
 export const missionHud = {
@@ -88,6 +93,23 @@ export class MissionRunner {
   private sincePromo = 0;
   /** "Hold on tight" softens harsh riding for a few seconds. */
   private braced = 0;
+  /** The fare agreed at the kerb (starts at the going rate). */
+  private agreedFare = 0;
+  /** Waiting on the rider's price ("Bei gani?") before the passenger gets on. */
+  private bargaining = false;
+  private bargained = false;
+  /** Seconds a passenger in a rush has been kept crawling. */
+  private dawdle = 0;
+  /** Shortcut tips: the planned length of the ride leg and the odometer when it began. */
+  private legPlanned = 0;
+  private legStart = 0;
+  private odometer = 0;
+  /** Landmarks tourists want pictures of, and the one they've asked about. */
+  private sights: { x: number; z: number; name: string }[] = [];
+  private sightAsked: { x: number; z: number; name: string } | null = null;
+  private sightsDone = new Set<string>();
+  private sightHold = 0;
+  private extraPhotos = 0;
 
   constructor(
     private readonly nav: NavNetwork,
@@ -117,6 +139,14 @@ export class MissionRunner {
         }
       }),
       events.on("horn", () => this.def && this.hornUses++),
+      events.on("pothole", () => {
+        if (!this.def || !missionHud.carrying) return;
+        if (this.def.passenger !== "none") {
+          this.mood = Math.max(0, this.mood - 0.06);
+          this.chatter("scared");
+        }
+        if (this.def.type === "chai") this.spill += 0.15;
+      }),
     ];
   }
 
@@ -143,6 +173,15 @@ export class MissionRunner {
     this.haggled = null;
     this.shopOpen = false;
     this.sinceChatter = CHATTER_GAP;
+    this.agreedFare = def.fare;
+    this.bargaining = false;
+    this.bargained = !BARGAIN_TYPES.has(def.type) || def.passenger === "none";
+    this.dawdle = 0;
+    this.legPlanned = 0;
+    this.sightAsked = null;
+    this.sightsDone.clear();
+    this.sightHold = 0;
+    this.extraPhotos = 0;
     this.ghost.stop();
     this.clearBus();
     this.sincePromo = 6;
@@ -211,9 +250,15 @@ export class MissionRunner {
     return best > 22 * 22;
   }
 
+  /** Landmarks a tourist passenger may want to stop at. */
+  setSights(sights: { x: number; z: number; name: string }[]) {
+    this.sights = sights;
+  }
+
   update(dt: number, bike: BikeState) {
     const def = this.def;
     this.guide.update(dt, def ? missionHud.route : null, bike.x, bike.z, this.loading);
+    this.odometer = bike.odometer;
     if (!def) return;
     const racing = def.type === "mbio";
     if (!racing || this.raceStarted) this.elapsed += dt;
@@ -277,6 +322,7 @@ export class MissionRunner {
       this.mood = Math.max(0, this.mood - dt * 0.035);
       this.chatter("hurry");
     }
+    if (missionHud.carrying && def.passenger !== "none") this.passengerTalk(dt, bike);
     missionHud.mood = this.mood;
     missionHud.spill = this.spill;
 
@@ -284,6 +330,13 @@ export class MissionRunner {
     if (def.timeLimit !== null) {
       const strict = def.type === "dharura" || def.type === "mbio";
       if ((strict && missionHud.timeLeft < 0) || missionHud.timeLeft < -LATE_GRACE) return this.finish(false, "timeout");
+    }
+
+    // Agreeing the fare: the passenger waits at the kerb; ride off and they wave the next boda over.
+    if (this.bargaining) {
+      if (d > STOP_RADIUS + 25) this.endBargain();
+      missionHud.loading = 0;
+      return;
     }
 
     // Arrivals.
@@ -324,6 +377,8 @@ export class MissionRunner {
       const best = def.courseId ? usePlayer.getState().bests[def.courseId] : undefined;
       if (best) this.ghost.play(best.ghost);
     } else if (stop.kind === "pickup") {
+      // "Bei gani?" first: the passenger gets on once a price is agreed.
+      if (!this.bargained) return this.openBargain(def, missionHud.stopIndex);
       missionHud.carrying = true;
       if (def.passenger !== "none") {
         this.model.setPassenger(def.passenger);
@@ -353,6 +408,137 @@ export class MissionRunner {
     if (missionHud.stopIndex + 1 >= def.stops.length) return this.finish(true);
     missionHud.stopIndex++;
     this.focusStop(bike);
+    // Shortcut tips: remember how far the planned way to the drop-off is.
+    if (stop.kind === "pickup" && def.passenger !== "none") {
+      const r = missionHud.route;
+      let len = 0;
+      if (r) for (let i = 2; i < r.length; i += 2) len += Math.hypot(r[i]! - r[i - 2]!, r[i + 1]! - r[i - 1]!);
+      this.legPlanned = len;
+      this.legStart = bike.odometer;
+    }
+  }
+
+  // ── Bargaining ("Bei gani?") ─────────────────────────────────────────────
+
+  private openBargain(def: MissionDef, stopIndex: number) {
+    this.bargaining = true;
+    const to = def.stops.slice(stopIndex + 1).find((s) => s.kind === "dropoff")?.name ?? "";
+    useMissions.getState().set({ bargain: { client: def.client, kind: def.passenger as Exclude<MissionDef["passenger"], "none">, to, fare: def.fare, counter: null } });
+    say("bargainAsk", def.client, { place: to || currentDictionary().missions.poi.other });
+  }
+
+  private endBargain() {
+    this.bargaining = false;
+    useMissions.getState().set({ bargain: null });
+  }
+
+  /** The passenger climbs on at the agreed price. */
+  private agree(amount: number, bike: BikeState) {
+    this.agreedFare = amount;
+    this.bargained = true;
+    this.endBargain();
+    this.advance(bike);
+  }
+
+  /** Quote QUOTES[i] × the going rate. Returns whether they took it. */
+  quote(i: number, bike: BikeState): boolean {
+    const def = this.def;
+    const b = useMissions.getState().bargain;
+    if (!def || !this.bargaining || !b || b.counter !== null) return false;
+    const mult = QUOTES[i] ?? 1;
+    const amount = Math.round((def.fare * mult) / 100) * 100;
+    say("bargainQuote", currentDictionary().ride.you, { amount: formatTzs(amount) });
+    const regular = (usePlayer.getState().regulars[def.client] ?? 0) > 0;
+    const yes = Math.random() < acceptChance(b.kind, mult, regular);
+    window.setTimeout(() => {
+      if (this.def !== def) return;
+      if (!yes) {
+        const counter = counterOffer(b.kind, def.fare, mult);
+        useMissions.getState().set({ bargain: { ...b, counter } });
+        say(b.kind === "student" ? "bargainBroke" : "bargainCounter", def.client, { amount: formatTzs(counter) });
+        return;
+      }
+      say(mult < 1 ? "bargainThanks" : "bargainOk", def.client);
+      const player = usePlayer.getState();
+      if (mult < 1) {
+        // A fair price gets around the kijiwe.
+        player.adjustReputation(0.03);
+        this.mood = Math.min(1, this.mood + 0.1);
+      } else if (mult > 1.2) {
+        // Charging the mzungu price (or anyone else) costs you your good name.
+        player.adjustReputation(b.kind === "tourist" ? -0.08 : -0.05);
+        events.emit("toast", { text: currentDictionary().bargain.sifaDown, tone: "coral" });
+      }
+      this.agree(amount, bike);
+    }, 700);
+    return yes;
+  }
+
+  /** Take their counter-offer, or turn it down and let them find another boda. */
+  answerCounter(accept: boolean, bike: BikeState) {
+    const def = this.def;
+    const b = useMissions.getState().bargain;
+    if (!def || !this.bargaining || !b || b.counter === null) return;
+    if (accept) {
+      say("bargainOk", def.client);
+      this.agree(b.counter, bike);
+      return;
+    }
+    say("bargainLeave", def.client);
+    this.endBargain();
+    this.finish(false, "walked");
+  }
+
+  // ── Passengers who talk ──────────────────────────────────────────────────
+
+  /** Speed complaints, rushing businessmen, and tourists who want a picture. */
+  private passengerTalk(dt: number, bike: BikeState) {
+    const def = this.def!;
+    const kind = def.passenger as Exclude<MissionDef["passenger"], "none">;
+    const p = PERSONALITY[kind];
+    const kmh = Math.abs(bike.speed) * 3.6;
+    // "Pole pole dereva!": past their comfort over the limit.
+    if (kmh > hud.limitKmh + p.speedTolerance && def.type !== "haraka" && def.type !== "wahibasi") {
+      this.mood = Math.max(0, this.mood - dt * 0.04 * (this.braced > 0 ? 0.5 : 1));
+      this.chatter("slowDown");
+    }
+    // The businessman is always late.
+    if (p.wantsSpeed && def.type !== "haraka") {
+      this.dawdle = Math.abs(bike.speed) < HURRY_SPEED ? this.dawdle + dt : Math.max(0, this.dawdle - dt * 2);
+      if (this.dawdle > 6) {
+        this.mood = Math.max(0, this.mood - dt * 0.02);
+        this.chatter("late");
+      }
+    }
+    // A tourist spots a landmark: stop close by for a moment and they take a picture (and tip for it).
+    if (kind === "tourist" && def.type !== "wageni") {
+      if (!this.sightAsked) {
+        const near = this.sights.find((s) => !this.sightsDone.has(s.name) && Math.hypot(s.x - bike.x, s.z - bike.z) < SIGHT_RANGE);
+        if (near) {
+          this.sightAsked = near;
+          this.sightHold = 0;
+          say("touristSight", def.client, { place: near.name });
+          this.sinceChatter = 0;
+        }
+      } else {
+        const s = this.sightAsked;
+        const d = Math.hypot(s.x - bike.x, s.z - bike.z);
+        if (d > SIGHT_RANGE * 2.5) {
+          this.sightsDone.add(s.name);
+          this.sightAsked = null;
+        } else if (d < SIGHT_RANGE && Math.abs(bike.speed) < STOP_SPEED) {
+          this.sightHold += dt;
+          if (this.sightHold > 1.5) {
+            this.sightsDone.add(s.name);
+            this.sightAsked = null;
+            this.extraPhotos++;
+            this.mood = Math.min(1, this.mood + 0.15);
+            events.emit("photo", { id: s.name });
+            say("touristPhoto", def.client);
+          }
+        }
+      }
+    }
   }
 
   private clearBus() {
@@ -399,7 +585,7 @@ export class MissionRunner {
   }
 
   /** A passenger remark, at most one every few seconds. */
-  private chatter(key: "hurry" | "scared" | "crash") {
+  private chatter(key: "hurry" | "scared" | "crash" | "slowDown" | "late") {
     if (this.sinceChatter < CHATTER_GAP || !this.def) return;
     this.sinceChatter = 0;
     say(key, this.def.client);
@@ -475,9 +661,18 @@ export class MissionRunner {
     const def = this.def!;
     const late = missionHud.late;
     const passengerish = def.passenger !== "none";
-    const fare = success ? Math.round(def.fare * (late ? 0.5 : 1)) : 0;
+    const fare = success ? Math.round(this.agreedFare * (late ? 0.5 : 1)) : 0;
     let tip = 0;
+    let shortcut = false;
     if (success) {
+      // Tourists tip for pictures taken on the way.
+      tip += this.extraPhotos * 1000;
+      // Knowing a short cut: the passenger rode noticeably less than the planned way, and on time.
+      const ridden = this.odometer - this.legStart;
+      if (passengerish && this.legPlanned > 300 && ridden > 50 && ridden < this.legPlanned * 0.85 && !late) {
+        shortcut = true;
+        tip += Math.max(500, this.agreedFare * 0.25);
+      }
       if (passengerish) tip += def.fare * 0.35 * this.mood;
       if (def.type === "chai") tip += def.fare * 0.4 * (1 - this.spill);
       if (def.type === "dharura" && def.timeLimit) tip += def.fare * 0.3 * Math.max(0, missionHud.timeLeft / def.timeLimit);
@@ -523,6 +718,7 @@ export class MissionRunner {
       collisions: this.collisions,
       nearMisses: this.nearMisses,
       shopping,
+      shortcut,
     };
 
     // Races: personal bests and ghosts.
@@ -536,6 +732,7 @@ export class MissionRunner {
         result.best = +this.elapsed.toFixed(2);
         player.patch({ bests: { ...player.bests, [def.courseId]: { time: result.best, ghost: this.recording } } });
       }
+      if (success) events.emit("raceFinished", { courseId: def.courseId, seconds: +this.elapsed.toFixed(2) });
     }
 
     // Payout and bookkeeping.
@@ -547,14 +744,15 @@ export class MissionRunner {
       this.pesa(def.client, -shopping.change);
       if (success) say(shopping.change > 0 ? "change" : "topup", def.client);
     }
-    if (success && def.passenger !== "none" && def.type !== "mbio") say(def.type === "wahibasi" ? "busCaught" : "thanks", def.client);
+    if (success && def.passenger !== "none" && def.type !== "mbio") say(shortcut ? "shortcut" : def.type === "wahibasi" ? "busCaught" : "thanks", def.client);
     this.clearBus();
     // Happy customers save your number and call again.
     if (success && stars >= 4 && def.type !== "mbio" && def.type !== "wageni") {
       const regulars = usePlayer.getState().regulars;
       player.patch({ regulars: { ...regulars, [def.client]: (regulars[def.client] ?? 0) + 1 } });
     }
-    player.adjustReputation(success ? (stars - 3) * 0.06 : reason === "abandoned" ? -0.1 : -0.15);
+    // Turning down a stingy passenger costs nothing; giving up on a job does.
+    player.adjustReputation(success ? (stars - 3) * 0.06 : reason === "walked" ? 0 : reason === "abandoned" ? -0.1 : -0.15);
     if (success) {
       player.patch({ cityEarnings: { ...player.cityEarnings, [this.cityId]: (player.cityEarnings[this.cityId] ?? 0) + result.total } });
       player.bumpStat("deliveries", 1);
@@ -563,7 +761,7 @@ export class MissionRunner {
       if (env.rain > 0.4) player.bumpStat("rainDeliveries", 1);
       if (env.night > 0.5) player.bumpStat("nightDeliveries", 1);
       if (def.type === "dharura") player.bumpStat("emergencies", 1);
-      player.bumpStat("photos", this.photos);
+      player.bumpStat("photos", this.photos + this.extraPhotos);
       events.emit("delivery", {
         type: def.type,
         stars,
@@ -577,6 +775,7 @@ export class MissionRunner {
     } else events.emit("missionFailed", { type: def.type });
 
     this.closeShop();
+    this.endBargain();
     this.def = null;
     missionHud.active = false;
     missionHud.route = null;

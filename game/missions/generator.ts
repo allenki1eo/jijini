@@ -181,14 +181,17 @@ export class MissionGenerator {
       case "usiku": {
         const a = this.place(["shop", "market", "bus_station", "bank", "restaurant", "bar", "hotel", "office"], x, z, 30, 380);
         const b = this.place(any, a.x, a.z, 300, 1500);
+        // Now and then a tourist flags you down; businessmen are always running late (a tighter clock).
+        const passenger: PassengerKind = this.rand() < 0.12 ? "tourist" : this.pick(PASSENGERS)!;
+        const late = passenger === "business";
         return this.build(type, ctx, [this.stop(a, "pickup"), this.stop(b, "dropoff")], {
-          client,
-          passenger: this.pick(PASSENGERS),
-          speed: 7,
-          slack: 45,
+          client: passenger === "tourist" ? this.pick(TOURIST_NAMES)! : client,
+          passenger,
+          speed: late ? 8.5 : 7,
+          slack: late ? 25 : 45,
           base: type === "usiku" ? 2700 : 1500,
           perKm: type === "usiku" ? 6300 : 3500,
-          risks: type === "usiku" ? ["night"] : [],
+          risks: [...(type === "usiku" ? (["night"] as const) : []), ...(late ? (["fast"] as const) : [])],
         });
       }
       case "mzigo": {
@@ -397,7 +400,7 @@ export class MissionGenerator {
    * Fixed race courses per city (seeded by city and course number), so
    * personal bests and ghosts are comparable run to run.
    */
-  private raceCourse(k: number): { stops: Stop[]; length: number } | null {
+  private raceCourse(k: number | string): { stops: Stop[]; length: number } | null {
     const nav = this.ctxNav;
     let seed = [...`${this.cityId}:${k}`].reduce((a, c) => Math.imul(a ^ c.charCodeAt(0), 16777619), 2166136261) >>> 0;
     const rand = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
@@ -444,6 +447,36 @@ export class MissionGenerator {
       perKm: 3500,
     });
     return { ...def, risks: [] };
+  }
+
+  /**
+   * This week's race in this city: the same course for every rider (seeded by
+   * the ISO week), so times compare on the city leaderboard.
+   */
+  weeklyRace(ctx: GeneratorContext, week: string): MissionDef | null {
+    this.rand = ctx.random ?? Math.random;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const course = this.raceCourse(`weekly:${week}:${attempt}`);
+      if (!course) continue;
+      const def = this.build("mbio", ctx, course.stops, { client: "Ligi ya Wiki", speed: 0, slack: 0, base: 8000, perKm: 3500, risks: ["fast"] });
+      return { ...def, timeLimit: Math.round(course.length / 12.5 + 15), courseId: `${this.cityId}-weekly-${week}` };
+    }
+    return null;
+  }
+
+  /** A ride from the boda stage: the customer is right there at (x, z), going somewhere nearby. */
+  fromStage(ctx: GeneratorContext, at: { x: number; z: number; name: string }): MissionDef {
+    this.rand = ctx.random ?? Math.random;
+    const b = this.place(null, at.x, at.z, 300, 1400);
+    const passenger: PassengerKind = this.rand() < 0.1 ? "tourist" : this.pick(PASSENGERS)!;
+    return this.build("abiria", ctx, [{ x: at.x, z: at.z, kind: "pickup", name: at.name, poi: "start" }, this.stop(b, "dropoff")], {
+      client: passenger === "tourist" ? this.pick(TOURIST_NAMES)! : this.pick(CLIENTS)!,
+      passenger,
+      speed: 7,
+      slack: 45,
+      base: 1500,
+      perKm: 3500,
+    });
   }
 
   /** One job of a given type for a named caller (phone requests), or null if none fits here. */

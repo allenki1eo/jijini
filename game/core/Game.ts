@@ -36,7 +36,7 @@ import { FuelStations } from "@/game/world/FuelStations";
 import { KijiweStage, stageHud } from "@/game/world/KijiweStage";
 import { StreetEvents } from "@/game/world/StreetEvents";
 import { FLEET_BIKES } from "@/data/fleet";
-import { addEarnings, submitRaceTime } from "@/lib/leaderboard";
+import { submitDelivery, submitRaceTime } from "@/lib/leaderboard";
 import { FuelSellers } from "@/game/world/FuelSellers";
 import { Frontage } from "@/game/world/Frontage";
 import { Civic } from "@/game/world/Civic";
@@ -191,9 +191,9 @@ export class Game {
         this.traffic?.hornAt(x, z, this.stats.hornRange);
         this.peds?.hornAt(x, z, this.stats.hornRange);
       }),
-      // City leaderboards: weekly race times and the week's earnings.
+      // The league (signed-in riders): weekly race times, and points and earnings for every job.
       events.on("raceFinished", ({ courseId, seconds }) => courseId.includes("-weekly-") && submitRaceTime(this.cityId, seconds)),
-      events.on("delivery", ({ earned }) => addEarnings(this.cityId, earned)),
+      events.on("delivery", ({ earned, stars, clean }) => submitDelivery(this.cityId, { earned, stars, clean })),
       events.on("pothole", ({ speed }) => {
         this.chase.kick(Math.min(0.6, speed / 16));
         audio.crash(Math.min(0.4, speed / 25));

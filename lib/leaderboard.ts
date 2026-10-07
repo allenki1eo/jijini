@@ -1,16 +1,17 @@
 /**
- * Client side of the city leaderboards (app/api/leaderboard): the weekly race
- * times and weekly earnings, posted under the rider's chosen name and the
- * anonymous install id (the same one telemetry uses). Nothing is sent when the
- * rider has turned off sharing in Settings.
+ * Client side of the league (app/api/leaderboard). Results go out only for a
+ * signed-in rider (the server takes the account from the session cookie);
+ * guests can still look at the boards.
  */
-import { weekKey } from "@/game/systems/progression";
-import { installId } from "@/lib/telemetry";
-import { useSettings } from "@/stores/settings";
+import type { TierId } from "@/data/league";
+import { useAccount } from "@/lib/account";
+import { weekKey } from "@/lib/week";
 
 export interface BoardRow {
   rank: number;
   name: string;
+  /** The rider's home city. */
+  city?: string;
   value: number;
   me: boolean;
 }
@@ -18,28 +19,54 @@ export interface BoardRow {
 export interface Board {
   rows: BoardRow[];
   configured: boolean;
+  signedIn?: boolean;
   me?: { rank: number; value: number | null } | null;
   total?: number;
   error?: boolean;
 }
 
-export type BoardKind = "race" | "earn";
+export type BoardKind = "points" | "race" | "earn";
 
-/** The rider's name on the boards (a "Dereva 1234" default until they pick one). */
-export const riderName = () => useSettings.getState().riderName || `Dereva ${installId().slice(0, 4).toUpperCase()}`;
+export interface PrizeWin {
+  board: "points" | "race" | "tier";
+  city: string;
+  rank: number;
+  amount: number;
+  tier?: TierId;
+}
 
-const post = (body: Record<string, unknown>) => {
-  if (typeof window === "undefined" || !useSettings.getState().shareStats) return;
-  void fetch("/api/leaderboard", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...body, id: installId(), name: riderName(), week: weekKey() }), keepalive: true }).catch(() => {});
+export interface Prizes {
+  wins: PrizeWin[];
+  total: number;
+  claimed: boolean;
+}
+
+const post = async (body: Record<string, unknown>) => {
+  if (typeof window === "undefined" || !useAccount.getState().account) return null;
+  try {
+    const res = await fetch("/api/leaderboard", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), keepalive: true });
+    return (await res.json()) as { ok: boolean; points?: number; paid?: number; error?: string } & Partial<Prizes>;
+  } catch {
+    return null;
+  }
 };
+
+/** A finished job: league points (stars, clean ride) and the week's earnings. */
+export const submitDelivery = (city: string, d: { earned: number; stars: number; clean: boolean }) => void post({ kind: "delivery", city, ...d });
 
 /** A finished weekly race (seconds); the board keeps each rider's best. */
-export const submitRaceTime = (city: string, seconds: number) => post({ kind: "race", city, value: seconds });
+export const submitRaceTime = (city: string, seconds: number) => void post({ kind: "race", city, seconds });
 
-/** Money from a finished job, added to this week's total. */
-export const addEarnings = (city: string, amount: number) => amount > 0 && post({ kind: "earn", city, value: amount });
-
-export const fetchBoard = async (city: string, kind: BoardKind, week = weekKey()): Promise<Board> => {
-  const res = await fetch(`/api/leaderboard?city=${city}&kind=${kind}&week=${week}&id=${encodeURIComponent(installId())}`, { cache: "no-store" });
+export const fetchBoard = async (scope: string, kind: BoardKind, week = weekKey()): Promise<Board> => {
+  const res = await fetch(`/api/leaderboard?city=${scope}&kind=${kind}&week=${week}`, { cache: "no-store" });
   return (await res.json()) as Board;
 };
+
+/** What the signed-in rider won last week. */
+export const fetchPrizes = async (): Promise<Prizes> => {
+  const res = await fetch(`/api/leaderboard?prizes=1&week=${weekKey()}`, { cache: "no-store" });
+  return (await res.json()) as Prizes;
+};
+
+/** Claim last week's prizes; the server pays each week once. */
+export const claimPrizes = (lastWeek: string) => post({ kind: "claim", week: lastWeek });

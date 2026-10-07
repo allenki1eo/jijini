@@ -4,6 +4,7 @@
  * today. Progress comes from game events; rewards are claimed in the UI.
  */
 import { events } from "@/game/core/events";
+import { weekKey } from "@/lib/week";
 import { usePlayer, type ChallengeState, type PlayerStats } from "@/stores/player";
 
 export type ChallengeMetric =
@@ -62,14 +63,7 @@ const hash = (s: string) => {
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-export const weekKey = (d = new Date()) => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
-};
+export { weekKey };
 
 const pickIds = (pool: ChallengeDef[], period: string, count: number) => {
   const ids: string[] = [];

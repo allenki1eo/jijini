@@ -137,3 +137,12 @@ export const netWorth = () => {
   const p = usePlayer.getState();
   return p.wallet + p.bodapesa + Object.values(p.banks).reduce((a, b) => a + (b ?? 0), 0);
 };
+
+/** League prizes, paid into BodaPesa with the usual SMS. */
+export const leaguePrize = (amount: number, week: string) => {
+  if (amount <= 0) return;
+  const p = usePlayer.getState();
+  p.patch({ bodapesa: p.bodapesa + amount });
+  const t = currentDictionary();
+  alert(t.league.prizeFrom, fmt(t.league.prizeSms, { amount: tzs(amount), week: week.replace("-W", " · ") }), amount);
+};

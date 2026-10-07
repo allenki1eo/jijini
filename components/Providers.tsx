@@ -2,8 +2,18 @@
 
 import { useEffect, type ReactNode } from "react";
 import { PwaProvider } from "@/components/pwa/PwaProvider";
+import { startCloudSync, useAccount } from "@/lib/account";
 import { usePlayer } from "@/stores/player";
 import { useSettings } from "@/stores/settings";
+
+/** Who is signed in (asked once per visit) and the cloud save kept fresh. */
+function AccountSync() {
+  useEffect(() => {
+    void Promise.resolve(useAccount.persist.rehydrate()).then(() => useAccount.getState().refresh());
+    return startCloudSync();
+  }, []);
+  return null;
+}
 
 function SettingsSync() {
   const locale = useSettings((s) => s.locale);
@@ -34,6 +44,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <PwaProvider>
       <SettingsSync />
+      <AccountSync />
       {children}
     </PwaProvider>
   );

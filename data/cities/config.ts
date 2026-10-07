@@ -188,4 +188,4 @@ export const CITIES: Record<CityId, CityConfig> = {
 
 export const CITY_ORDER: CityId[] = ["shinyanga", "dodoma", "moshi", "arusha", "tanga", "mwanza", "mbeya", "kariakoo"];
 
-export const isCityId = (value: string): value is CityId => value in CITIES;
+export const isCityId = (value: string): value is CityId => Object.hasOwn(CITIES, value);

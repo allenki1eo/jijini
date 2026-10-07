@@ -1,13 +1,15 @@
 "use client";
 
-import { CalendarCheck, Coins, Map as MapIcon, MapPin, Maximize, PackageOpen, Play, Radio, Settings, Star, Trophy, Wrench, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Coins, UserPlus, Map as MapIcon, MapPin, Maximize, PackageOpen, Play, Radio, Settings, Star, Trophy, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { RiderAvatar } from "@/components/account/RiderBadge";
 import { Skyline } from "@/components/brand/Skyline";
 import { Logo } from "@/components/brand/Logo";
 import { InstallBanner, OfflineChip, UpdateToast } from "@/components/pwa/PwaPrompts";
 import { Chip, IconButton, Segmented } from "@/components/ui";
 import { CHALLENGE_BY_ID } from "@/game/systems/progression";
 import { fmt, formatTzs, useT } from "@/i18n";
+import { useAccount } from "@/lib/account";
 import { cn } from "@/lib/cn";
 import { enterFullscreen } from "@/lib/device";
 import { usePlayer } from "@/stores/player";
@@ -22,6 +24,26 @@ interface TileProps {
   href: string;
   /** A glowing dot: something is waiting there (a challenge to claim). */
   badge?: boolean;
+}
+
+/** Top-bar account button: the rider's avatar and name, or an invitation to register. */
+function AccountChip() {
+  const t = useT();
+  const account = useAccount((s) => s.account);
+  return (
+    <Link
+      href="/akaunti"
+      aria-label={account ? `${t.account.title}: ${account.name}` : t.account.menuGuest}
+      className={cn(
+        // Phones: just the avatar (or the register icon), so the top bar fits.
+        "chunky flex h-12 shrink-0 items-center gap-2 rounded-2xl pr-3 pl-1.5 font-display font-bold ring-1 [--edge:var(--color-night)] max-sm:w-12 max-sm:justify-center max-sm:p-0",
+        account ? "bg-night-600/95 text-cream ring-white/10" : "bg-sun pl-3 text-night ring-sun [--edge:var(--color-sun-800)]",
+      )}
+    >
+      {account ? <RiderAvatar name={account.name} className="size-9 text-sm ring-0" /> : <UserPlus className="size-5" />}
+      <span className="max-w-28 truncate max-sm:sr-only">{account ? account.name : t.account.menuGuest}</span>
+    </Link>
+  );
 }
 
 function MenuTile({ icon: Icon, label, accent, href, badge }: TileProps) {
@@ -58,12 +80,13 @@ export function MainMenu() {
 
       {/* Top bar: wallet, reputation, language, fullscreen */}
       <header className="safe-top safe-x absolute inset-x-0 top-0 z-20 flex items-center justify-end gap-2">
-        <div className="mr-auto">
+        <div className="mr-auto flex items-center gap-2">
+          <AccountChip />
           <OfflineChip />
         </div>
         <Chip tone="night" icon={<Coins className="text-sun" />} className="tabular">
           <span className="sr-only">{t.menu.wallet}: </span>
-          {formatTzs(wallet)} <span className="text-cream/60">{t.common.tzs}</span>
+          {formatTzs(wallet)} <span className="text-cream/60 max-sm:sr-only">{t.common.tzs}</span>
         </Chip>
         <Chip tone="night" icon={<Star className="fill-sun text-sun" />} className="tabular">
           <span className="sr-only">Sifa</span>

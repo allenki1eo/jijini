@@ -147,7 +147,6 @@ All art and audio is original and generated in code. `public/assets/MANIFEST.jso
 
 ## Not included
 
-- **Online leaderboards** need a backend (Supabase or Turso) and credentials. Personal bests, race ghosts and per-city earnings are stored locally.
 - **M-Pesa / Tigo Pesa** cosmetic purchases need a merchant integration. Cosmetics are bought with in-game TZS.
 - **Lighthouse audit and device testing** on a physical Tecno/Infinix-class phone are still to do.
 
@@ -162,11 +161,25 @@ Live numbers need a small Redis database:
 
 The game sends anonymous events to `/api/track`: a random install id, the city, device class, jobs, km and minutes. No names or locations are sent. Riders can switch it off in Settings → "Shiriki takwimu". Without a database the routes still answer but store nothing, and `/stats` explains how to switch the numbers on.
 
-## City leagues (`/ligi`)
+## Accounts (`/akaunti`)
 
-Each city has two weekly boards. Both run on the same Redis database as `/stats`, with no extra setup.
+Riders register with a name and a 4–6 digit PIN, like a mobile-money PIN. Accounts run on the same Redis database as `/stats`, with no extra setup.
 
+- **Names are unique.** Case, spaces and punctuation are ignored when comparing, so "Juma K" and "juma-k" are the same name.
+- **PINs are stored as salted scrypt hashes.** Easy PINs such as 0000 or 1234 are refused.
+- **Sessions use an httpOnly cookie.** Redis stores only a SHA-256 of the session token.
+- **Rate limits:** five wrong PINs lock the name for 15 minutes. One IP can open five accounts a day.
+- **Online backup:** a signed-in rider's progress is saved within about 45 seconds of changing, and again when the tab is hidden. Signing in on another device asks which progress to keep.
+- **Changing or deleting:** changing the PIN signs out every other device. Deleting the account removes the name, the backup and the sessions.
+
+## The league (`/ligi`)
+
+One season lasts an ISO week and turns at Monday midnight, Tanzania time. Only registered riders score. Guests can still see the boards.
+
+- **Standings (Msimamo):** league points per city and for all of Tanzania. A job is worth 10 points, ±5 per star away from three, plus 5 for a clean ride. The first weekly-race finish each day adds 30.
+- **Divisions:** Shaba (Bronze) from 0 points, Fedha (Silver) from 250, Dhahabu (Gold) from 800, Almasi (Diamond) from 2000.
 - **Weekly race:** the same course for every rider, seeded by the ISO week. The board keeps each rider's best time.
-- **Weekly earnings:** the pay from every finished job.
+- **Earnings:** the pay from every finished job.
+- **Prizes:** last week's top three in each city's standings (TSh 150k / 100k / 60k) and race (TSh 100k / 60k / 40k) win prizes. Every division above Shaba also pays a bonus. Prizes are collected on `/ligi`, paid into BodaPesa, and can only be claimed once per week, which the server enforces.
 
-Riders appear under a name they pick on `/ligi`. The default is "Dereva 1234". Results are tied to the anonymous install id. They are only sent when "Shiriki takwimu" is on. Boards are kept for ten weeks.
+Writes always come from the session, never from an id in the request, and each account can post at most 40 results a minute. Boards are kept for ten weeks.

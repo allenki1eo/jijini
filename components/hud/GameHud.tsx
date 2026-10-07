@@ -23,8 +23,9 @@ import { formatTzs, useT } from "@/i18n";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
 import { AgeGate } from "./AgeGate";
-import { RideHud, useTouchDevice } from "./RideHud";
+import { RideHud, useNarrowScreen, useTouchDevice } from "./RideHud";
 import { hud } from "@/game/core/hud";
+import { stageHud } from "@/game/world/KijiweStage";
 import { useHudTick } from "./useHudTick";
 import { cn } from "@/lib/cn";
 import { Tutorial } from "./Tutorial";
@@ -53,6 +54,13 @@ function FuelFinder({ game }: { game: Game }) {
       <span className="max-sm:hidden short:hidden">{t.nav.findFuel}</span>
     </button>
   );
+}
+
+/** Is a stop panel showing (fare, queue, sheli/bank/wakala, photo spot)? Polled like the panels themselves. */
+function useContextOpen(game: Game) {
+  useHudTick(4);
+  const bargain = useMissions((s) => s.bargain);
+  return Boolean(bargain || (stageHud.inZone && hud.speedKmh < 6) || game.serviceNearby() || game.photoSpot());
 }
 
 /** Wallet in a few characters for narrow screens: 250k, 1.2M. */
@@ -86,6 +94,8 @@ export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }:
   }, [openBoardOnStart, set]);
 
   const tutorial = hydrated && !tutorialDone;
+  const narrow = useNarrowScreen();
+  const contextOpen = useContextOpen(game);
 
   // Arriving from the leaderboard's "race now": line up for this week's course (after the tutorial).
   useEffect(() => {
@@ -122,19 +132,30 @@ export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }:
       topLeft={
         <>
           <IncomingCall game={game} />
-          {touch && <ChatBar game={game} touch />}
+          {narrow ? (
+            // Phones: the chat button and the latest line share one row, so the stack stays short.
+            <div className="flex w-full items-start gap-1.5">
+              {touch && <ChatBar game={game} touch compact />}
+              <SpeechBubbles docked />
+            </div>
+          ) : (
+            touch && <ChatBar game={game} touch />
+          )}
+        </>
+      }
+      contextOpen={contextOpen}
+      context={
+        <>
+          <BargainPanel game={game} />
+          <StagePanel game={game} />
+          <PhotoPrompt game={game} />
+          <StationPanel game={game} />
         </>
       }
     >
       {tutorial && <Tutorial game={game} />}
       <StoryDirector enabled={hydrated && tutorialDone} />
-      <div className="safe-x pointer-events-none absolute top-1/2 left-0 flex -translate-y-1/2 flex-col gap-2">
-        <BargainPanel game={game} />
-        <StagePanel game={game} />
-        <PhotoPrompt game={game} />
-        <StationPanel game={game} />
-      </div>
-      <SpeechBubbles />
+      {!narrow && <SpeechBubbles />}
       {!touch && <ChatBar game={game} touch={false} />}
       <ShopCounter game={game} />
       <AgeGate enabled={hydrated && tutorialDone} />

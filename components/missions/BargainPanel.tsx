@@ -45,12 +45,12 @@ export function BargainPanel({ game }: { game: Game }) {
     <m.div
       initial={{ x: -24, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="pointer-events-auto flex w-72 flex-col gap-2.5 rounded-2xl bg-night-800/95 p-3 shadow-xl ring-1 ring-sun/40 backdrop-blur"
+      className="pointer-events-auto flex w-72 flex-col gap-2.5 rounded-2xl bg-night-800/95 p-3 shadow-xl ring-1 ring-sun/40 backdrop-blur max-sm:w-full max-sm:max-w-[17rem] max-sm:gap-2 max-sm:p-2.5"
       role="dialog"
       aria-label={t.bargain.title}
     >
       <div className="flex items-center gap-2.5">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sun text-night">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sun text-night max-sm:size-8">
           <Icon className="size-5" />
         </span>
         <div className="min-w-0">
@@ -61,32 +61,32 @@ export function BargainPanel({ game }: { game: Game }) {
         </div>
         <HandCoins className="ml-auto size-5 shrink-0 text-sun" />
       </div>
-      <p className="flex items-baseline justify-between rounded-xl bg-white/5 px-2.5 py-1.5 text-xs text-cream/60">
+      <p className="flex items-baseline justify-between rounded-xl bg-white/5 px-2.5 py-1.5 text-xs text-cream/60 max-sm:py-1">
         {t.bargain.going}
         <b className="font-display text-sm text-cream tabular">TSh {formatTzs(bargain.fare)}</b>
       </p>
 
       {bargain.counter === null ? (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 max-sm:grid max-sm:grid-cols-3">
           {QUOTES.map((_, i) => (
             <button
               key={i}
               type="button"
               onClick={() => game.quoteFare(i)}
-              className={cn("flex items-center gap-2.5 rounded-xl bg-white/5 px-2.5 py-2 text-left ring-1 transition-colors", TONES[i])}
+              className={cn("flex items-center gap-2.5 rounded-xl bg-white/5 px-2.5 py-2 text-left ring-1 transition-colors max-sm:min-h-14 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 max-sm:py-1.5 max-sm:text-center", TONES[i])}
             >
-              <kbd className="grid size-6 shrink-0 place-items-center rounded-md bg-night-500 font-display text-xs font-bold">{i + 1}</kbd>
-              <span className="min-w-0 flex-1">
-                <span className="block font-display text-sm leading-tight font-extrabold">{t.bargain.quotes[i]}</span>
-                <span className="block truncate text-[11px] text-cream/55">{t.bargain.hints[i]}</span>
+              <kbd className="grid size-6 shrink-0 place-items-center rounded-md bg-night-500 font-display text-xs font-bold max-sm:hidden">{i + 1}</kbd>
+              <span className="min-w-0 flex-1 max-sm:flex-none">
+                <span className="block font-display text-sm leading-tight font-extrabold max-sm:truncate max-sm:text-xs">{t.bargain.quotes[i]}</span>
+                <span className="block truncate text-[11px] text-cream/55 max-sm:hidden">{t.bargain.hints[i]}</span>
               </span>
-              <b className={cn("font-display text-base tabular", AMOUNT_TONES[i])}>{formatTzs(amounts[i]!)}</b>
+              <b className={cn("font-display text-base tabular max-sm:text-sm", AMOUNT_TONES[i])}>{formatTzs(amounts[i]!)}</b>
             </button>
           ))}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          <p className="text-center font-display text-lg font-extrabold text-sun">{fmt(t.bargain.counter, { amount: `TSh ${formatTzs(bargain.counter)}` })}</p>
+          <p className="text-center font-display text-lg font-extrabold text-sun max-sm:text-base">{fmt(t.bargain.counter, { amount: `TSh ${formatTzs(bargain.counter)}` })}</p>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => game.answerCounter(true)} className="chunky min-h-11 rounded-xl bg-forest font-display text-sm font-extrabold text-cream [--edge:var(--color-forest-800)]">
               {fmt(t.bargain.accept, { amount: formatTzs(bargain.counter) })}

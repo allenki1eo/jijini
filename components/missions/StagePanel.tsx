@@ -3,6 +3,7 @@
 import { Hand, ListOrdered, LogOut, UserCheck, UserRoundX } from "lucide-react";
 import { useHudTick } from "@/components/hud/useHudTick";
 import type { Game } from "@/game/core/Game";
+import { hud } from "@/game/core/hud";
 import { stageHud } from "@/game/world/KijiweStage";
 import { fmt, useT } from "@/i18n";
 import { cn } from "@/lib/cn";
@@ -16,17 +17,17 @@ export function StagePanel({ game }: { game: Game }) {
   useHudTick(5);
   const t = useT();
   const h = stageHud;
-  if (!h.inZone) return null;
+  if (!h.inZone || hud.speedKmh >= 6) return null;
   const yourTurn = h.joined && h.position <= 1 && h.customer;
   const canSteal = h.customer && !yourTurn;
 
   return (
-    <div className="pointer-events-auto flex w-64 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-sun/40 backdrop-blur">
+    <div className="pointer-events-auto flex w-64 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-sun/40 backdrop-blur max-sm:w-full max-sm:max-w-[15rem] max-sm:gap-1.5 max-sm:p-2.5">
       <div className="flex items-start gap-2">
         <ListOrdered className="mt-0.5 size-5 shrink-0 text-sun" />
         <div className="min-w-0">
           <p className="font-display leading-tight font-extrabold text-sun">{t.stage.title}</p>
-          <p className="text-xs text-cream/60">{h.banned > 0 ? fmt(t.stage.bannedFor, { min: Math.ceil(h.banned / 60) }) : t.stage.hint}</p>
+          <p className={cn("text-xs text-cream/60", h.banned <= 0 && "max-sm:hidden")}>{h.banned > 0 ? fmt(t.stage.bannedFor, { min: Math.ceil(h.banned / 60) }) : t.stage.hint}</p>
         </div>
       </div>
 

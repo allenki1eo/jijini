@@ -36,7 +36,7 @@ export function PhotoPrompt({ game }: { game: Game }) {
   return (
     <>
       {spot && (
-        <div className="pointer-events-auto flex w-64 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-sky/40 backdrop-blur">
+        <div className="pointer-events-auto flex w-64 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-sky/40 backdrop-blur max-sm:w-full max-sm:max-w-[15rem] max-sm:p-2.5">
           <div className="flex items-start gap-2">
             <Camera className="mt-0.5 size-5 shrink-0 text-sky-300" />
             <div className="min-w-0">

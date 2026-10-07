@@ -27,7 +27,7 @@ export function StationPanel({ game }: { game: Game }) {
   const repairCost = game.repairCost();
   const Icon = service.fuel ? Fuel : Wrench;
   return (
-    <div className="pointer-events-auto flex w-60 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-sky/40 backdrop-blur">
+    <div className="pointer-events-auto flex w-60 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-sky/40 backdrop-blur max-sm:w-full max-sm:max-w-[16rem] max-sm:gap-1.5 max-sm:p-2.5">
       <div className="flex items-start gap-2">
         <Icon className="mt-0.5 size-5 shrink-0 text-sky-300" />
         <div className="min-w-0">
@@ -84,7 +84,7 @@ function BottlePanel({ game, name, wallet, onBuy }: { game: Game; name: string; 
   const price = game.bottlePrice;
   const room = game.tankRoom;
   return (
-    <div className="pointer-events-auto flex w-60 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-[#F2A14A]/50 backdrop-blur">
+    <div className="pointer-events-auto flex w-60 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-[#F2A14A]/50 backdrop-blur max-sm:w-full max-sm:max-w-[16rem] max-sm:gap-1.5 max-sm:p-2.5">
       <div className="flex items-start gap-2">
         <Fuel className="mt-0.5 size-5 shrink-0 text-[#F2A14A]" />
         <div className="min-w-0">
@@ -124,7 +124,7 @@ function LicencePanel({ game, name }: { game: Game; name: string }) {
   const expired = game.licenceHours <= 0;
   const permitExpired = game.permitHours <= 0;
   return (
-    <div className="pointer-events-auto flex w-64 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-[#2D6BFF]/50 backdrop-blur">
+    <div className="pointer-events-auto flex w-64 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-[#2D6BFF]/50 backdrop-blur max-sm:w-full max-sm:max-w-[16rem] max-sm:gap-1.5 max-sm:p-2.5">
       <div className="flex items-start gap-2">
         <ShieldCheck className="mt-0.5 size-5 shrink-0 text-sky-300" />
         <div className="min-w-0">

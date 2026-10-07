@@ -69,10 +69,18 @@ interface RideHudProps {
   onRestart?: () => void;
   /** Hide the keyboard hint (e.g. while the tutorial talks). */
   quiet?: boolean;
+  /**
+   * Panels for where the rider has stopped (a fare to agree, the stage queue, a
+   * sheli, a bank, a photo spot). Mid-left on big screens; on portrait phones
+   * they take the place of the arrow and the dash (the bike is stopped anyway),
+   * keeping the middle of the screen, and the rider, clear.
+   */
+  context?: ReactNode;
+  contextOpen?: boolean;
 }
 
 /** In-game overlay: speedometer, touch controls, pause, toasts and the debug tools. */
-export function RideHud({ game, manifest, children, topCenter, topRight, rail, topLeft, pauseExtra, onRestart, quiet }: RideHudProps) {
+export function RideHud({ game, manifest, children, topCenter, topRight, rail, topLeft, pauseExtra, onRestart, quiet, context, contextOpen }: RideHudProps) {
   const t = useT();
   const w = useWorld();
   const touch = useTouchDevice();
@@ -143,8 +151,9 @@ export function RideHud({ game, manifest, children, topCenter, topRight, rail, t
         <div className={cn("grid items-start gap-2", narrow ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]")}>
           {/* Left: on phones the whole rider stack; elsewhere just notifications, out of the line of sight. */}
           <div className="flex min-w-0 flex-col items-start gap-2">
-            {narrow && riding && <NavArrow />}
-            {narrow && riding && touch && <CompactDash />}
+            {narrow && contextOpen && <div className="pointer-events-auto flex w-full flex-col gap-2">{context}</div>}
+            {narrow && riding && !contextOpen && <NavArrow />}
+            {narrow && riding && touch && !contextOpen && <CompactDash />}
             {narrow && (
               <>
                 <CheckpointPrompt />
@@ -204,6 +213,8 @@ export function RideHud({ game, manifest, children, topCenter, topRight, rail, t
           </div>
         </div>
       )}
+
+      {!narrow && <div className="safe-x pointer-events-none absolute top-1/2 left-0 flex -translate-y-1/2 flex-col gap-2">{context}</div>}
 
       {children}
 

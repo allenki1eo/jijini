@@ -34,7 +34,9 @@ export function CheckpointPrompt() {
       : phase === "passed"
         ? t.life.checkpointPassed
         : phase === "fined"
-          ? fmt(checkpointState.expired ? t.life.licenceExpiredFine : t.life.checkpointFined, { fine: formatTzs(checkpointState.fine) })
+          ? checkpointState.missing.length
+            ? fmt(t.gear.finedFor, { fine: formatTzs(checkpointState.fine), items: [...(checkpointState.expired ? [t.hesabu.licence] : []), ...checkpointState.missing.map((k) => t.gear.missing[k])].join(", ") })
+            : fmt(checkpointState.expired ? t.life.licenceExpiredFine : t.life.checkpointFined, { fine: formatTzs(checkpointState.fine) })
           : null;
   return (
     <AnimatePresence>

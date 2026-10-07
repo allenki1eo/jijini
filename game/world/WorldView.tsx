@@ -6,6 +6,7 @@ import { RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { GameHud } from "@/components/hud/GameHud";
+import { CrashScreen } from "@/components/screens/CrashScreen";
 import { LoadingScreen } from "@/components/screens/LoadingScreen";
 import { Button, Card } from "@/components/ui";
 import { CITIES, type CityId } from "@/data/cities/config";
@@ -13,6 +14,7 @@ import { Game } from "@/game/core/Game";
 import { QUALITY_PRESETS } from "@/game/core/quality";
 import { fmt, useT } from "@/i18n";
 import { requestWakeLock } from "@/lib/device";
+import { hasWebGL } from "@/lib/webgl";
 import { fetchJson } from "@/lib/fetchJson";
 import { useSettings } from "@/stores/settings";
 import { useWorld } from "@/stores/world";
@@ -20,8 +22,14 @@ import { streamFocus } from "./focus";
 import type { CityManifest } from "./format";
 import { WorldScene } from "./WorldScene";
 
-/** The play screen: loads a baked city, creates the Game, renders the scene and HUD. */
-export default function WorldView({ cityId, openBoard }: { cityId: CityId; openBoard?: boolean }) {
+/** The play screen: loads a baked city, creates the Game, renders the scene and HUD. Without WebGL it says so rather than crashing. */
+export default function WorldView({ cityId, openBoard, weeklyRace }: { cityId: CityId; openBoard?: boolean; weeklyRace?: boolean }) {
+  const [webgl] = useState(hasWebGL);
+  if (!webgl) return <CrashScreen kind="webgl" where="/play" />;
+  return <World cityId={cityId} openBoard={openBoard} weeklyRace={weeklyRace} />;
+}
+
+function World({ cityId, openBoard, weeklyRace }: { cityId: CityId; openBoard?: boolean; weeklyRace?: boolean }) {
   const t = useT();
   const [game, setGame] = useState<Game | null>(null);
   const preset = QUALITY_PRESETS[useSettings((s) => s.quality)];
@@ -86,7 +94,7 @@ export default function WorldView({ cityId, openBoard }: { cityId: CityId; openB
         </Canvas>
       )}
 
-      {status === "ready" && manifest && game && <GameHud game={game} manifest={manifest} openBoardOnStart={openBoard} />}
+      {status === "ready" && manifest && game && <GameHud game={game} manifest={manifest} openBoardOnStart={openBoard} weeklyRaceOnStart={weeklyRace} />}
 
       <AnimatePresence>
         {status === "loading" && (

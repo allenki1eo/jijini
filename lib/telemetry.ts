@@ -16,7 +16,8 @@ export type TelemetryEvent =
 
 const ID_KEY = "bodago:install";
 
-const installId = () => {
+/** A random id for this install (no personal data), shared by telemetry and the leaderboards. */
+export const installId = () => {
   try {
     let id = localStorage.getItem(ID_KEY);
     if (!id) {

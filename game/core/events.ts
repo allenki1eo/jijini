@@ -7,6 +7,8 @@ export interface GameEvents {
   nearMiss: { combo: number };
   collision: { speed: number; kind: "wall" | "vehicle" | "pedestrian" };
   stumble: Record<string, never>;
+  pothole: { speed: number };
+  raceFinished: { courseId: string; seconds: number };
   wheelie: { meters: number };
   drift: { seconds: number };
   horn: Record<string, never>;

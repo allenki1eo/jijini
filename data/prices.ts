@@ -179,3 +179,16 @@ export const HESABU_HOUR = 20;
 /** Motorcycle (class A) licence renewal fee, and how long it lasts in game hours (10 game days). */
 export const LICENCE_FEE = 70_000;
 export const LICENCE_HOURS = 240;
+
+/**
+ * Safety gear the police check at a roadblock, besides the leseni: a helmet
+ * (it can crack in a bad crash), a reflector vest, and the LATRA permit
+ * (kibali) every commercial boda needs. Prices and fines in TZS.
+ */
+export const HELMET_PRICE = 25_000;
+export const REFLECTOR_PRICE = 8_000;
+export const PERMIT_FEE = 20_000;
+/** The permit runs this many game hours (10 game days). */
+export const PERMIT_HOURS = 240;
+export const GEAR_FINES = { helmet: 10_000, reflector: 5_000, permit: 15_000 } as const;
+export type GearCheck = keyof typeof GEAR_FINES;

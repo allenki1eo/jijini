@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRight, Bike, Star, Trophy } from "lucide-react";
+import { ArrowRight, Bike, Star, Trophy, Signpost } from "lucide-react";
 import { KitengeStrip } from "@/components/brand/Kitenge";
 import { Button } from "@/components/ui";
 import type { MissionResult } from "@/game/missions/types";
@@ -49,6 +49,12 @@ function Body({ result, onNext, onClose }: { result: MissionResult; onNext: () =
             </p>
           </div>
         </div>
+
+        {result.shortcut && (
+          <m.p initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.5 }} className="mx-auto inline-flex items-center gap-1.5 self-center rounded-full bg-forest px-3 py-1 font-display font-extrabold text-cream">
+            <Signpost className="size-4" /> {t.results.shortcut}
+          </m.p>
+        )}
 
         {result.best !== undefined && (
           <div className="flex items-center justify-center gap-2">

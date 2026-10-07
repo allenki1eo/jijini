@@ -2,11 +2,14 @@
 
 import { Briefcase, Coins, Fuel } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { BargainPanel } from "@/components/missions/BargainPanel";
 import { CityMap } from "@/components/missions/CityMap";
 import { MissionBoard } from "@/components/missions/MissionBoard";
 import { MissionTracker } from "@/components/missions/MissionTracker";
 import { Minimap } from "@/components/missions/Minimap";
 import { ResultsScreen } from "@/components/missions/ResultsScreen";
+import { PhotoPrompt } from "@/components/missions/PhotoPrompt";
+import { StagePanel } from "@/components/missions/StagePanel";
 import { StationPanel } from "@/components/missions/StationPanel";
 import { IncomingCall, PhoneButton, PhonePanel } from "@/components/phone/Phone";
 import { ShopCounter } from "@/components/phone/ShopCounter";
@@ -56,7 +59,7 @@ function FuelFinder({ game }: { game: Game }) {
 const shortTzs = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatTzs(n));
 
 /** Full in-game HUD: the ride overlay plus jobs, minimap, wallet and results. */
-export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; manifest: CityManifest; openBoardOnStart?: boolean }) {
+export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }: { game: Game; manifest: CityManifest; openBoardOnStart?: boolean; weeklyRaceOnStart?: boolean }) {
   const t = useT();
   const wallet = usePlayer((s) => s.wallet);
   const hydrated = usePlayer((s) => s.hydrated);
@@ -83,6 +86,11 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
   }, [openBoardOnStart, set]);
 
   const tutorial = hydrated && !tutorialDone;
+
+  // Arriving from the leaderboard's "race now": line up for this week's course (after the tutorial).
+  useEffect(() => {
+    if (weeklyRaceOnStart && hydrated && tutorialDone) game.startWeeklyRace();
+  }, [weeklyRaceOnStart, hydrated, tutorialDone, game]);
   const touch = useTouchDevice();
 
   return (
@@ -120,7 +128,10 @@ export function GameHud({ game, manifest, openBoardOnStart }: { game: Game; mani
     >
       {tutorial && <Tutorial game={game} />}
       <StoryDirector enabled={hydrated && tutorialDone} />
-      <div className="safe-x pointer-events-none absolute top-1/2 left-0 -translate-y-1/2">
+      <div className="safe-x pointer-events-none absolute top-1/2 left-0 flex -translate-y-1/2 flex-col gap-2">
+        <BargainPanel game={game} />
+        <StagePanel game={game} />
+        <PhotoPrompt game={game} />
         <StationPanel game={game} />
       </div>
       <SpeechBubbles />

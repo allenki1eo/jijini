@@ -26,7 +26,7 @@ export function PlayClient() {
   if (hydrated && !unlocked) return null;
   return (
     <MotionProvider>
-      <WorldView cityId={city} openBoard={params.get("board") === "1"} />
+      <WorldView cityId={city} openBoard={params.get("board") === "1"} weeklyRace={params.get("race") === "weekly"} />
     </MotionProvider>
   );
 }

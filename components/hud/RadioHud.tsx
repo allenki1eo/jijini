@@ -1,12 +1,13 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { Check, ChevronDown, Loader2, Power, Radio as RadioIcon, VolumeX, Wifi } from "lucide-react";
+import { Check, ChevronDown, Loader2, Power, Radio as RadioIcon, SignalLow, VolumeX, Wifi } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { liveStations, loadLiveStations, useLiveCatalog, useLivePlayback, type LiveStation } from "@/game/audio/LiveRadio";
-import { Radio, STATIONS } from "@/game/audio/Radio";
+import { Radio, STATIONS, radioHud } from "@/game/audio/Radio";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/cn";
+import { useHudTick } from "./useHudTick";
 import { useSettings } from "@/stores/settings";
 
 const STYLE_LABEL = { singeli: "Singeli", bongo: "Bongo Flava", taarab: "Taarab" } as const;
@@ -64,6 +65,8 @@ export function RadioChip({ compact = false }: { compact?: boolean }) {
   const liveOn = live.find((s) => s.id === station);
   const info = STATIONS.find((s) => s.id === station) ?? liveOn;
   const connecting = Boolean(liveOn) && phase === "loading";
+  useHudTick(2);
+  const weak = radioHud.signal < 0.6;
 
   useEffect(() => {
     void loadLiveStations();
@@ -107,7 +110,11 @@ export function RadioChip({ compact = false }: { compact?: boolean }) {
         {connecting ? (
           <Loader2 className="size-5 animate-spin text-cream/70" />
         ) : info ? (
-          <RadioIcon className="size-5" style={{ color: info.color }} />
+          <span className="relative">
+            <RadioIcon className="size-5" style={{ color: info.color }} />
+            {/* Far from town the signal fades (and the static comes in). */}
+            {weak && <SignalLow className="absolute -top-1.5 -right-2 size-3.5 rounded-full bg-coral p-[1.5px] text-night" strokeWidth={3} aria-label={t.radio.weak} />}
+          </span>
         ) : (
           <VolumeX className="size-5 text-cream/50" />
         )}

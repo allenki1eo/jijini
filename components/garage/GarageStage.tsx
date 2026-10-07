@@ -2,10 +2,13 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import { MonitorX } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import type { BikeId } from "@/game/vehicles/bikes";
 import { BikeModel } from "@/game/vehicles/BikeModel";
+import { useT } from "@/i18n";
+import { hasWebGL } from "@/lib/webgl";
 import type { Customization } from "@/stores/player";
 
 const IDLE = {
@@ -72,8 +75,19 @@ function Floor() {
   );
 }
 
-/** Turntable showroom for the selected bike. */
+/** Turntable showroom for the selected bike. Without WebGL the shop still works; the stage just says why it's empty. */
 export default function GarageStage({ bike, custom }: { bike: BikeId; custom: Customization }) {
+  const t = useT();
+  const [webgl] = useState(hasWebGL);
+  if (!webgl)
+    return (
+      <div className="absolute inset-0 grid place-items-center p-6 text-center">
+        <p className="flex max-w-xs flex-col items-center gap-2 text-sm text-cream/60">
+          <MonitorX className="size-8 text-sky-300" />
+          {t.crash.webglTitle}
+        </p>
+      </div>
+    );
   return (
     <Canvas className="!absolute inset-0" dpr={[1, 2]} camera={{ fov: 32, position: [4.2, 2.1, 4.4] }}>
       <hemisphereLight args={["#FFF1D6", "#2A2030", 1.6]} />

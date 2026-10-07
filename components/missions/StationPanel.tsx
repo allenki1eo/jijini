@@ -1,8 +1,8 @@
 "use client";
 
-import { Fuel, IdCard, ShieldCheck, Smartphone, Wrench } from "lucide-react";
+import { FileBadge, Fuel, IdCard, ShieldCheck, Smartphone, Wrench } from "lucide-react";
 import { BankPanel, WakalaPanel } from "./BankPanel";
-import { LICENCE_FEE } from "@/data/prices";
+import { LICENCE_FEE, PERMIT_FEE } from "@/data/prices";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import type { Game } from "@/game/core/Game";
@@ -22,6 +22,7 @@ export function StationPanel({ game }: { game: Game }) {
   if (service.police) return <LicencePanel game={game} name={service.name} />;
   if (service.bank) return <BankPanel bank={service.bank} name={service.name} />;
   if (service.wakala) return <WakalaPanel name={service.name} />;
+  if (service.bottle) return <BottlePanel game={game} name={service.name} wallet={wallet} onBuy={() => bump((n) => n + 1)} />;
   const fuelCost = game.refuelCost();
   const repairCost = game.repairCost();
   const Icon = service.fuel ? Fuel : Wrench;
@@ -77,12 +78,51 @@ export function StationPanel({ game }: { game: Game }) {
 }
 
 /** At a police post: see how long the leseni has left and renew it. */
+/** A roadside petrol seller: a litre or two from a bottle, cash only, a little dearer than the pump. */
+function BottlePanel({ game, name, wallet, onBuy }: { game: Game; name: string; wallet: number; onBuy: () => void }) {
+  const t = useT();
+  const price = game.bottlePrice;
+  const room = game.tankRoom;
+  return (
+    <div className="pointer-events-auto flex w-60 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-[#F2A14A]/50 backdrop-blur">
+      <div className="flex items-start gap-2">
+        <Fuel className="mt-0.5 size-5 shrink-0 text-[#F2A14A]" />
+        <div className="min-w-0">
+          <p className="truncate font-display leading-tight font-extrabold text-[#F2A14A]">{name}</p>
+          <p className="text-xs text-cream/60">{fmt(t.station.bottleHint, { price: formatTzs(price) })}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {[1, 2].map((l) => {
+          const liters = Math.min(l, room);
+          const cost = Math.ceil((liters * price) / 50) * 50;
+          return (
+            <Button
+              key={l}
+              variant="night"
+              disabled={liters <= 0.05 || wallet < cost}
+              onClick={() => {
+                game.buyBottleFuel(l);
+                onBuy();
+              }}
+              className="!min-h-11 !px-2 !text-sm"
+            >
+              {liters <= 0.05 ? t.station.full : fmt(t.station.bottleBuy, { l, cost: formatTzs(cost) })}
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function LicencePanel({ game, name }: { game: Game; name: string }) {
   const t = useT();
   const wallet = usePlayer((s) => s.wallet);
   const [, bump] = useState(0);
   const days = Math.ceil(game.licenceHours / 24);
   const expired = game.licenceHours <= 0;
+  const permitExpired = game.permitHours <= 0;
   return (
     <div className="pointer-events-auto flex w-64 flex-col gap-2 rounded-2xl bg-night-800/92 p-3 shadow-xl ring-1 ring-[#2D6BFF]/50 backdrop-blur">
       <div className="flex items-start gap-2">
@@ -104,6 +144,21 @@ function LicencePanel({ game, name }: { game: Game; name: string }) {
         }}
       >
         {wallet < LICENCE_FEE ? t.station.broke : fmt(t.hesabu.renew, { fee: formatTzs(LICENCE_FEE) })}
+      </Button>
+      {/* The LATRA permit (kibali) is paid here too. */}
+      <p className={permitExpired ? "text-xs font-semibold text-coral" : "text-xs text-cream/60"}>
+        {t.gear.permit} · {permitExpired ? t.gear.permitExpired : fmt(t.gear.permitLeft, { days: Math.ceil(game.permitHours / 24) })}
+      </p>
+      <Button
+        variant={permitExpired ? "sun" : "night"}
+        icon={<FileBadge />}
+        disabled={wallet < PERMIT_FEE}
+        onClick={() => {
+          game.renewPermit();
+          bump((n) => n + 1);
+        }}
+      >
+        {wallet < PERMIT_FEE ? t.station.broke : fmt(t.gear.renew, { fee: formatTzs(PERMIT_FEE) })}
       </Button>
     </div>
   );

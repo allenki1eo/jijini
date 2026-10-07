@@ -27,7 +27,7 @@ export const STATIONS: { id: StationId; name: string; freq: string; style: Music
 ];
 
 /** What the radio is saying right now (HUD ticker). */
-export const radioHud = { text: "", station: "" as StationId | "", shownAt: 0 };
+export const radioHud = { text: "", station: "" as StationId | "", shownAt: 0, signal: 1 };
 
 const pick = <T>(list: readonly T[]) => list[Math.floor(Math.random() * list.length)]!;
 

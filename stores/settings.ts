@@ -31,6 +31,8 @@ export interface SettingsState {
   realClock: boolean;
   /** Send anonymous play counts (city, jobs, km) for the public /stats page. */
   shareStats: boolean;
+  /** Name on the city leaderboards (empty = a "Dereva 1234" default). */
+  riderName: string;
   set: <K extends keyof Omit<SettingsState, "set">>(key: K, value: SettingsState[K]) => void;
 }
 
@@ -55,6 +57,7 @@ export const useSettings = create<SettingsState>()(
       adult: null,
       realClock: true,
       shareStats: true,
+      riderName: "",
       set: (key, value) => set({ [key]: value } as Partial<SettingsState>),
     }),
     {

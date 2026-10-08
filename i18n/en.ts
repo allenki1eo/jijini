@@ -118,8 +118,6 @@ export const en: Dictionary = {
     updateCta: "Refresh",
     offline: "You're offline — playing from cache",
     city: "City",
-    radio: "Radio",
-    radioHint: "Tanzanian stations, live",
   },
   settings: {
     title: "Settings",

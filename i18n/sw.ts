@@ -117,8 +117,6 @@ export const sw = {
     updateCta: "Onyesha upya",
     offline: "Huna mtandao — unacheza nje ya mtandao",
     city: "Jiji",
-    radio: "Redio",
-    radioHint: "Vituo vya Tanzania, moja kwa moja",
   },
   settings: {
     title: "Mipangilio",

@@ -1,6 +1,6 @@
 /**
  * Local businesses that advertise in the game: on billboards, banners
- * strung across main roads, radio spots and boda promo rides (Matangazo).
+ * strung across main roads and boda promo rides (Matangazo).
  *
  * These are all fictional. Real businesses can be added as sponsors in
  * public/ads/manifest.json (with their written permission) and appear in
@@ -13,7 +13,7 @@ export type AdIcon = "utensils" | "wrench" | "smartphone" | "shirt" | "fish" | "
 export interface Business {
   id: string;
   name: string;
-  /** Swahili tagline (shown on boards and read on the radio). */
+  /** Swahili tagline (shown on boards and banners). */
   tagline: string;
   taglineEn: string;
   /** Background, text and accent colours. */

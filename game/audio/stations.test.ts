@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { parseLiveStations, shouldStartStream, STATION_GROUPS } from "./stations";
+import { nextStation, parseLiveStations, resolveTuned, shouldStartStream, stationDial, STATION_GROUPS } from "./stations";
 
 test("parseLiveStations keeps named https streams and drops the rest", () => {
   const stations = parseLiveStations({
@@ -39,6 +39,28 @@ test("parseLiveStations accepts an empty or broken catalog", () => {
   assert.deepEqual(parseLiveStations(null), []);
   assert.deepEqual(parseLiveStations({}), []);
   assert.deepEqual(parseLiveStations({ live: {} }), []);
+});
+
+test("the ride dial is the live catalog, then off, and nothing else", () => {
+  const ids = ["live:tbc-taifa", "live:wasafi-fm"];
+  assert.deepEqual(stationDial(ids), ["live:tbc-taifa", "live:wasafi-fm", "off"]);
+  assert.equal(nextStation("live:tbc-taifa", ids), "live:wasafi-fm");
+  assert.equal(nextStation("live:wasafi-fm", ids), "off");
+  assert.equal(nextStation("off", ids), "live:tbc-taifa");
+  // An old built-in station (or one dropped from the catalog) flips onto the first live one.
+  assert.equal(nextStation("kijiweni", ids), "live:tbc-taifa");
+  // No catalog (offline, failed to load): R does nothing.
+  assert.equal(nextStation("off", []), "off");
+  assert.equal(nextStation("live:tbc-taifa", []), "live:tbc-taifa");
+});
+
+test("resolveTuned moves unknown stations onto the catalog but leaves off and empty catalogs alone", () => {
+  const ids = ["live:tbc-taifa", "live:wasafi-fm"];
+  assert.equal(resolveTuned("live:wasafi-fm", ids), "live:wasafi-fm");
+  assert.equal(resolveTuned("off", ids), "off");
+  assert.equal(resolveTuned("kijiweni", ids), "live:tbc-taifa");
+  assert.equal(resolveTuned("live:gone", ids), "live:tbc-taifa");
+  assert.equal(resolveTuned("live:tbc-taifa", []), "live:tbc-taifa");
 });
 
 test("shouldStartStream holds a paused station but lets the listener choose another", () => {

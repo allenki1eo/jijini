@@ -22,8 +22,7 @@ export interface SettingsState {
   hudScale: number;
   /** Set once the graphics preset was picked from the device tier. */
   tierDetected: boolean;
-  /** Radio station playing while you ride (or "off"). */
-  /** "kijiweni" | "bongo" | "pwani", a live station "live:<n>", or "off". */
+  /** Live station tuned while you ride (`live:<id>` from public/radio/stations.json), or "off". */
   radio: string;
   /** Answer to "are you 18 or over?" (null = not asked yet). Gates alcohol adverts. */
   adult: boolean | null;
@@ -52,7 +51,7 @@ export const useSettings = create<SettingsState>()(
       cameraView: "chase",
       hudScale: 1,
       tierDetected: false,
-      radio: "kijiweni",
+      radio: "live:tbc-taifa",
       adult: null,
       realClock: true,
       shareStats: true,
@@ -60,9 +59,14 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       name: "bodago:settings",
-      version: 2,
+      version: 3,
       // v2 added ride assists and HUD scale; persisted fields merge over the defaults.
-      migrate: (persisted) => persisted as SettingsState,
+      // v3 took the built-in stations off the radio: riders tuned to one move to a live station.
+      migrate: (persisted, version) => {
+        const next = persisted as SettingsState;
+        if (version < 3 && ["kijiweni", "bongo", "pwani"].includes(next.radio)) next.radio = "live:tbc-taifa";
+        return next;
+      },
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: ({ set, ...rest }) => rest,

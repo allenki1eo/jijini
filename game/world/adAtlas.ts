@@ -69,7 +69,7 @@ export const adUniforms = {
   uHero: { value: null as THREE.Texture | null },
 };
 
-/** Ads suitable for everyone, in slot order: radio spots and promo rides pick from these. */
+/** Ads suitable for everyone, in slot order: promo rides pick from these. */
 export let currentAds: Business[] = [];
 
 const fit = (ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, family: string, max: number) => {
@@ -199,7 +199,7 @@ export const loadAds = (city: CityId) => {
       if (sponsor?.image) drawCover(b, sponsor.image, x, y, BOARD_W, BOARD_H);
       else drawBoard(b, sponsor?.ad ?? local[i % local.length]!, x, y);
     }
-    // Banners, radio spots and promo rides: everyone-friendly ads only.
+    // Banners and promo rides: everyone-friendly ads only.
     const general = [...shown.filter((s) => !s.ad.ageRestricted).map((s) => s.ad), ...local];
     for (let i = 0; i < AD_SLOTS; i++) drawStrip(st, general[i % general.length]!, i * STRIP_H);
     currentAds = general.slice(0, AD_SLOTS);

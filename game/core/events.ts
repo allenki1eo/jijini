@@ -38,8 +38,6 @@ export interface GameEvents {
   ringing: { on: boolean };
   /** Traffic police: waved down by a tochi, fined, a chase starting or ending. */
   police: { kind: "flagged" | "fined" | "chase" | "caught" | "escaped" };
-  /** The radio DJ speaks between songs. */
-  radio: { station: string; text: string };
   /** A message or mobile-money alert arrived on the boda phone. */
   sms: { from: string };
 }

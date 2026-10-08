@@ -1,6 +1,6 @@
 # Live radio
 
-Besides its three built-in stations (Kijiweni FM, Bongo Vibes, Pwani Taarab), BodaGo plays **real Tanzanian stations**. They are on the Redio screen (from the main menu) and on the boda phone while you ride. On the ride HUD they also come up on the radio button (or the R key) after the built-in ones, marked **LIVE**.
+BodaGo's radio plays **real Tanzanian stations** only; there are no built-in stations. While you ride, pick one from the radio chip (or flip to the next with the R key) or from the boda phone's Redio tab. There is no separate radio page.
 
 The listener's browser fetches the audio directly from the station. BodaGo does not proxy or rebroadcast it.
 
@@ -31,7 +31,7 @@ The listener's browser fetches the audio directly from the station. BodaGo does 
 | Field | Notes |
 |---|---|
 | `id` | Stable slug. The app stores `live:<id>` in settings. |
-| `name` | Shown on the list, the radio chip and the lock screen. |
+| `name` | Shown on the radio chip, the phone list and the lock screen. |
 | `freq` | Shown next to the name. Use `LIVE` when there is no frequency. |
 | `city` | City or town, when we know it. |
 | `genre` | One of `news`, `talk`, `bongo`, `hits`, `gospel`, `sports`, `music`, `community`. |
@@ -42,11 +42,12 @@ The listener's browser fetches the audio directly from the station. BodaGo does 
 
 ## How it behaves
 
-- One station plays at a time. Play, pause and stop are on the station list. Connecting shows a spinner. If you are offline, or the stream will not start, the radio says so instead of spinning forever.
-- Live audio follows the music volume (a quiet floor is used on the Redio screen if music is muted). Stop leaves the station selected but does not keep the connection open. Switching station, turning the radio off, or leaving a ride drops the stream.
+- One station plays at a time. The radio chip and R step through the stations in catalog order, then Off. Play, pause and stop are on the phone's station list. Connecting shows a spinner. If you are offline, or the stream will not start, the radio says so instead of spinning forever.
+- Live audio follows the music volume (a quiet floor is used on the phone's Redio tab if music is muted). Stop leaves the station selected but does not keep the connection open. Switching station, turning the radio off, or leaving a ride drops the stream.
 - The stream keeps playing when the screen locks. The system media controls show the station name, frequency and city (Media Session), with play, pause and stop. The ride's engine sounds still pause in the background.
 - The first time a rider tunes in during a ride, they're told live radio uses mobile data (about 1 MB a minute at 128 kbps).
-- During a ride, if a stream dies, the radio says so and goes back to Kijiweni FM. On the Redio screen it stays on that station and asks you to try again. The built-in stations always work offline.
+- If you are offline or a stream dies, the radio says so and stays on that station. It does not retry by itself: tap the station again (or press Play on the phone) to try again, or pick another one.
+- A saved station that is no longer in `stations.json` moves to the first station in the list. If the list itself cannot load (offline), the radio chip says there are no stations and R does nothing.
 - The service worker never caches streams.
 
 ## Left out on purpose

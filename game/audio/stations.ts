@@ -34,6 +34,24 @@ const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
 const oneOf = <T extends string>(value: string, allowed: readonly T[]): T | undefined =>
   (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
 
+/** The ride's radio dial: every live station, then off. */
+export const stationDial = (liveIds: readonly string[]): string[] => [...liveIds, "off"];
+
+/** The station after `tuned` on the dial (R, or a tap on the chip). With no live stations there is nothing to flip to. */
+export const nextStation = (tuned: string, liveIds: readonly string[]): string => {
+  if (!liveIds.length) return tuned;
+  const dial = stationDial(liveIds);
+  return dial[(dial.indexOf(tuned) + 1) % dial.length]!;
+};
+
+/**
+ * A saved station that the catalog no longer lists (or one of the old
+ * built-in stations) moves to the first live station. "off" stays off, and
+ * nothing changes while the catalog is empty (offline, failed to load).
+ */
+export const resolveTuned = (tuned: string, liveIds: readonly string[]): string =>
+  tuned === "off" || liveIds.includes(tuned) || !liveIds.length ? tuned : liveIds[0]!;
+
 /**
  * A ride that is merely following the tuned station must not restart audio
  * the listener has paused or stopped. Choosing a station (or pressing play)

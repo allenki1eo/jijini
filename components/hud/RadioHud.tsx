@@ -3,15 +3,12 @@
 import { AnimatePresence, m } from "motion/react";
 import { Check, ChevronDown, Loader2, Power, Radio as RadioIcon, SignalLow, VolumeX, Wifi } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { liveStations, loadLiveStations, useLiveCatalog, useLivePlayback, type LiveStation } from "@/game/audio/LiveRadio";
-import { Radio, STATIONS, radioHud } from "@/game/audio/Radio";
+import { livePlayer, liveStations, loadLiveStations, useLiveCatalog, useLivePlayback, type LiveStation } from "@/game/audio/LiveRadio";
+import { Radio, radioHud } from "@/game/audio/Radio";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { useHudTick } from "./useHudTick";
 import { useSettings } from "@/stores/settings";
-
-const STYLE_LABEL = { singeli: "Singeli", bongo: "Bongo Flava", taarab: "Taarab" } as const;
-
 
 /** Three bars bouncing to the beat: this is the station that's on. */
 function Equalizer({ color, still }: { color: string; still?: boolean }) {
@@ -51,20 +48,20 @@ function StationRow({ name, freq, sub, color, active, connecting, onPick }: { na
   );
 }
 
-/** The boda's radio: tap to pick a station (house stations or live Tanzanian radio), R to flip to the next one. */
+/** The boda's radio: tap to pick a live Tanzanian station, R to flip to the next one. */
 /** `compact`: icon only (portrait phones), the station shows in the picker. */
 export function RadioChip({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const station = useSettings((s) => s.radio);
   const set = useSettings((s) => s.set);
   const phase = useLivePlayback((s) => (s.stationId === station ? s.phase : "idle"));
+  const ready = useLiveCatalog((s) => s.ready);
   useLiveCatalog((s) => s.revision);
   const live: LiveStation[] = liveStations;
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  const liveOn = live.find((s) => s.id === station);
-  const info = STATIONS.find((s) => s.id === station) ?? liveOn;
-  const connecting = Boolean(liveOn) && phase === "loading";
+  const info = live.find((s) => s.id === station);
+  const connecting = Boolean(info) && phase === "loading";
   useHudTick(2);
   const weak = radioHud.signal < 0.6;
 
@@ -88,7 +85,12 @@ export function RadioChip({ compact = false }: { compact?: boolean }) {
   }, [open]);
 
   const pick = (id: string) => {
-    set("radio", id);
+    // Tapping the station that just failed tries it again.
+    const again = id === station && phase === "error" ? live.find((s) => s.id === id) : undefined;
+    if (again) {
+      const s = useSettings.getState();
+      livePlayer.play(again, s.masterVolume * s.musicVolume, "user");
+    } else set("radio", id);
     setOpen(false);
   };
 
@@ -119,8 +121,8 @@ export function RadioChip({ compact = false }: { compact?: boolean }) {
           <VolumeX className="size-5 text-cream/50" />
         )}
         {info ? (
-          <span className={cn("flex items-baseline gap-1.5 tabular", compact && !liveOn && "hidden")}>
-            {liveOn && <span className="animate-pulse rounded bg-coral px-1 text-[10px] leading-4 font-extrabold text-cream">LIVE</span>}
+          <span className="flex items-baseline gap-1.5 tabular">
+            <span className="animate-pulse rounded bg-coral px-1 text-[10px] leading-4 font-extrabold text-cream">LIVE</span>
             {!compact && <span className="max-w-24 truncate">{info.freq}</span>}
             <span className="hidden max-w-36 truncate text-cream/60 xl:inline">{info.name}</span>
           </span>
@@ -147,12 +149,17 @@ export function RadioChip({ compact = false }: { compact?: boolean }) {
               <kbd className="hidden rounded-md bg-white/8 px-1.5 py-0.5 font-display text-[10px] font-bold text-cream/60 sm:inline">{t.radio.cycleHint}</kbd>
             </div>
             <div className="overflow-y-auto overscroll-contain px-2 pb-2">
-              <p className="px-2 pt-3 pb-1 font-display text-[11px] font-bold tracking-wide text-cream/45 uppercase">{t.radio.house}</p>
-              <ul>
-                {STATIONS.map((s) => (
-                  <StationRow key={s.id} name={s.name} freq={s.freq} sub={STYLE_LABEL[s.style]} color={s.color} active={station === s.id} onPick={() => pick(s.id)} />
-                ))}
-              </ul>
+              {live.length === 0 && (
+                <p className="flex items-center gap-2 px-2 pt-4 pb-2 text-sm text-cream/60">
+                  {ready ? (
+                    t.radio.none
+                  ) : (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> {t.radio.loadingList}
+                    </>
+                  )}
+                </p>
+              )}
               {live.length > 0 && (
                 <>
                   <p className="flex items-center gap-1.5 px-2 pt-3 pb-1 font-display text-[11px] font-bold tracking-wide text-cream/45 uppercase">

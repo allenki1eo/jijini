@@ -5,7 +5,7 @@
  *  - engine: two detuned oscillators + noise, pitched by "RPM" with gear changes
  *  - horn (and an emergency siren), tyre skid, rain, market ambience, NPC honks
  *  - UI blips, coin, level-up, crash, near-miss whoosh, police whistle
- *  - an original Singeli / Bongo-flava-inspired loop sequenced in real time
+ *  - FM static under the live radio when reception fades
  */
 
 type Bus = "music" | "sfx";
@@ -19,13 +19,6 @@ export class AudioEngine {
   private noise!: AudioBuffer;
   private engine: { a: OscillatorNode; b: OscillatorNode; lfo: OscillatorNode; gain: GainNode; filter: BiquadFilterNode } | null = null;
   private loops: Record<"skid" | "rain" | "crowd", { gain: GainNode } | null> = { skid: null, rain: null, crowd: null };
-  private musicTimer = 0;
-  private nextBeat = 0;
-  private beat = 0;
-  private bar = 0;
-  private musicOn = false;
-  /** Which radio station's sound the music sequencer plays. */
-  style: MusicStyle = "singeli";
   private volumes = { master: 0.8, music: 0.6, sfx: 0.9 };
   /** Radio reception 0..1: the music fades and static hisses in as it drops. */
   private signal = 1;
@@ -468,133 +461,13 @@ export class AudioEngine {
 
   // ── Music ────────────────────────────────────────────────────────────────
 
-  /**
-   * An original groove: 4-on-the-floor kick, offbeat claps, 16th shakers,
-   * a pentatonic bass and a marimba-like lead in the spirit of Singeli and
-   * Bongo flava. Scheduled with a small look-ahead.
-   */
-  startMusic() {
-    if (!this.ctx || this.musicOn) return;
-    this.musicOn = true;
-    this.nextBeat = this.ctx.currentTime + 0.1;
-    this.beat = 0;
-    this.bar = 0;
-    this.musicTimer = window.setInterval(() => this.schedule(), 30);
-  }
-
-  stopMusic() {
-    this.musicOn = false;
-    window.clearInterval(this.musicTimer);
-  }
-
-  /** Switch station sound; the groove restarts on the next bar. */
-  setStyle(style: MusicStyle) {
-    if (style === this.style) return;
-    this.style = style;
-    if (this.ctx) this.nextBeat = Math.max(this.nextBeat, this.ctx.currentTime + 0.15);
-    this.beat = 0;
-  }
-
-  private schedule() {
-    if (!this.ctx || !this.musicOn) return;
-    if (this.style === "bongo") return this.scheduleBongo();
-    if (this.style === "taarab") return this.scheduleTaarab();
-    const bpm = 140;
-    const sixteenth = 60 / bpm / 4;
-    // A minor pentatonic around A2 / A4.
-    const bass = [45, 45, 48, 50, 52, 50, 48, 43];
-    const scale = [69, 72, 74, 76, 79, 81, 84];
-    while (this.nextBeat < this.ctx.currentTime + 0.12) {
-      const step = this.beat % 16;
-      const at = this.nextBeat - this.ctx.currentTime;
-      if (step % 4 === 0) this.tone(150, 0.18, { type: "sine", gain: 0.55, slideTo: 45, delay: at, bus: "music" });
-      if (step === 4 || step === 12) this.burst(0.12, 1500, 0.28, { delay: at, bus: "music", q: 0.7 });
-      this.burst(0.03, 7000, step % 2 ? 0.05 : 0.09, { type: "highpass", delay: at, bus: "music" });
-      if (step % 2 === 0) {
-        const note = bass[(this.bar * 2 + Math.floor(step / 8)) % bass.length]!;
-        this.tone(midi(note + (step % 8 === 6 ? 12 : 0)), sixteenth * 1.8, { type: "triangle", gain: 0.28, delay: at, bus: "music" });
-      }
-      // Marimba lead: a seeded call-and-response that changes every two bars.
-      const seed = Math.sin((this.bar >> 1) * 91.7 + step * 13.1) * 43758.5453;
-      const r = seed - Math.floor(seed);
-      if ((step % 3 === 0 || step === 14) && r > 0.35 && this.bar % 4 !== 3) {
-        const n = scale[Math.floor(r * scale.length)]!;
-        this.tone(midi(n), 0.22, { type: "sine", gain: 0.13, delay: at, bus: "music" });
-        this.tone(midi(n + 12), 0.08, { type: "triangle", gain: 0.04, delay: at, bus: "music" });
-      }
-      this.nextBeat += sixteenth;
-      this.beat++;
-      if (this.beat % 16 === 0) this.bar++;
-    }
-  }
-
-  /**
-   * Mid-tempo Bongo flava: syncopated kick, log-drum bass slides, offbeat
-   * chord stabs and a bright pentatonic pluck.
-   */
-  private scheduleBongo() {
-    const ctx = this.ctx!;
-    const bpm = 102;
-    const sixteenth = 60 / bpm / 4;
-    const roots = [50, 50, 45, 47];
-    const lead = [74, 76, 78, 81, 83, 86];
-    while (this.nextBeat < ctx.currentTime + 0.12) {
-      const step = this.beat % 16;
-      const at = this.nextBeat - ctx.currentTime;
-      const root = roots[this.bar % roots.length]!;
-      if (step === 0 || step === 6 || step === 8 || step === 11) this.tone(130, 0.2, { type: "sine", gain: 0.5, slideTo: 42, delay: at, bus: "music" });
-      if (step === 4 || step === 12) this.burst(0.14, 1800, 0.22, { delay: at, bus: "music", q: 0.6 });
-      if (step % 2 === 1) this.burst(0.025, 8000, 0.05, { type: "highpass", delay: at, bus: "music" });
-      if (step === 0 || step === 3 || step === 7 || step === 10) this.tone(midi(root - 12), sixteenth * 2.6, { type: "sine", gain: 0.34, slideTo: midi(root - 14), delay: at, bus: "music" });
-      if (step === 2 || step === 6 || step === 10 || step === 14) [0, 4, 7].forEach((iv) => this.tone(midi(root + 12 + iv), 0.12, { type: "triangle", gain: 0.035, delay: at, bus: "music" }));
-      const seed = Math.sin((this.bar >> 1) * 57.3 + step * 7.7) * 43758.5453;
-      const r = seed - Math.floor(seed);
-      if (step % 2 === 0 && r > 0.55 && this.bar % 4 !== 3) this.tone(midi(lead[Math.floor(r * lead.length)]!), 0.16, { type: "triangle", gain: 0.07, delay: at, bus: "music" });
-      this.nextBeat += sixteenth;
-      this.beat++;
-      if (this.beat % 16 === 0) this.bar++;
-    }
-  }
-
-  /**
-   * Coastal Taarab feel: darbuka doum-tek, an oud-like pluck in a Hijaz
-   * mode and a soft string drone.
-   */
-  private scheduleTaarab() {
-    const ctx = this.ctx!;
-    const bpm = 88;
-    const eighth = 60 / bpm / 2;
-    // D Hijaz: D Eb F# G A Bb C.
-    const scale = [62, 63, 66, 67, 69, 70, 72, 74];
-    while (this.nextBeat < ctx.currentTime + 0.12) {
-      const step = this.beat % 8;
-      const at = this.nextBeat - ctx.currentTime;
-      // Maqsum rhythm: doum on 1 and 4, teks between.
-      if (step === 0 || step === 3) this.tone(95, 0.22, { type: "sine", gain: 0.42, slideTo: 60, delay: at, bus: "music" });
-      if (step === 2 || step === 5 || step === 6) this.burst(0.06, 3200, 0.12, { delay: at, bus: "music", q: 2 });
-      if (step === 0 && this.bar % 2 === 0) this.tone(midi(50), eighth * 15, { type: "sawtooth", gain: 0.025, delay: at, bus: "music", lowpass: 700, sustain: true });
-      const seed = Math.sin(this.bar * 31.7 + step * 11.3) * 43758.5453;
-      const r = seed - Math.floor(seed);
-      if (r > 0.35) {
-        const n = scale[Math.floor(r * scale.length)]!;
-        this.tone(midi(n), 0.3, { type: "sawtooth", gain: 0.05, delay: at, bus: "music", lowpass: 1600, attack: 0.004 });
-      }
-      this.nextBeat += eighth;
-      this.beat++;
-      if (this.beat % 8 === 0) this.bar++;
-    }
-  }
-
   dispose() {
-    this.stopMusic();
     void this.ctx?.close();
     this.ctx = null;
     this.engine = null;
     this.loops = { skid: null, rain: null, crowd: null };
   }
 }
-
-export type MusicStyle = "singeli" | "bongo" | "taarab";
 
 /** One engine per page. */
 export const audio = new AudioEngine();

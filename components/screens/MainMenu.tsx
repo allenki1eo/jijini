@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Coins, UserPlus, Map as MapIcon, MapPin, Maximize, PackageOpen, Play, Radio, Settings, Star, Trophy, Wrench, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Coins, UserPlus, Map as MapIcon, MapPin, Maximize, PackageOpen, Play, Settings, Star, Trophy, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { RiderAvatar } from "@/components/account/RiderBadge";
 import { Skyline } from "@/components/brand/Skyline";
@@ -143,13 +143,13 @@ export function MainMenu() {
             </Link>
           </div>
 
-          <nav className="animate-rise grid grid-cols-6 gap-2.5 max-sm:grid-cols-3 [animation-delay:260ms] short:gap-2" aria-label="Menu">
+          {/* Radio lives in the ride (the chip, R, and the phone's Redio tab), so the menu has five tiles: three over two on phones. */}
+          <nav className="animate-rise grid grid-cols-5 gap-2.5 max-sm:grid-cols-6 max-sm:[&>a]:col-span-2 max-sm:[&>a:nth-child(n+4)]:col-span-3 [animation-delay:260ms] short:gap-2" aria-label="Menu">
             <MenuTile icon={Wrench} label={t.menu.garage} accent="bg-coral text-cream" href="/garage" />
             <MenuTile icon={PackageOpen} label={t.menu.missions} accent="bg-sky text-night" href="/play?board=1" />
             <MenuTile icon={CalendarCheck} label={t.menu.daily} accent="bg-forest text-sun" href="/daily" badge={dailyReady} />
             <MenuTile icon={MapIcon} label={t.cities.title} accent="bg-cream text-night" href="/cities" />
             <MenuTile icon={Trophy} label={t.league.title} accent="bg-sun text-night" href="/ligi" />
-            <MenuTile icon={Radio} label={t.menu.radio} accent="bg-[#7C3AED] text-cream" href="/radio" />
           </nav>
         </section>
 

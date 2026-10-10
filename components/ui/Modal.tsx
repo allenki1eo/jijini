@@ -43,7 +43,7 @@ export function Modal({ open, onClose, title, closeLabel, children, className }:
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className={cn("relative w-full max-w-lg overflow-hidden rounded-[var(--radius-card)] bg-night-800 ring-1 ring-white/10", className)}
+            className={cn("relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-[var(--radius-card)] bg-night-800 ring-1 ring-white/10", className)}
             initial={{ y: 40, scale: 0.94 }}
             animate={{ y: 0, scale: 1 }}
             exit={{ y: 24, scale: 0.96, opacity: 0 }}

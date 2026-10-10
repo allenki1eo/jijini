@@ -26,8 +26,8 @@ import { PlaceSigns, synthesizeBusStops } from "@/game/world/PlaceSigns";
 import { buildHeroBillboard, loadAds } from "@/game/world/adAtlas";
 import { RoadBanners } from "@/game/world/RoadBanners";
 import { Markets } from "@/game/world/Markets";
-import { Radio, radioHud } from "@/game/audio/Radio";
-import { liveStations, livePlayer, loadLiveStations } from "@/game/audio/LiveRadio";
+import { radioHud } from "@/game/audio/Radio";
+import { liveStations, livePlayer, loadLiveStations, useLivePlayback } from "@/game/audio/LiveRadio";
 import { fetchJson } from "@/lib/fetchJson";
 import { Collectibles, HELMET_REWARD } from "@/game/world/Collectibles";
 import { Particles } from "@/game/world/Particles";
@@ -121,7 +121,6 @@ export class Game {
   private frontage: Frontage | null = null;
   private civic: Civic | null = null;
   private banks: BankBranches | null = null;
-  private radio: Radio | null = null;
   private disposeAds: (() => void) | null = null;
   private landmarkObjects: THREE.Object3D[] = [];
   /** Petrol stations and fundi (mechanics), for refuelling and repairs. */
@@ -256,7 +255,7 @@ export class Game {
     this.pois = pois;
     this.places = new PlaceSigns(pois);
     this.root.add(this.places.group);
-    // Local businesses on billboards, road banners and the radio.
+    // Local businesses on billboards and road banners.
     this.disposeAds = loadAds(this.cityId);
     this.banners = new RoadBanners(nav);
     this.root.add(this.banners.group);
@@ -266,7 +265,6 @@ export class Game {
     if (this.markets.walls.length) this.index.addChunk("markets", new Float32Array(this.markets.walls), new Float32Array());
     const busy = new Set([POI_KINDS.indexOf("market"), POI_KINDS.indexOf("bus_station")]);
     this.riskSpots = pois.filter((p) => busy.has(p.k)).map((p) => [p.x / 10, p.z / 10]);
-    this.radio = new Radio(this.cityId, [...new Set(pois.filter((p) => busy.has(p.k) && p.n).map((p) => p.n!))]);
     const cap = DENSITY.high;
     this.traffic = new TrafficSystem(nav, cap.traffic);
     this.peds = new Pedestrians(nav, cap.peds);
@@ -896,17 +894,16 @@ export class Game {
         audio.resume();
       }
     };
-    void loadLiveStations().then((list) => {
+    // Tune in once the catalog is here (loading it also moves a stale saved station onto a live one).
+    void loadLiveStations().then(() => {
       const s = useSettings.getState();
-      if (!s.radio.startsWith("live:")) return;
-      // A saved station that's no longer listed: back to the house station. Otherwise tune in now the list is here.
-      if (!list.some((st) => st.id === s.radio)) s.set("radio", "kijiweni");
-      else if (audio.ready && s.musicVolume > 0) this.applyRadio();
+      if (s.radio !== "off" && audio.ready && s.musicVolume > 0) this.applyRadio();
     });
-    // A live stream that won't play (offline, down, blocked): back to the house station.
+    // A live stream that won't play: say why, and stay on that station so the rider can try again or pick another.
     livePlayer.onError = (station) => {
-      events.emit("toast", { text: fmt(currentDictionary().radio.liveDown, { name: station.name }), tone: "coral" });
-      useSettings.getState().set("radio", "kijiweni");
+      const t = currentDictionary().radio;
+      const text = useLivePlayback.getState().problem === "offline" ? t.offline : fmt(t.unavailable, { name: station.name });
+      events.emit("toast", { text, tone: "coral" });
     };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
@@ -915,10 +912,8 @@ export class Game {
     const unsubSettings = useSettings.subscribe((s) => {
       setRealTime(s.realClock);
       audio.setVolumes(s.masterVolume, s.musicVolume, s.sfxVolume);
-      if (s.musicVolume <= 0 || s.radio === "off") {
-        audio.stopMusic();
-        livePlayer.stop();
-      } else if (audio.ready) this.applyRadio();
+      if (s.musicVolume <= 0 || s.radio === "off") livePlayer.stop();
+      else if (audio.ready) this.applyRadio();
       livePlayer.setVolume(s.masterVolume * s.musicVolume);
     });
     const offs = [
@@ -950,7 +945,6 @@ export class Game {
       unsubSettings();
       offs.forEach((off) => off());
       audio.stopContinuous();
-      audio.stopMusic();
       audio.ring(false);
       livePlayer.stop();
       livePlayer.onError = null;
@@ -959,7 +953,6 @@ export class Game {
 
   private liveNoticeShown = false;
 
-  /** Start whichever station is selected: the procedural ones through Web Audio, live ones as a stream. */
   private receptionTimer = 0;
 
   /**
@@ -984,11 +977,14 @@ export class Game {
     livePlayer.setVolume(settings.masterVolume * settings.musicVolume * Math.max(0.1, signal ** 0.8));
   }
 
+  /** Play the tuned live station. A station the catalog doesn't list (or none at all) leaves the radio silent. */
   private applyRadio() {
     const s = useSettings.getState();
     const live = liveStations.find((st) => st.id === s.radio);
     if (live) {
-      audio.stopMusic();
+      // A station that just failed waits for the rider to pick it again, instead of retrying (and toasting) on every tap.
+      const playback = useLivePlayback.getState();
+      if (playback.stationId === live.id && playback.phase === "error") return;
       const started = livePlayer.play(live, s.masterVolume * s.musicVolume, "follow");
       if (started && !this.liveNoticeShown) {
         this.liveNoticeShown = true;
@@ -996,7 +992,6 @@ export class Game {
       }
     } else {
       livePlayer.stop();
-      audio.startMusic();
     }
   }
 
@@ -1070,7 +1065,6 @@ export class Game {
     this.stage?.update(dt, s, Boolean(this.missions?.active));
     this.streetEvents?.update(dt, this.bike, this.stats, this.missions?.active?.type === "mbio" || Boolean(this.police?.chasing));
     this.phone?.update(dt);
-    this.radio?.update(dt);
     this.updateReception(dt);
     const skid = s.drifting ? 1 : controls.brake > 0.5 && s.speed > 6 ? 0.6 : 0;
     const crowd = Math.min(1, (this.peds?.countNear(s.x, s.z, 45) ?? 0) / 10);

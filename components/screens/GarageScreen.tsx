@@ -289,7 +289,7 @@ export function GarageScreen() {
         </Chip>
       </div>
       <Toast text={toast} />
-      <div className="relative grid gap-4 pb-6 lg:h-[calc(100dvh-5rem)] lg:grid-cols-[1.2fr_1fr]">
+      <div className="relative grid grid-cols-[minmax(0,1fr)] gap-4 pb-6 lg:h-[calc(100dvh-5rem)] lg:grid-cols-[1.2fr_1fr]">
         <section className="relative h-[42dvh] min-h-64 lg:h-full" aria-label={BIKES[viewed].name}>
           <GarageStage bike={viewed} custom={custom} />
           <div className="safe-x pointer-events-none absolute bottom-4 left-0">
@@ -300,6 +300,7 @@ export function GarageScreen() {
         <section className="safe-x lg:overflow-y-auto lg:pr-4">
           <Card pattern className="p-4">
             <Segmented<Tab>
+              fill
               label={t.garage.title}
               value={tab}
               onChange={setTab}

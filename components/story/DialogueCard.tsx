@@ -6,6 +6,7 @@ import { Button } from "@/components/ui";
 import { KitengeStrip } from "@/components/brand/Kitenge";
 import { useEffect } from "react";
 import { playVoice } from "@/game/audio/voices";
+import { useWorld } from "@/stores/world";
 import { Portrait, type CharacterId } from "./Portrait";
 
 export const CHARACTER_NAMES: Record<CharacterId, string> = {
@@ -31,6 +32,12 @@ export function DialogueCard({ open, speaker, text, cta, onNext, secondary, voic
   useEffect(() => {
     if (open && voiceKey) void playVoice(voiceKey, CHARACTER_NAMES[speaker]);
   }, [open, voiceKey, speaker]);
+  // Lets the touch controls and other pop-ups step aside while someone is talking.
+  useEffect(() => {
+    if (!open) return;
+    useWorld.getState().set({ dialogue: true });
+    return () => useWorld.getState().set({ dialogue: false });
+  }, [open]);
   return (
     <AnimatePresence mode="wait">
       {open && (

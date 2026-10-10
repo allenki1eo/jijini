@@ -17,6 +17,7 @@ import { ChatBar, SpeechBubbles } from "@/components/phone/Speech";
 import { StoryDirector } from "@/components/story/StoryDirector";
 import { Button, Chip } from "@/components/ui";
 import { Modal } from "@/components/ui/Modal";
+import { audio } from "@/game/audio/AudioEngine";
 import type { Game } from "@/game/core/Game";
 import type { CityManifest } from "@/game/world/format";
 import { formatTzs, useT } from "@/i18n";
@@ -56,11 +57,11 @@ function FuelFinder({ game }: { game: Game }) {
   );
 }
 
-/** Is a stop panel showing (fare, queue, sheli/bank/wakala, photo spot)? Polled like the panels themselves. */
-function useContextOpen(game: Game) {
+/** Is a stop panel showing (fare, queue, sheli/bank/wakala, photo spot)? Polled like the panels themselves. The kijiwe queue stays out of the tutorial. */
+function useContextOpen(game: Game, tutorial: boolean) {
   useHudTick(4);
   const bargain = useMissions((s) => s.bargain);
-  return Boolean(bargain || (stageHud.inZone && hud.speedKmh < 6) || game.serviceNearby() || game.photoSpot());
+  return Boolean(bargain || (!tutorial && stageHud.inZone && hud.speedKmh < 6) || game.serviceNearby() || game.photoSpot());
 }
 
 /** Wallet in a few characters for narrow screens: 250k, 1.2M. */
@@ -72,6 +73,7 @@ export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }:
   const wallet = usePlayer((s) => s.wallet);
   const hydrated = usePlayer((s) => s.hydrated);
   const tutorialDone = usePlayer((s) => s.tutorialDone);
+  const firstJobDone = usePlayer((s) => s.stats.deliveries > 0);
   const active = useMissions((s) => s.active);
   const set = useMissions((s) => s.set);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
@@ -95,13 +97,24 @@ export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }:
 
   const tutorial = hydrated && !tutorialDone;
   const narrow = useNarrowScreen();
-  const contextOpen = useContextOpen(game);
+  const contextOpen = useContextOpen(game, tutorial);
 
   // Arriving from the leaderboard's "race now": line up for this week's course (after the tutorial).
   useEffect(() => {
     if (weeklyRaceOnStart && hydrated && tutorialDone) game.startWeeklyRace();
   }, [weeklyRaceOnStart, hydrated, tutorialDone, game]);
   const touch = useTouchDevice();
+
+  // The game creates its sound on the first touch (pointerdown), but phones only count a touch as a user
+  // gesture when the finger lifts, so the sound can stay suspended. Resume it on release too (no-op once running).
+  useEffect(() => {
+    const resume = () => audio.resume();
+    const types = ["pointerup", "touchend", "click"] as const;
+    for (const type of types) window.addEventListener(type, resume);
+    return () => {
+      for (const type of types) window.removeEventListener(type, resume);
+    };
+  }, []);
 
   return (
     <RideHud
@@ -147,7 +160,7 @@ export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }:
       context={
         <>
           <BargainPanel game={game} />
-          <StagePanel game={game} />
+          {!tutorial && <StagePanel game={game} />}
           <PhotoPrompt game={game} />
           <StationPanel game={game} />
         </>
@@ -158,7 +171,8 @@ export function GameHud({ game, manifest, openBoardOnStart, weeklyRaceOnStart }:
       {!narrow && <SpeechBubbles />}
       {!touch && <ChatBar game={game} touch={false} />}
       <ShopCounter game={game} />
-      <AgeGate enabled={hydrated && tutorialDone} />
+      {/* The age question waits until after the first paid job, so a new rider meets one card at a time. */}
+      <AgeGate enabled={hydrated && tutorialDone && firstJobDone} />
       <PhonePanel game={game} />
       {mapOpen && <CityMap game={game} cityName={manifest.name} onClose={closeMap} />}
       <MissionBoard

@@ -10,6 +10,8 @@ import { missionHud } from "@/game/missions/MissionRunner";
 import { useT } from "@/i18n";
 import { usePlayer } from "@/stores/player";
 import { useMissions } from "@/stores/missions";
+import { useSettings } from "@/stores/settings";
+import { useTouchDevice } from "./RideHud";
 
 type Step = "juma1" | "juma2" | "throttle" | "steer" | "brake" | "job" | "pickup" | "deliver" | "done";
 
@@ -23,6 +25,8 @@ export function Tutorial({ game }: { game: Game }) {
   const steerHeld = useRef(0);
   const wasFast = useRef(false);
   const result = useMissions((s) => s.result);
+  const touchDevice = useTouchDevice();
+  const tilt = useSettings((s) => s.tiltSteer);
 
   const finish = () => {
     game.setTutorial(false);
@@ -61,11 +65,20 @@ export function Tutorial({ game }: { game: Game }) {
   }, [result, step]);
 
   const dialogue = step === "juma1" ? t.tutorial.juma1 : step === "juma2" ? t.tutorial.juma2 : step === "done" && !result ? t.tutorial.done : null;
-  const hint = { throttle: t.tutorial.throttle, steer: t.tutorial.steer, brake: t.tutorial.brake, job: t.tutorial.job, pickup: t.tutorial.pickup, deliver: t.tutorial.deliver }[step as string];
+  // Phones get button-only wording; keyboards keep the W/A/S/D hints.
+  const hints = touchDevice
+    ? { throttle: t.tutorial.throttleTouch, steer: tilt ? t.tutorial.steerTilt : t.tutorial.steerTouch, brake: t.tutorial.brakeTouch }
+    : { throttle: t.tutorial.throttle, steer: t.tutorial.steer, brake: t.tutorial.brake };
+  const hint = { ...hints, job: t.tutorial.job, pickup: t.tutorial.pickup, deliver: t.tutorial.deliver }[step as string];
+  const skipPractice = () => {
+    game.missions?.abandon();
+    useMissions.getState().set({ result: null });
+    finish();
+  };
 
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 bottom-40 flex justify-center px-4 short:bottom-32">
+      <div className="pointer-events-none absolute inset-x-0 bottom-40 z-30 flex justify-center px-4 short:bottom-32">
         <DialogueCard
           open={Boolean(dialogue)}
           speaker="juma"
@@ -80,28 +93,25 @@ export function Tutorial({ game }: { game: Game }) {
         {hint && (
           <m.div
             key={step}
-            className="pointer-events-none absolute inset-x-0 top-[38%] flex justify-center px-4"
+            className="pointer-events-none absolute inset-x-0 top-[38%] z-30 flex justify-center px-4 short:top-[30%]"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
           >
-            <p className="max-w-lg rounded-2xl bg-night/80 px-5 py-3 text-center font-display text-xl font-extrabold text-sun shadow-xl ring-2 ring-sun/40 backdrop-blur">{hint}</p>
+            {/* The skip link rides with the hint, clear of the pedals (it used to sit under the brake). */}
+            <div className="flex max-w-lg flex-col items-center gap-1.5">
+              <p className="rounded-2xl bg-night/80 px-5 py-3 text-center font-display text-xl font-extrabold text-sun shadow-xl ring-2 ring-sun/40 backdrop-blur short:py-2 short:text-lg">{hint}</p>
+              <button
+                type="button"
+                onClick={skipPractice}
+                className="pointer-events-auto min-h-11 rounded-full bg-night/70 px-4 font-display text-sm font-bold text-cream/75 hover:text-cream"
+              >
+                {t.tutorial.skip}
+              </button>
+            </div>
           </m.div>
         )}
       </AnimatePresence>
-      {hint && (
-        <button
-          type="button"
-          onClick={() => {
-            game.missions?.abandon();
-            useMissions.getState().set({ result: null });
-            finish();
-          }}
-          className="pointer-events-auto absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-night/70 px-4 py-2 font-display text-sm font-bold text-cream/70 hover:text-cream"
-        >
-          {t.tutorial.skip}
-        </button>
-      )}
     </>
   );
 }

@@ -16,6 +16,8 @@ interface WorldState {
   showChunkGrid: boolean;
   /** This city has 18+ sponsors (the age question appears). */
   adultAdsHere: boolean;
+  /** A character dialogue card (tutorial or story) is on screen. */
+  dialogue: boolean;
   set: (patch: Partial<Omit<WorldState, "set" | "reset">>) => void;
   reset: () => void;
 }
@@ -31,6 +33,7 @@ const initial = {
   showNavGraph: false,
   showChunkGrid: false,
   adultAdsHere: false,
+  dialogue: false,
 };
 
 /** Session state for the world explorer (not persisted). */

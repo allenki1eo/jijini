@@ -5,6 +5,7 @@ import { useSyncExternalStore, useState } from "react";
 import { Button, Chip } from "@/components/ui";
 import { useT } from "@/i18n";
 import { isIos, isStandalone } from "@/lib/device";
+import { usePlayer } from "@/stores/player";
 import { usePwa } from "@/stores/pwa";
 import { applyUpdate } from "./PwaProvider";
 
@@ -22,7 +23,10 @@ const recentlyDismissed = () => {
 
 const noop = () => () => undefined;
 
-/** Friendly install banner (Android: native prompt; iOS: Add to Home Screen instructions). */
+/**
+ * Friendly install banner (Android: native prompt; iOS: Add to Home Screen instructions).
+ * Offered once the rider has finished a paid job, not on the very first screen.
+ */
 export function InstallBanner() {
   const t = useT();
   const installEvent = usePwa((s) => s.installEvent);
@@ -31,7 +35,8 @@ export function InstallBanner() {
   // Client-only facts, read without a hydration mismatch.
   const eligible = useSyncExternalStore(noop, () => !isStandalone() && !recentlyDismissed(), () => false);
   const ios = useSyncExternalStore(noop, isIos, () => false);
-  const show = eligible && !dismissed && (installEvent !== null || ios);
+  const played = usePlayer((s) => s.hydrated && s.stats.deliveries > 0);
+  const show = eligible && played && !dismissed && (installEvent !== null || ios);
 
   const dismiss = () => {
     setDismissed(true);

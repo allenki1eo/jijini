@@ -43,6 +43,15 @@ const subscribeNarrow = (cb: () => void) => {
 /** Portrait phones: the HUD stacks into one column beside the minimap instead of spreading across the top. */
 export const useNarrowScreen = () => useSyncExternalStore(subscribeNarrow, () => window.matchMedia(narrowQuery).matches, () => false);
 
+const shortQuery = "(max-height: 480px)";
+const subscribeShort = (cb: () => void) => {
+  const mq = window.matchMedia(shortQuery);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+};
+/** Landscape phones (same breakpoint as the `short:` CSS variant). */
+export const useShortScreen = () => useSyncExternalStore(subscribeShort, () => window.matchMedia(shortQuery).matches, () => false);
+
 function FuelWarning() {
   useHudTick(4);
   const t = useT();
@@ -85,6 +94,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, rail, t
   const w = useWorld();
   const touch = useTouchDevice();
   const narrow = useNarrowScreen();
+  const short = useShortScreen();
   const scale = useSettings((s) => s.hudScale);
   const cameraView = useSettings((s) => s.cameraView);
   const setSetting = useSettings((s) => s.set);
@@ -166,8 +176,13 @@ export function RideHud({ game, manifest, children, topCenter, topRight, rail, t
           </div>
           {!narrow && (
             <div className="flex flex-col items-center gap-2">
-              {riding && <NavArrow />}
-              {riding && touch && <CompactDash />}
+              {/* Landscape phones: a stop panel takes the middle (where the bike is stopped anyway) instead of the left edge, where the steering thumb and horn live. */}
+              {short && contextOpen ? (
+                <div className="pointer-events-auto flex w-[22rem] max-w-[calc(100vw-28rem)] flex-col gap-2">{context}</div>
+              ) : (
+                riding && <NavArrow />
+              )}
+              {riding && touch && !short && <CompactDash />}
               <CheckpointPrompt />
               <PoliceBanner />
               <FuelWarning />
@@ -214,7 +229,7 @@ export function RideHud({ game, manifest, children, topCenter, topRight, rail, t
         </div>
       )}
 
-      {!narrow && <div className="safe-x pointer-events-none absolute top-1/2 left-0 flex -translate-y-1/2 flex-col gap-2">{context}</div>}
+      {!narrow && !short && <div className="safe-x pointer-events-none absolute top-1/2 left-0 flex -translate-y-1/2 flex-col gap-2">{context}</div>}
 
       {children}
 
@@ -226,6 +241,12 @@ export function RideHud({ game, manifest, children, topCenter, topRight, rail, t
             </div>
           )}
           {touch && <TouchControls />}
+          {/* Landscape phones: the dash sits low between the steering pad and the pedals, so the top of the screen shows the road ahead. */}
+          {touch && short && !narrow && !contextOpen && (
+            <div className="safe-bottom pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2">
+              <CompactDash />
+            </div>
+          )}
           <AnimatePresence>
             {!touch && showKeys && !quiet && (
               <m.p

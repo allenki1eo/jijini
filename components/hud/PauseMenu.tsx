@@ -25,29 +25,30 @@ export function PauseMenu({ open, onResume, onRestart, extra }: PauseMenuProps) 
   return (
     <AnimatePresence>
       {open && (
-        <m.div className="fixed inset-0 z-50 grid place-items-center bg-night/70 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <m.div className="fixed inset-0 z-50 grid place-items-center bg-night/70 p-4 backdrop-blur-sm short:p-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <m.div
             role="dialog"
             aria-modal="true"
             aria-label={t.ride.paused}
-            className="w-full max-w-md overflow-hidden rounded-[var(--radius-card)] bg-night-800 ring-1 ring-white/10"
+            className="w-full max-w-md overflow-hidden rounded-[var(--radius-card)] bg-night-800 ring-1 ring-white/10 short:max-w-3xl"
             initial={{ scale: 0.92, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0 }}
           >
-            <KitengeStrip className="h-3 w-full" />
-            <div className="flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-5">
-              <h2 className="sticker text-4xl">{t.ride.paused}</h2>
+            <KitengeStrip className="h-3 w-full short:h-2" />
+            {/* Landscape phones: two columns (resume and exits left, quick settings right) so nothing hides below the fold. */}
+            <div className="flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-5 short:grid short:max-h-[calc(100dvh-1.5rem)] short:grid-flow-row-dense short:grid-cols-2 short:content-start short:p-4">
+              <h2 className="sticker text-4xl short:col-start-1 short:text-3xl">{t.ride.paused}</h2>
               {extra}
-              <Button variant="sun" size="lg" icon={<Play />} onClick={onResume} block>
+              <Button variant="sun" size="lg" icon={<Play />} onClick={onResume} block className="short:col-start-1">
                 {t.ride.resume}
               </Button>
               {onRestart && (
-                <Button variant="night" size="lg" icon={<RotateCcw />} onClick={onRestart} block>
+                <Button variant="night" size="lg" icon={<RotateCcw />} onClick={onRestart} block className="short:col-start-1">
                   {t.ride.restart}
                 </Button>
               )}
-              <div className="grid gap-3 rounded-2xl bg-night-700 p-4">
+              <div className="grid gap-3 rounded-2xl bg-night-700 p-4 short:col-start-2 short:row-span-4 short:row-start-1 short:self-start">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-display font-bold">{t.settings.cameraView}</span>
                   <Segmented
@@ -78,7 +79,7 @@ export function PauseMenu({ open, onResume, onRestart, extra }: PauseMenuProps) 
               </div>
               {/* Laptop riders: every key in one place (the on-screen hint fades after a few seconds). */}
               {!touch && (
-                <div className="rounded-2xl bg-night-700 p-4">
+                <div className="rounded-2xl bg-night-700 p-4 short:col-start-2">
                   <p className="mb-2.5 flex items-center gap-2 font-display font-bold">
                     <Keyboard className="size-5 text-sun" /> {t.ride.keysTitle}
                   </p>
@@ -98,7 +99,7 @@ export function PauseMenu({ open, onResume, onRestart, extra }: PauseMenuProps) 
                   </dl>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 short:col-start-1">
                 <Link href="/settings" className="chunky flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-night-600 font-display font-bold ring-1 ring-white/10 [--edge:var(--color-night)]">
                   <Settings2 className="size-5" />
                   {t.settings.title}

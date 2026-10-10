@@ -4,16 +4,26 @@ import { AnimatePresence, m } from "motion/react";
 import { Wine } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useT } from "@/i18n";
+import { useMissions } from "@/stores/missions";
+import { usePhone } from "@/stores/phone";
 import { useSettings } from "@/stores/settings";
 import { useWorld } from "@/stores/world";
 
-/** Asked once, in towns whose billboards advertise alcohol: are you 18 or over? */
+/**
+ * Asked once, in towns whose billboards advertise alcohol: are you 18 or over?
+ * Until it's answered the adverts stay hidden, so it can wait: it never opens on
+ * top of another card (phone, job board, results, a character talking).
+ */
 export function AgeGate({ enabled }: { enabled: boolean }) {
   const t = useT();
   const adult = useSettings((s) => s.adult);
   const set = useSettings((s) => s.set);
   const here = useWorld((s) => s.adultAdsHere);
-  const open = enabled && here && adult === null;
+  const phoneOpen = usePhone((s) => s.open);
+  const missionCard = useMissions((s) => s.boardOpen || s.result !== null);
+  const talking = useWorld((s) => s.dialogue);
+  const busy = phoneOpen || missionCard || talking;
+  const open = enabled && here && adult === null && !busy;
   return (
     <AnimatePresence>
       {open && (
